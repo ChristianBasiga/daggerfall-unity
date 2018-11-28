@@ -39,6 +39,8 @@ namespace DaggerfallRandomEncounterEvents.Enums
             filters = new Dictionary<string, string>();
         }
 
+        //Returning FilterObjects of each individual split/
+        //Doing this in factory instead.
         public List<EncounterFilter> splitFilters()
         {
 
@@ -46,8 +48,27 @@ namespace DaggerfallRandomEncounterEvents.Enums
             List<EncounterFilter> splitFilters = new List<EncounterFilter>();
 
 
+            //Less efficient cause then has to then go through the split filters.
+            //Also only adds single filter, todo: make it so gets sub combinations too.
+            foreach (string filterKey in filters.Keys)
+            {
+
+                
+                EncounterFilter split = new EncounterFilter();
+                splitFilters.Add(split);
+
+            }
+
 
             return splitFilters;
+        }
+
+        public Dictionary<string,string> Filters
+        {
+            get
+            {
+                return filters;
+            }
         }
 
 
@@ -107,49 +128,5 @@ namespace DaggerfallRandomEncounterEvents.Enums
     
 
 
-    //Could be strings instead of enum, for the tables, so more easily extendable.
-    //cause then people are stuck to only these filters. Problem with that though is combination
-    //hash of newDay, rainy, left dungeon, and rainy, left dungeon, newDay would be different, but should
-    //map to same thing, also that's more expensive than newDay | rainy | leftDungeon, essentially the trigger
-    //shouldn't change the resulting encounters.
-    //this also makes it so more constraints stricter subset, but there would be stuff that appear
-    //on just raining then random from there, but then should just raining encapsulate every combination with raining in it?
-    //No cause that wouldn't make sense lol, cause if raining doesn't mean meets rest of criteria, which
-    //would make sense to be more random but eh.
-
-    //So first layer of indirection is neutral,positive,negative, then next layer are these filters,
-    //then from there player reputation, but taking that into account isn't just use of keys,
-    //unless as simple as keys of who player has more reputation with, hmm, that's another layer of
-    //complexity, try this first, see how works out.
-   /* public enum EncounterFilter
-    {
-
-        //Weather based filters, sucks that essentiall rewriting these.
-        //I could have another layer of keys with just weather, but weather isn't always
-        //a criterion
-
-        //Hmm okay cause can have rain and new day.
-        //But can't have rain and cloudy.
-        //
-        RAIN = 1,
-        CLOUDY = 2,
-        FOG = 4,
-        SNOW = 8,
-        THUNDER = 16,
-        SUNNY = 32,
-        OVERCAST = 64,
-
-        //Time based filters
-        NEW_DAY = 
-        DAWN,
-        DUSK,
-        MID_DAY,
-        MID_NIGHT,
-
-
-        //Whether left dungeon last or town.
-        LEFT_DUNGEON,
-        LEFT_TOWN,
-
-    }*/
+  
 }

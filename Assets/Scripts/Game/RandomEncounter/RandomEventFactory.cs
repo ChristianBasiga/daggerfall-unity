@@ -73,8 +73,6 @@ namespace DaggerfallRandomEncounterEvents
                 type = EncounterType.NEGATIVE;
             }
 
-            //For testing, forcing it.
-            type = EncounterType.NEGATIVE;
 
             if (!possibleEvents.ContainsKey(type) || !possibleEvents[type].ContainsKey(filter))
             {
@@ -82,43 +80,28 @@ namespace DaggerfallRandomEncounterEvents
                 return null;
             }
 
+
             List<RandomEvent> subset = possibleEvents[type][filter];
 
+            List<EncounterFilter> split = filter.splitFilters();
 
+            //This could get fucking huge man.
+            //Maybe there's a better structure for this.
+            //Something where like as it goes down, it adds into pool.
+            //Though actually I think would turn out same time complexity.
+            for (int i = 0; i < split.Count; ++i)
+            {
+                foreach (RandomEvent evt in possibleEvents[type][split[i]])
+                {
+                    subset.Add(evt);
+                }
+            }
 
             RandomEvent randomEvent = null;
             List<int> runningEncounters = new List<int>();
 
-
-
-
-            //Choose random event within subset until finds one that hasn't started already.
-            //This would be like got attacked by robbers, kept running with them near you,
-            //then spawned robbers again, though brutal that would keep to random.
-            int index;
-
-
-            do
-            {
-                //minus 2 because exclusive.
-
-                 index = Random.Range(0, subset.Count - 2);
-
-                if (runningEncounters.Contains(index))
-                {
-                    continue;
-                }
-                else
-                {
-                    runningEncounters.Add(index);
-                }
-
-                randomEvent = subset[index];
-
-            } while (randomEvent.Began);
-
             //If don't care about above or not possible then actually clone it.
-            index = Random.Range(0, subset.Count - 2);
+            int index = Random.Range(0, subset.Count - 2);
             randomEvent = Instantiate(subset[index].gameObject, Vector3.zero, Quaternion.identity).GetComponent<RandomEvent>();
 
             return randomEvent;
