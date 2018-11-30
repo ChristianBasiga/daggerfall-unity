@@ -29,7 +29,6 @@ namespace DaggerfallRandomEncounterEvents
 
         List<RandomEvent> activeEncounters;
 
-        EncounterFilter filter;
 
         //Though honestly I could, also just have anoother layer of keys.
         //but it's a set 3, so fine this way.
@@ -106,12 +105,23 @@ namespace DaggerfallRandomEncounterEvents
             //It could be on manager instead too.
             eventHolder = new GameObject("RandomEncounterHolder");
 
-
-            loadEncounterData();
+            setUpFilters();
             setUpTriggers();
+            setUpFactories();
 
             GameManager.Instance.PlayerEntity.GodMode = true;
             
+        }
+
+        #region Initializing Factories
+
+
+        void setUpFactories()
+        {
+            worldEventsFactory = new RandomEventFactory();
+            fastTravelEventsFactory = new RandomEventFactory();
+            restEventsFactory = new RandomEventFactory();
+            loadEncounterData();
         }
 
         //Initializing the factories from json files.
@@ -121,6 +131,7 @@ namespace DaggerfallRandomEncounterEvents
 
             //Original way was just creating encounter then adding to factory manually
             //but doing via jsons makes it so source code here doesn't have to change
+            Debug.Log("loading encounter data");
             List<string> encounterJSONData = EncounterUtils.loadEncounterData();
 
             foreach (string json in encounterJSONData)
@@ -195,18 +206,20 @@ namespace DaggerfallRandomEncounterEvents
         }
 
 
+#endregion
+
+
         void setUpFilters()
         {
 
             worldFilter = new EncounterFilter();
             fastTravelFilter = new EncounterFilter();
             restFilter = new EncounterFilter();
-
-
+         
             //setting world filters.
             //Initial values of each one would be current state of game
             WeatherType currentWeather = GameManager.Instance.WeatherManager.PlayerWeather.WeatherType;
-
+   
             worldFilter.setFilter("weather", currentWeather.ToString());
         
 
@@ -284,6 +297,9 @@ namespace DaggerfallRandomEncounterEvents
                     return;
                 }
 
+                //So this is null, thank god not factory.
+                //Is closure not happening? 
+                Debug.Log(worldFilter);
                 worldFilter.setFilter("time", "night");
 
 

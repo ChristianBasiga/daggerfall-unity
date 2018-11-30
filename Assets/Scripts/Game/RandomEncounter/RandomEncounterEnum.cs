@@ -9,56 +9,41 @@ namespace DaggerfallRandomEncounterEvents.Enums
 {
    public enum EncounterType
     { 
-        POSITIVE,
-        NEGATIVE,
-        NEUTRAL,
+        Positive,
+        Negative,
+        Neutral,
 
     };
 
 
-    //I could have value be templated, but then the factory won't work.
-    //cause using same factory instance for all of it, or am i?
-    //Different factory instance for each individual trigger?
-    //Then has own set of encounters for that trigger then divided deeper with type and filter.
+
     public class EncounterFilter : System.IEquatable<EncounterFilter>
     {
 
         //Dictionary instead, this way it will work for fast travel encounters too.
         Dictionary<string, string> filters;
 
-        //Could also be straight up variables, only some will be unused depending on context.
 
 
         public EncounterFilter()
         {
-            // For world encounters 0: weather, 1: time:, 2: left dungeon or town, 3: climate(mountains, desert,...)
-            //Above only applies if applying multiple filters to guarantee same hash for abc and bca.
-            //Will think of better way later.
-
             
             filters = new Dictionary<string, string>();
         }
 
         //Returning FilterObjects of each individual split/
-        //Doing this in factory instead.
+        //Consider doing this within factory, so can split and use filters to get rest of random encounters
+        //at the same time to reduce the overall time complexity, not huge change but something.
         public List<EncounterFilter> splitFilters()
         {
-
-
             List<EncounterFilter> splitFilters = new List<EncounterFilter>();
 
-
-            //Less efficient cause then has to then go through the split filters.
             //Also only adds single filter, todo: make it so gets sub combinations too.
             foreach (string filterKey in filters.Keys)
             {
-
-                
                 EncounterFilter split = new EncounterFilter();
                 splitFilters.Add(split);
-
             }
-
 
             return splitFilters;
         }

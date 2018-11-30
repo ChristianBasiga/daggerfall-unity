@@ -69,13 +69,14 @@ namespace DaggerfallRandomEncounterEvents.Utils
         {
             List<string> encounterData = new List<string>();
 
-            Object[] jsonData = Resources.LoadAll("RandomEncounters", typeof(TextAsset));
+            
 
+            Object[] jsonData = Resources.LoadAll("RandomEncounters", typeof(TextAsset));
 
             foreach (Object json in jsonData)
             {
                 TextAsset textAsset = (TextAsset)json;
-                Debug.Log(textAsset.text);
+                //So it loads it in correctly.
                 encounterData.Add(textAsset.text);
             }
 
