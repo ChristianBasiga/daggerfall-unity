@@ -1,3 +1,4 @@
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,9 +7,59 @@ using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.UserInterface;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 
+using DaggerfallRandomEncounterEvents.Enums;
+
 namespace DaggerfallRandomEncounterEvents.Utils
 {
 
+    //Object representing the json file.
+    /// <summary>
+    /// Format would be like this
+    /*
+        {
+            eventId: Robber
+            context: World,
+            type: Negative
+            filters: [
+                {
+                    context: weather,
+                    value: rain,
+                },
+                {
+                    context: climate,
+                    value: mountain
+                }
+
+            ]
+
+        }
+
+
+     */
+    /// </summary>
+    ///
+
+
+    [System.Serializable]
+    public struct EncounterData
+    {
+        public string eventId;
+        public string context;
+       
+        public List<FilterData> filters;
+
+        //For now making it string, then enum.parsing
+        // public EncounterType type;
+        public string type;
+    }
+
+
+    [System.Serializable]
+    public struct FilterData
+    {    
+        public string context;
+        public string value;
+    }
 
 
     public class EncounterUtils
@@ -16,7 +67,6 @@ namespace DaggerfallRandomEncounterEvents.Utils
         //Loading in encouner jsons from resources folder to create prototypes for factory.
         public static List<string> loadEncounterData()
         {
-
             List<string> encounterData = new List<string>();
 
             Object[] jsonData = Resources.LoadAll("RandomEncounters", typeof(TextAsset));
@@ -25,7 +75,7 @@ namespace DaggerfallRandomEncounterEvents.Utils
             foreach (Object json in jsonData)
             {
                 TextAsset textAsset = (TextAsset)json;
-
+                Debug.Log(textAsset.text);
                 encounterData.Add(textAsset.text);
             }
 

@@ -14,6 +14,7 @@ using DaggerfallWorkshop.Game.Weather;
 using DaggerfallRandomEncounterEvents.Utils;
 using DaggerfallRandomEncounterEvents.RandomEvents;
 using DaggerfallRandomEncounterEvents.Enums;
+using System;
 
 namespace DaggerfallRandomEncounterEvents
 {
@@ -22,16 +23,9 @@ namespace DaggerfallRandomEncounterEvents
     {
 
 
-        //Object representing the json file.
-        //Make serializable.
-        public struct EncounterData
-        {
-            public string eventId;
-            public string context;
-            //This will need to be reworked, can't do like would in javascript.
-            public Dictionary<string,string> filter;
-            public EncounterType type;
-        }
+        
+
+
 
         List<RandomEvent> activeEncounters;
 
@@ -41,8 +35,8 @@ namespace DaggerfallRandomEncounterEvents
         //but it's a set 3, so fine this way.
         //
         RandomEventFactory worldEventsFactory;
-        RandomEventFactory restEvents;
-        RandomEventFactory fastTravelEvents;
+        RandomEventFactory restEventsFactory;
+        RandomEventFactory fastTravelEventsFactory;
 
 
         //There will be diff filters for each kind of trigger area.
@@ -112,10 +106,9 @@ namespace DaggerfallRandomEncounterEvents
             //It could be on manager instead too.
             eventHolder = new GameObject("RandomEncounterHolder");
 
-            setUpEncounters();
+
+            loadEncounterData();
             setUpTriggers();
-
-
 
             GameManager.Instance.PlayerEntity.GodMode = true;
             
@@ -124,40 +117,80 @@ namespace DaggerfallRandomEncounterEvents
         //Initializing the factories from json files.
         void loadEncounterData()
         {
+            //Time to test this.
 
             //Original way was just creating encounter then adding to factory manually
             //but doing via jsons makes it so source code here doesn't have to change
-
             List<string> encounterJSONData = EncounterUtils.loadEncounterData();
 
             foreach (string json in encounterJSONData)
             {
-
                 //Loads json into object.
-                EncounterData encounterData = encounterData = (EncounterData)JsonUtility.FromJson<EncounterData>(json);
+                EncounterData encounterData = (EncounterData)JsonUtility.FromJson<EncounterData>(json);
 
-
-                //processes object.
-                RandomEvent randomEvent;
-
-                
-                if (encounterData.eventId == "Summoning")
+                try
                 {
-                    randomEvent = gameObject.AddComponent<SummoningEvent>();
+                    #region  Testing for valid input.
+
+
+                    //Will throw exception if invalid EncounterType
+                    EncounterType type = (EncounterType)Enum.Parse(typeof(EncounterType), encounterData.type);
+
+                    #endregion
+                    //processes object.
+                    RandomEvent randomEvent = null;
+
+
+                    if (encounterData.eventId == "Summoning")
+                    {
+                        randomEvent = gameObject.AddComponent<SummoningEvent>();
+                    }
+
+
+                    //Then check for each one.
+
+                    //Instantiates filter using filter data within json object.
+                    EncounterFilter filter = new EncounterFilter();
+
+                    foreach (FilterData data in encounterData.filters)
+                    {
+                        filter.setFilter(data.context, data.value);
+                    }
+
+
+
+
+                    //Adds to respective factory.
+                    switch (encounterData.context)
+                    {
+                        case "World":
+                            worldEventsFactory.addRandomEvent(type, randomEvent, filter);
+                            break;
+
+                        case "Rest":
+                            restEventsFactory.addRandomEvent(type, randomEvent, filter);
+                            break;
+
+                        case "Fast Travel":
+                            fastTravelEventsFactory.addRandomEvent(type, randomEvent, filter);
+                            break;
+
+                        default:
+
+                            //Throws exception, maybe in future make even the factories reside in dictionary
+                            //to further make it extensible.
+                            throw new Exception("Invalid context");
+                    }
+
                 }
-                //Then check for each one.
-
-                //Instantiates filter using filter within object.
-                EncounterFilter filter = new EncounterFilter();
-
-                foreach (string filterSet in encounterData.filter)
+                //Will make more specific catches later.
+                catch (Exception exception)
                 {
-                    filter.setFilter
+                    //Will make a toString for it later so this is better, but that's all polish.
+                    Debug.LogError(exception.Message);
                 }
-
-
-
             }
+                
 
         }
 
@@ -175,6 +208,8 @@ namespace DaggerfallRandomEncounterEvents
             WeatherType currentWeather = GameManager.Instance.WeatherManager.PlayerWeather.WeatherType;
 
             worldFilter.setFilter("weather", currentWeather.ToString());
+        
+
 
             //lastBuilding should also be from last save, so in my case dungeon, but not sure what would be by default
             //cause not currently serialized I believe? I'll have to do more digging.
@@ -196,32 +231,7 @@ namespace DaggerfallRandomEncounterEvents
             //Could see how this would do with considering rep, maybe like faction tight with?
         }
 
-        void setUpEncounters()
-        {
-            //This would explode in size, could just have single object for all of it.
-            //Then the components themselves just gets destroyed.
-
-            //Perhaps take note from Parser in quest machine and parse a text file with this information
-            //and instantiate accordingly? Only outlier here is the component adding.
-            //That has to be a switch / if else, so not super clean but reduces duplicate code.
-            //And makes it easier to add an event as a possibility under different constraints too.
-
-
-            //That only takes out GO part, filter shit still repeated and can end up being big.
-
-            //Need to create prefabs of these, then dictionary
-
-            EncounterFilter filter = new EncounterFilter();
-            filter.setFilter("time", "night");
-            RobbersEvent robbersEvent = eventHolder.AddComponent<RobbersEvent>();
-            worldEventsFactory.addRandomEvent(EncounterType.NEGATIVE, robbersEvent, filter);
-
-
-           // SummoningEvent summoningEvent = eventHolder.AddComponent<SummoningEvent>();
-           // worldFilter.addRandomEvent(EncounterType)
-            
-        }
-
+        
 
         //For adding onto active.
         private void addEncounter(RandomEvent evt)
@@ -305,11 +315,6 @@ namespace DaggerfallRandomEncounterEvents
         {
             GameObject randomEncounter = new GameObject("RandomEncounterManager");
             randomEncounter.AddComponent<RandomEncounterManager>();
-
-            //after finishing, set the mod's IsReady flag to true.
-            // StartCoroutine("start");
-
-            //So what should happen here, is loading up all of the encounters through their json files.
 
 
             ModManager.Instance.GetMod(initParams.ModTitle).IsReady = true;
