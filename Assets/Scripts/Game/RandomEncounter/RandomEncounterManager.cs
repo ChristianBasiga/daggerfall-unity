@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Linq;
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,23 +13,20 @@ using DaggerfallWorkshop.Game.Utility.ModSupport;   //required for modding featu
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Utility;
 using DaggerfallWorkshop.Game.Weather;
-using DaggerfallRandomEncounterEvents.Utils;
-using DaggerfallRandomEncounterEvents.RandomEvents;
-using DaggerfallRandomEncounterEvents.Enums;
+using DaggerfallRandomEncountersMod.Utils;
+using DaggerfallRandomEncountersMod.RandomEncounters;
+using DaggerfallRandomEncountersMod.Enums;
 using System;
 
-namespace DaggerfallRandomEncounterEvents
+namespace DaggerfallRandomEncountersMod
 {
     //Only this mod uses this, others would use factory directly.
     public class RandomEncounterManager : MonoBehaviour
     {
-
-
         
+        static Dictionary<string, Type> randomEncounterCache;
 
-
-
-        List<RandomEvent> activeEncounters;
+        List<RandomEncounters.RandomEncounter> activeEncounters;
 
 
         //Though honestly I could, also just have anoother layer of keys.
@@ -99,12 +98,14 @@ namespace DaggerfallRandomEncounterEvents
         void Start()
         {
             worldEventsFactory = gameObject.AddComponent<RandomEventFactory>();
-            activeEncounters = new List<RandomEvent>();
+            activeEncounters = new List<RandomEncounters.RandomEncounter>();
             //For now just adding encounters directly.
 
             //It could be on manager instead too.
             eventHolder = new GameObject("RandomEncounterHolder");
 
+
+            //Filters happens at start of game loaded.
             setUpFilters();
             setUpTriggers();
             setUpFactories();
@@ -121,6 +122,8 @@ namespace DaggerfallRandomEncounterEvents
             worldEventsFactory = new RandomEventFactory();
             fastTravelEventsFactory = new RandomEventFactory();
             restEventsFactory = new RandomEventFactory();
+
+            
             loadEncounterData();
         }
 
@@ -132,12 +135,12 @@ namespace DaggerfallRandomEncounterEvents
             //Original way was just creating encounter then adding to factory manually
             //but doing via jsons makes it so source code here doesn't have to change
             Debug.Log("loading encounter data");
-            List<string> encounterJSONData = EncounterUtils.loadEncounterData();
+            Dictionary<string, string> encounterJSONData = EncounterUtils.loadEncounterData();
 
-            foreach (string json in encounterJSONData)
+            foreach (string jsonFile in encounterJSONData.Keys)
             {
                 //Loads json into object.
-                EncounterData encounterData = (EncounterData)JsonUtility.FromJson<EncounterData>(json);
+                EncounterData encounterData = (EncounterData)JsonUtility.FromJson<EncounterData>(encounterJSONData[jsonFile]);
 
                 try
                 {
@@ -149,9 +152,14 @@ namespace DaggerfallRandomEncounterEvents
 
                     #endregion
                     //processes object.
-                    RandomEvent randomEvent = null;
+                    RandomEncounters.RandomEncounter randomEvent = null;
 
 
+                    //Will also throw exception if isn't an option we have.
+                    //So here lies another problem with extension, so need dictionary callback.
+                    //with the manager as argument to add the component.
+                    //Then their own script can reference the manager and set the valid encounters.
+                    //Or they can even make their own instance of the manager, add the stuff, then invoke the set up.
                     if (encounterData.eventId == "Summoning")
                     {
                         randomEvent = gameObject.AddComponent<SummoningEvent>();
@@ -190,8 +198,17 @@ namespace DaggerfallRandomEncounterEvents
 
                             //Throws exception, maybe in future make even the factories reside in dictionary
                             //to further make it extensible.
-                            throw new Exception("Invalid context");
+                            throw new Exception("Invalid context: " + encounterData.context);
                     }
+
+                }
+                catch(ArgumentException argExcept)
+                {
+
+                    //Then will actually log it for ourselves later on, this is all polish.
+
+                    //In this case can only mean that the value they put in json was invalid.
+                    Debug.LogError("Failed to load encounter from " + jsonFile);
 
                 }
                 //Will make more specific catches later.
@@ -247,19 +264,19 @@ namespace DaggerfallRandomEncounterEvents
         
 
         //For adding onto active.
-        private void addEncounter(RandomEvent evt)
+        private void addEncounter(RandomEncounters.RandomEncounter evt)
         {
 
             //This part will also be repeated.
             if (evt != null)
             {
-                evt.OnBegin += (RandomEvent a) =>
+                evt.OnBegin += (RandomEncounters.RandomEncounter a) =>
                 {
                     activeEncounters.Add(evt);
                 };
 
 
-                evt.OnEnd += (RandomEvent a) =>
+                evt.OnEnd += (RandomEncounters.RandomEncounter a) =>
                 {
                     //Once encounter over, remove from active encounters.
                     activeEncounters.Remove(a);
@@ -303,7 +320,7 @@ namespace DaggerfallRandomEncounterEvents
                 worldFilter.setFilter("time", "night");
 
 
-                RandomEvent evt = worldEventsFactory.getRandomEvent(worldFilter);
+                RandomEncounters.RandomEncounter evt = worldEventsFactory.getRandomEvent(worldFilter);
 
                 addEncounter(evt);
                 
@@ -329,11 +346,56 @@ namespace DaggerfallRandomEncounterEvents
         [Invoke(StateManager.StateTypes.Game, 0)]
         public static void Init(InitParams initParams)
         {
+
+
+            //Adds object of manager into scene.
             GameObject randomEncounter = new GameObject("RandomEncounterManager");
+
             randomEncounter.AddComponent<RandomEncounterManager>();
 
 
+            //Initializes cache with all RandomEncounters available.
+            initRandomEncounterCache();
+
+
             ModManager.Instance.GetMod(initParams.ModTitle).IsReady = true;
+
+        }
+
+        private static void initRandomEncounterCache()
+        {
+            foreach (System.Reflection.Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+
+                //Goes through all the types in currenty assembly that inherit from RandomEncounter directly or indirectly.
+                foreach (Type currentType in assembly.GetTypes().Where(_ => typeof(RandomEncounter).IsAssignableFrom(_)))
+                {
+                    //Gets all attributes of this type.
+                    var attributes = currentType.GetCustomAttributes(typeof(RandomEncounterIdentifierAttribute), false);
+
+                    if (attributes.Length > 0)
+                    {
+                        //Only first, cause theres should only be one kind of this attribute on the class.
+                        var targetAttribute = attributes.First() as RandomEncounterIdentifierAttribute;
+
+
+                        if (randomEncounterCache.ContainsKey(targetAttribute.EncounterId))
+                        {
+                           string err = ("There is already a RandomEncounter with the id " + targetAttribute.EncounterId + " in the cache\n " +
+                                "Please make sure all of your custom RandomEncounters have unique EncounterIds");
+
+                            Debug.LogError(err);
+
+                            //Throw exception cause shouldn't continue, or should it? It won't behave like they would expect if don't crash it.
+                            throw new Exception(err);
+                        }
+
+
+                        //Adds encounter into cache.
+                        randomEncounterCache.Add(targetAttribute.EncounterId, currentType);
+                    }
+                }
+            }
 
         }
 
