@@ -1,28 +1,43 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using DaggerfallRandomEncounterEvents.Enums;
+using DaggerfallRandomEncountersMod.Enums;
 using DaggerfallWorkshop.Game;
 
-namespace DaggerfallRandomEncounterEvents.RandomEvents
+using DaggerfallRandomEncountersMod.Utils;
+using DaggerfallWorkshop.Game.Utility.ModSupport;
+
+namespace DaggerfallRandomEncountersMod.RandomEncounters
 {
+
+    [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple= false)]
+    public class RandomEncounterIdentifierAttribute :  System.Attribute{
+
+        public string EncounterId { get; set; }
+    }
+
+
 
     //Any kind of event will extend from here.
     //The base ones part of this will have the Positive Neutral Negative, can move to other files later.
     //Really only need base, since no difference in representation from positive, neutral, and negative.
     //those enums will instead of be used in the factory.
-    public abstract class RandomEvent : MonoBehaviour
+    public abstract class RandomEncounter : MonoBehaviour
     {
         //Will pass itself into event so onBegins know specifically what event began.
-        public delegate void OnBeginEventHandler(RandomEvent evt);
+        public delegate void OnBeginEventHandler(RandomEncounter evt);
         public event OnBeginEventHandler OnBegin;
 
-        public delegate void OnEndEventHandler(RandomEvent evt);
+        public delegate void OnEndEventHandler(RandomEncounter evt);
         public event OnEndEventHandler OnEnd;
 
         //May add more params her later.
-        public delegate void OnTickEventHandler(RandomEvent evt);
+        public delegate void OnTickEventHandler(RandomEncounter evt);
         public event OnTickEventHandler OnTick;
+
+
+        protected string warning;
+        protected string closure;
 
         bool began = false;
 
@@ -37,7 +52,7 @@ namespace DaggerfallRandomEncounterEvents.RandomEvents
         public virtual void begin() {
 
             began = true;
-
+            Debugging.AlertPlayer(warning);
 
 
             if (OnBegin != null)
@@ -54,9 +69,6 @@ namespace DaggerfallRandomEncounterEvents.RandomEvents
             if (began)
             {
 
-                //Need to check distance to player, then despawn accordingly.
-                //Could be lazy and set timer instead.
-
                 if (OnTick != null)
                 {
 
@@ -71,9 +83,11 @@ namespace DaggerfallRandomEncounterEvents.RandomEvents
                 OnEnd(this);
             }
 
+            Debugging.AlertPlayer(closure);
+
             began = false;
-            Debug.Log("random event ended");
-            Destroy(this);
+          //  Debug.Log("random event ended");
+            Destroy(this.gameObject);
 
 
         }

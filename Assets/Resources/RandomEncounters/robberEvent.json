@@ -1,0 +1,12 @@
+{
+
+    "encounterId": "Robbers",
+    "context": "World",
+    "type": "Negative",
+    "filter": [
+        {
+            "context": "time",
+            "value": "night"
+        }
+    ]
+}

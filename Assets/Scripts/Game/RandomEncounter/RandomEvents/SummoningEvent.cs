@@ -6,9 +6,9 @@ using DaggerfallWorkshop;
 using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Utility;
-using DaggerfallRandomEncounterEvents.Utils;
+using DaggerfallRandomEncountersMod.Utils;
 
-namespace DaggerfallRandomEncounterEvents.RandomEvents
+namespace DaggerfallRandomEncountersMod.RandomEncounters
 {
 
     //This is the event where Wizards will be spawned passive.
@@ -17,7 +17,8 @@ namespace DaggerfallRandomEncounterEvents.RandomEvents
     //  Attack Wizards before summon.
     //  Attack Wizards and Demon after summon.
     //  Ignore.
-    public class SummoningEvent : RandomEvent
+    [RandomEncounterIdentifier(EncounterId = "Summoners")]
+    public class SummoningEvent : RandomEncounter
     {
 
 
@@ -78,10 +79,12 @@ namespace DaggerfallRandomEncounterEvents.RandomEvents
         }
 
         // Use this for initialization
-        void Start()
+        void OnEnable()
         {
 
             timeLeftToSummon = summoningTime;
+            warning = "You notice mages summoning something";
+            closure = "Stopped the summoning";
          //   summonedDemon = false;
             
         }

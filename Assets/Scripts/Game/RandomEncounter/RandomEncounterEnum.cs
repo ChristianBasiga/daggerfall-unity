@@ -4,9 +4,11 @@ using UnityEngine;
 using DaggerfallWorkshop.Game.Weather;
 using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop;
+using DaggerfallWorkshop.Game.Utility.ModSupport;
 
-namespace DaggerfallRandomEncounterEvents.Enums
+namespace DaggerfallRandomEncountersMod.Enums
 {
+    /*
    public enum EncounterType
     { 
         Positive,
@@ -14,6 +16,49 @@ namespace DaggerfallRandomEncounterEvents.Enums
         Neutral,
 
     };
+    */  
+    //Enums don't work with mvc compiler, it seemed to have worked fine, but just incase transfroming to class.
+    //Didn't fix problm, but just incase it will be an issue later, made class to simulate an enum via dictionary.
+    //was going to initially be jut static variables with same names, but for parsing json easier
+    //doing it like this.
+
+
+    public class EncounterType :  System.IEquatable<EncounterType>
+    {
+        private string id;
+
+
+        //Dictionary to make taking json data into encounter type easier.
+        public static readonly Dictionary<string, EncounterType> defaultTypes = new Dictionary<string, EncounterType>()
+        {
+            {"Positive" , new EncounterType("Positive") },
+            {"Negative" , new EncounterType("Negative") },
+            {"Neutral" , new EncounterType("Neutral") },
+        };
+
+        public EncounterType(string id)
+        {
+            this.id = id;
+        }
+
+        public bool Equals(EncounterType type)
+        {
+
+            return type.id == id;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals((EncounterType)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return id.GetHashCode();
+        }
+
+
+    }
 
 
 
@@ -34,28 +79,23 @@ namespace DaggerfallRandomEncounterEvents.Enums
         //Returning FilterObjects of each individual split/
         //Consider doing this within factory, so can split and use filters to get rest of random encounters
         //at the same time to reduce the overall time complexity, not huge change but something.
+        
         public List<EncounterFilter> splitFilters()
         {
-            List<EncounterFilter> splitFilters = new List<EncounterFilter>();
+            List<EncounterFilter> split = new List<EncounterFilter>();
 
             //Also only adds single filter, todo: make it so gets sub combinations too.
-            foreach (string filterKey in filters.Keys)
+            foreach (KeyValuePair<string,string> entry in filters)
             {
-                EncounterFilter split = new EncounterFilter();
-                splitFilters.Add(split);
+                EncounterFilter filter = new EncounterFilter();
+                filter.setFilter(entry.Key, entry.Value);
+                split.Add(filter);
             }
 
-            return splitFilters;
+            return split;
         }
-
-        public Dictionary<string,string> Filters
-        {
-            get
-            {
-                return filters;
-            }
-        }
-
+        
+       
 
         //Note: Change this to property later, but not prio.
         public string getFilter(string index)
@@ -70,20 +110,21 @@ namespace DaggerfallRandomEncounterEvents.Enums
 
         public bool Equals(EncounterFilter other)
         {
-            foreach (string key in other.filters.Keys)
+            
+            foreach (KeyValuePair<string,string> entry in other.filters)
             {
                 //If don't share a key, then not equal.
-                if (!filters.ContainsKey(key))
+                if (!filters.ContainsKey(entry.Key))
                 {
                     return false; 
                 }
                 //If witin that shared key, their values not same, then not equal.
-                else if (filters[key] != other.filters[key])
+                else if (filters[entry.Key] != entry.Value)
                 {
                     return false;
                 }
             }
-
+            
             return true;
 
         }
@@ -95,12 +136,13 @@ namespace DaggerfallRandomEncounterEvents.Enums
         public override int GetHashCode()
         {
             string totalFilter = "";
-            foreach (string key in filters.Keys)
+            
+            foreach (KeyValuePair<string,string> entry in filters)
             {
 
-                totalFilter += filters[key];
+                totalFilter += entry.Value;
             }
-
+            
 
             return totalFilter.GetHashCode();
             

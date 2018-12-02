@@ -7,9 +7,11 @@ using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.UserInterface;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 
-using DaggerfallRandomEncounterEvents.Enums;
+using DaggerfallRandomEncountersMod.Enums;
+using DaggerfallWorkshop.Game.Utility.ModSupport;
 
-namespace DaggerfallRandomEncounterEvents.Utils
+
+namespace DaggerfallRandomEncountersMod.Utils
 {
 
     //Object representing the json file.
@@ -41,21 +43,25 @@ namespace DaggerfallRandomEncounterEvents.Utils
 
 
     [System.Serializable]
-    public struct EncounterData
+    public class EncounterData
     {
-        public string eventId;
+        public string encounterId;
         public string context;
-       
-        public List<FilterData> filters;
+
+        //It it because of linq? Nope
+        public List<FilterData> filter;
+
 
         //For now making it string, then enum.parsing
         // public EncounterType type;
         public string type;
+
+        
     }
 
 
     [System.Serializable]
-    public struct FilterData
+    public class FilterData
     {    
         public string context;
         public string value;
@@ -130,6 +136,11 @@ namespace DaggerfallRandomEncounterEvents.Utils
 
         public static void AlertPlayer(string message)
         {
+            if (message == null)
+            {
+                Debug.Log("message is null");
+                return;
+            }
             DaggerfallUI.AddHUDText(message, 1.5f);
         }
     }
