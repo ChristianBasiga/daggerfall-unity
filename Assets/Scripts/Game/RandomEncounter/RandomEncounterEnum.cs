@@ -17,10 +17,10 @@ namespace DaggerfallRandomEncountersMod.Enums
 
     };
     */  
-    //Enums don't work with mvc compiler, it seemed to have worked fine, but just incase transfroming to class.
-    //Didn't fix problm, but just incase it will be an issue later, made class to simulate an enum via dictionary.
-    //was going to initially be jut static variables with same names, but for parsing json easier
-    //doing it like this.
+    //Enums don't work with mvc compiler, so have to simulate.
+
+
+  
 
 
     public class EncounterType :  System.IEquatable<EncounterType>

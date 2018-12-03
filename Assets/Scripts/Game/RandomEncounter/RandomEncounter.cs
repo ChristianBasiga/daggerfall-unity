@@ -40,12 +40,21 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         protected string closure;
 
         bool began = false;
+        protected bool effectReputation;
 
         public bool Began
         {
             get
             {
                 return began;
+            }
+        }
+
+        public bool EffectReputation
+        {
+            get
+            {
+                return effectReputation;
             }
         }
 

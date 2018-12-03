@@ -26,7 +26,18 @@ namespace DaggerfallRandomEncountersMod
 
         static Dictionary<string, System.Type> randomEncounterCache;
 
-        List<RandomEncounters.RandomEncounter> activeEncounters;
+
+
+        #region Contexts
+        const string World = "World";
+        const string Resting = "Resting";
+        const string FastTravel = "Fast Travel";
+
+#endregion
+
+
+        //Also static because it is activeEncounters in game, that doesn't change.
+        static List<RandomEncounters.RandomEncounter> activeEncounters;
         
 
         //Though honestly I could, also just have anoother layer of keys.
@@ -103,164 +114,32 @@ namespace DaggerfallRandomEncountersMod
         void Start()
         {
             activeEncounters = new List<RandomEncounters.RandomEncounter>();
-            //For now just adding encounters directly.
-            
-
-
-
-
             //Filters happens at start of game loaded.
-            setUpFilters();
-            setUpTriggers();
+            initStates();
+            setUpObservers();
             setUpFactories();
 
             GameManager.Instance.PlayerEntity.GodMode = true;
             
         }
 
-        #region Initializing Factories
-
-
-        void setUpFactories()
-        {
-            worldEventsFactory = new RandomEncounterFactory();
-            fastTravelEventsFactory = new RandomEncounterFactory();
-            restEventsFactory = new RandomEncounterFactory();
-
-            
-            loadEncounterData();
-        }
-
-        //Initializing the factories from json files.
-        void loadEncounterData()
-        {
-
-           List<string> encounterJSONData = EncounterUtils.loadEncounterData();
-            foreach (string jsonFile in encounterJSONData)
-            {
-
-                //Loads json into object.
-                EncounterData encounterData = JsonConvert.DeserializeObject<EncounterData>(jsonFile);
-                //
-                //EncounterData encounterData = JsonUtility.FromJson<EncounterData>(jsonFile);
-                Debug.LogError(jsonFile);
-                try
-                {
-                    #region  Testing for valid input.
-
-
-                    //Will throw exception if invalid EncounterType
-
-                    //Switched EncounterType to class earlier to make sure doesn't conflict with mpc compiler, it didn't so may just convert this back.
-                     if (!EncounterType.defaultTypes.ContainsKey(encounterData.type))
-                     {
-                         throw new System.Exception("This is not a valid EncounterType: " + encounterData.type);
-                     }
-
-                     EncounterType type = EncounterType.defaultTypes[encounterData.type];
-
-
-                    //  EncounterType type = (EncounterType)System.Enum.Parse(typeof(EncounterType), encounterData.type);
-                    #endregion
-                    //processes object.
-                    //RandomEncounters.RandomEncounter randomEvent = null;
-
-                    if (!randomEncounterCache.ContainsKey(encounterData.encounterId))
-                    {
-                        throw new System.Exception("There is no RandomEncounter with the id: " + encounterData.encounterId);
-                    }
-
-
-                    
-                    //All of the prototypes are components attached to the manager itself.
-                    //Wait this is bad, that means will instantiate the GameObject.
-                    var randomEncounterToLoad = randomEncounterCache[encounterData.encounterId];
-                    GameObject holder = new GameObject("Random Encounter:" + encounterData.encounterId);
-                    RandomEncounter randomEvent = holder.AddComponent(randomEncounterToLoad) as RandomEncounter;
-                  //  randomEvent = holder.GetComponent<RandomEncounter>();
-                    
-                    //Instantiates filter using filter data within json object.
-                    EncounterFilter filter = new EncounterFilter();
 
 
 
 
-                    
-                    foreach (FilterData data in encounterData.filter)
-                    {
-
-                        filter.setFilter(data.context, data.value);
-
-                    }
-                    
-
-
-
-                    //Adds to respective factory.
-                    switch (encounterData.context)
-                    {
-                        case "World":
-                            Debug.LogError("inserting into world");
-                            worldEventsFactory.addRandomEvent(type, randomEvent, filter);
-                            break;
-
-                        case "Rest":
-                            Debug.LogError("inserting into rest");
-
-                            restEventsFactory.addRandomEvent(type, randomEvent, filter);
-                            break;
-
-                        case "Fast Travel":
-                            Debug.LogError("inserting into fast travel");
-
-                            fastTravelEventsFactory.addRandomEvent(type, randomEvent, filter);
-                            break;
-
-                        default:
-
-                            //Throws exception, maybe in future make even the factories reside in dictionary
-                            //to further make it extensible.
-                            throw new System.Exception("Invalid context: " + encounterData.context);
-                    }
-
-                }
-                catch(System.ArgumentException argExcept)
-                {
-
-                    //Then will actually log it for ourselves later on, this is all polish.
-
-                    //In this case can only mean that the value they put in json was invalid.
-                    Debug.LogError("Failed to load encounter from " + jsonFile);
-
-                }
-                //Will make more specific catches later.
-                catch (System.Exception exception)
-                {
-                    //Will make a toString for it later so this is better, but that's all polish.
-                    Debug.LogError("I happen?" + exception.Message);
-                }
-            }
-                
-
-        }
-
-    
-#endregion
-
-
-        void setUpFilters()
+        void initStates()
         {
 
             worldFilter = new EncounterFilter();
             fastTravelFilter = new EncounterFilter();
             restFilter = new EncounterFilter();
-         
+
             //setting world filters.
             //Initial values of each one would be current state of game
             WeatherType currentWeather = GameManager.Instance.WeatherManager.PlayerWeather.WeatherType;
-   
+
             worldFilter.setFilter("weather", currentWeather.ToString());
-        
+
 
 
             //lastBuilding should also be from last save, so in my case dungeon, but not sure what would be by default
@@ -272,18 +151,165 @@ namespace DaggerfallRandomEncountersMod
             worldFilter.setFilter("time", currentTime.IsDay ? "Day" : "Night");
 
 
-            //This would depend on the reputation array, whatever the max is.
-            
-            worldFilter.setFilter("faction", "Merhcants");
+            updateReputationObserver();
 
-            //TODO: set up filter for fast travel and resting.
-
-
-            //Then filters like player rep will be either at trigger or within each encounter instead.
-            //Could see how this would do with considering rep, maybe like faction tight with?
         }
 
         
+
+        void updateReputationObserver()
+        {
+
+
+            short[] reputation = GameManager.Instance.PlayerEntity.SGroupReputations;
+
+            int maxIndex = 0;
+            int max = reputation[0];
+
+            for (int i = 1; i < reputation.Length; ++i)
+            {
+
+              
+
+                if (reputation[i] > max)
+                {
+                    maxIndex = i;
+                    max = reputation[i];
+                }
+            }
+
+            string faction = "Commoners";
+
+            switch (maxIndex)
+            {
+
+                case 1:
+                    faction = "Merchants";
+                    break;
+
+                case 2:
+                    faction = "Nobility";
+                    break;
+
+                case 3:
+                    faction = "Scholars";
+                    break;
+                case 4:
+                    faction = "Underworld";
+                    break;
+
+            }
+
+            worldFilter.setFilter("faction", faction);
+        }
+
+        //Basically set up observers
+        void setUpObservers()
+        {
+
+            //Anytime reputation changed should also know, this will added to onEnd() of encounter
+            //check and update reputation.
+
+            //When leave areas.
+            PlayerEnterExit.OnTransitionDungeonExterior += (PlayerEnterExit.TransitionEventArgs args) =>
+            {
+
+
+                worldFilter.setFilter("lastInside", "dungeon");
+                trySpawnEncounter(World);
+            };
+
+
+            PlayerEnterExit.OnTransitionDungeonExterior += (PlayerEnterExit.TransitionEventArgs args) =>
+            {
+
+
+                worldFilter.setFilter("lastInside", "building");
+                trySpawnEncounter(World);
+            };
+
+
+            WeatherManager.OnWeatherChange += (WeatherType newWeather) =>
+            {
+                worldFilter.setFilter("weather", newWeather.ToString());
+                trySpawnEncounter(World);
+            };
+
+
+            WorldTime.OnNewDay += () =>
+            {
+                worldFilter.setFilter("time", "day");
+                trySpawnEncounter(World);
+            };
+
+            WorldTime.OnDawn += () =>
+            {
+                worldFilter.setFilter("time", "dawn");
+                trySpawnEncounter(World);
+            };
+
+            
+            WorldTime.OnMidnight += () =>
+            {
+
+                //This filter is essentially state of game and adds what just happened to it.
+
+                //So keeps what was there before and sets specific spot.
+                worldFilter.setFilter("time", "midnight");
+                trySpawnEncounter(World);
+            };
+
+            //When hits dusk, look for where I can force this change.
+            //So the these are essentially the observers that updates filters for encounter.
+
+            WorldTime.OnDusk += () =>
+            {
+                //If more than 2 encounters currently active, don't make more?
+                if (activeEncounters.Count > 2)
+                {
+                    return;
+                }
+
+              
+                worldFilter.setFilter("time", "night");
+                trySpawnEncounter(World);
+                
+            };
+
+        }
+
+#region Spawning Encounters
+        void trySpawnEncounter(string s)
+        {
+
+            bool dontSpawn = (Random.Range(1, 100) & 1) == 0;
+
+            if (dontSpawn)
+            {
+                return;
+            }
+
+            RandomEncounter encounter = null;
+            switch (s)
+            {
+                case World:
+
+                    encounter = worldEventsFactory.getRandomEvent(worldFilter);
+                    break;
+
+                case Resting:
+                    encounter = restEventsFactory.getRandomEvent(restFilter);
+                    break;
+
+                case FastTravel:
+                    encounter = fastTravelEventsFactory.getRandomEvent(fastTravelFilter);
+                    break;
+
+            }
+
+            addEncounter(encounter);
+        }
+
 
         //For adding onto active.
         private void addEncounter(RandomEncounters.RandomEncounter evt)
@@ -307,6 +333,12 @@ namespace DaggerfallRandomEncountersMod
                     {
                         activeEncounters.Remove(a);
                     }
+
+                    //Because if encounter didn't effect reputation don't want to go through time to update it.
+                    if (a.EffectReputation)
+                    {
+                        updateReputationObserver();
+                    }
                 };
 
                 //Begin the encounter
@@ -314,46 +346,8 @@ namespace DaggerfallRandomEncountersMod
             }
         }
 
-        //Basically set up observers
-        void setUpTriggers()
-        {
-            
-            WorldTime.OnMidnight += () =>
-            {
 
-                //This filter is essentially state of game and adds what just happened to it.
-
-                //So keeps what was there before and sets specific spot.
-
-
-            };
-
-            //When hits dusk, look for where I can force this change.
-            //So the these are essentially the observers that updates filters for encounter.
-
-
-
-            WorldTime.OnDusk += () =>
-            {
-                //If more than 2 encounters currently active, don't make more?
-                if (activeEncounters.Count > 2)
-                {
-                    return;
-                }
-
-              
-                worldFilter.setFilter("time", "night");
-
-
-                RandomEncounters.RandomEncounter evt = worldEventsFactory.getRandomEvent(worldFilter);
-
-                addEncounter(evt);
-                
-            };
-
-    
-        }
-
+#endregion
         // Update is called once per frame
         void Update()
         {
@@ -390,8 +384,9 @@ namespace DaggerfallRandomEncountersMod
             //Initializes cache with all RandomEncounters available.
 
             Mod mod = initParams.Mod;
-
+            
             initRandomEncounterCache();
+            setUpFactories();
 
 
             //Okay so all of the classes need to be taken via asset
@@ -450,6 +445,127 @@ namespace DaggerfallRandomEncountersMod
             }
 
         }
-        
+
+
+        #region Initializing Factories
+
+
+        private static void setUpFactories()
+        {
+            worldEventsFactory = new RandomEncounterFactory();
+            fastTravelEventsFactory = new RandomEncounterFactory();
+            restEventsFactory = new RandomEncounterFactory();
+
+
+            loadEncounterData();
+        }
+
+        //Initializing the factories from json files.
+        private static void loadEncounterData()
+        {
+
+            List<string> encounterJSONData = EncounterUtils.loadEncounterData();
+            foreach (string jsonFile in encounterJSONData)
+            {
+
+                //Loads json into object.
+                EncounterData encounterData = JsonConvert.DeserializeObject<EncounterData>(jsonFile);
+                //EncounterData encounterData = JsonUtility.FromJson<EncounterData>(jsonFile);
+
+                try
+                {
+
+
+                 
+                    if (!EncounterType.defaultTypes.ContainsKey(encounterData.type))
+                    {
+                        throw new System.Exception("This is not a valid EncounterType: " + encounterData.type);
+                    }
+
+                    EncounterType type = EncounterType.defaultTypes[encounterData.type];
+
+                    if (!randomEncounterCache.ContainsKey(encounterData.encounterId))
+                    {
+                        throw new System.Exception("There is no RandomEncounter with the id: " + encounterData.encounterId);
+                    }
+
+
+
+                    //All of the prototypes are components attached to the manager itself.
+                    //Wait this is bad, that means will instantiate the GameObject.
+                    var randomEncounterToLoad = randomEncounterCache[encounterData.encounterId];
+                    GameObject holder = new GameObject("Random Encounter:" + encounterData.encounterId);
+                    RandomEncounter randomEvent = holder.AddComponent(randomEncounterToLoad) as RandomEncounter;
+                    //  randomEvent = holder.GetComponent<RandomEncounter>();
+
+                    //Instantiates filter using filter data within json object.
+                    EncounterFilter filter = new EncounterFilter();
+
+
+
+
+
+                    foreach (FilterData data in encounterData.filter)
+                    {
+
+                        filter.setFilter(data.context, data.value);
+
+                    }
+
+
+
+
+                    //Adds to respective factory.
+                    switch (encounterData.context)
+                    {
+                        case World:
+                            Debug.LogError("inserting into world");
+                            worldEventsFactory.addRandomEvent(type, randomEvent, filter);
+                            break;
+
+                        case Resting:
+                            Debug.LogError("inserting into rest");
+
+                            restEventsFactory.addRandomEvent(type, randomEvent, filter);
+                            break;
+
+                        case FastTravel:
+                            Debug.LogError("inserting into fast travel");
+
+                            fastTravelEventsFactory.addRandomEvent(type, randomEvent, filter);
+                            break;
+
+                        default:
+
+                            //Throws exception, maybe in future make even the factories reside in dictionary
+                            //to further make it extensible.
+                            throw new System.Exception("Invalid context: " + encounterData.context);
+                    }
+
+                }
+                catch (System.ArgumentException argExcept)
+                {
+
+                    //Then will actually log it for ourselves later on, this is all polish.
+
+                    //In this case can only mean that the value they put in json was invalid.
+                    Debug.LogError("Failed to load encounter from " + jsonFile);
+
+                }
+                //Will make more specific catches later.
+                catch (System.Exception exception)
+                {
+                    //Will make a toString for it later so this is better, but that's all polish.
+                    Debug.LogError("I happen?" + exception.Message);
+                }
+            }
+
+
+        }
+
+
+        #endregion
+
     }
 }
+ 

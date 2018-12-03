@@ -47,6 +47,7 @@ namespace DaggerfallRandomEncountersMod.Utils
     {
         public string encounterId;
         public string context;
+        public string type;
 
         //It it because of linq? Nope
         public List<FilterData> filter;
@@ -54,7 +55,6 @@ namespace DaggerfallRandomEncountersMod.Utils
 
         //For now making it string, then enum.parsing
         // public EncounterType type;
-        public string type;
 
         
     }
