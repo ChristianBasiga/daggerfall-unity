@@ -9,7 +9,7 @@ namespace DaggerfallRandomEncountersMod
 {
 
     //Maybe does have to be monobehaviour, atleast to make it buildable with each other.
-    public class RandomEncounterFactory //: UnityEngine.Object
+    public class RandomEncounterFactory
     {
         
         Dictionary<EncounterType, Dictionary<EncounterFilter, List<RandomEncounter>>> possibleEvents = new Dictionary<EncounterType, Dictionary<EncounterFilter, List<RandomEncounter>>>();

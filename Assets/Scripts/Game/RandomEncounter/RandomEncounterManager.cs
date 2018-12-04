@@ -6,6 +6,8 @@ using DaggerfallWorkshop;
 
 using DaggerfallWorkshop.Game;
 
+//For mapsfile and climate.
+using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.UserInterfaceWindows; //required for pop-up window
 using DaggerfallWorkshop.Game.Utility.ModSupport;   //required for modding features
 using DaggerfallWorkshop.Game.Utility;
@@ -16,6 +18,7 @@ using DaggerfallRandomEncountersMod.RandomEncounters;
 using DaggerfallRandomEncountersMod.Enums;
 using System.Linq;
 using Newtonsoft.Json;
+using DaggerfallConnect;
 
 namespace DaggerfallRandomEncountersMod
 {
@@ -29,39 +32,42 @@ namespace DaggerfallRandomEncountersMod
 
 
         #region Contexts
+
+
         const string World = "World";
         const string Resting = "Resting";
         const string FastTravel = "Fast Travel";
 
-#endregion
+        #endregion
 
 
-        //Also static because it is activeEncounters in game, that doesn't change.
+        #region Encounter Info
+
+        //Also static because it is activeEncounters in game, and there is only one instance of game..
         static List<RandomEncounters.RandomEncounter> activeEncounters;
         
 
-        //Though honestly I could, also just have anoother layer of keys.
-        //but it's a set 3, so fine this way.
-        //
+        //Same for these
         private static RandomEncounterFactory worldEventsFactory;
         private static RandomEncounterFactory restEventsFactory;
         private static RandomEncounterFactory fastTravelEventsFactory;
 
+        #endregion
+
+        #region Filters are state data for different contexts.
 
         //There will be diff filters for each kind of trigger area.
-        //Essentiall the observers of state of game.
+        //Essentially the observers of state of game.
         EncounterFilter worldFilter;
         EncounterFilter fastTravelFilter;
         EncounterFilter restFilter;
 
-
+        #endregion
 
         //Just here for testing.
-        bool hitDusk = false;
+     //   bool hitDusk = false;
 
 
-        //Something with instance causing error, not sure what.
-        //But the error desn't stop the game, and everything else works fine.
         private static RandomEncounterManager instance;
 
         public static RandomEncounterManager Instance
@@ -85,10 +91,11 @@ namespace DaggerfallRandomEncountersMod
                 return;
             }
 
-         
 
         }
 
+
+        //Makes sure it is only instance, if it's not returns false.
         private bool SetUpSingleton()
         {
 
@@ -110,11 +117,11 @@ namespace DaggerfallRandomEncountersMod
             return instance == this;
         }
 
-        // Use this for initialization
+
         void Start()
         {
             activeEncounters = new List<RandomEncounters.RandomEncounter>();
-            //Filters happens at start of game loaded.
+
             initStates();
             setUpObservers();
             setUpFactories();
@@ -123,10 +130,7 @@ namespace DaggerfallRandomEncountersMod
             
         }
 
-
-
-
-
+        //Sets filters / observer states to current state of game on load.
         void initStates()
         {
 
@@ -134,7 +138,6 @@ namespace DaggerfallRandomEncountersMod
             fastTravelFilter = new EncounterFilter();
             restFilter = new EncounterFilter();
 
-            //setting world filters.
             //Initial values of each one would be current state of game
             WeatherType currentWeather = GameManager.Instance.WeatherManager.PlayerWeather.WeatherType;
 
@@ -147,30 +150,39 @@ namespace DaggerfallRandomEncountersMod
 
 
             DaggerfallDateTime currentTime = DaggerfallUnity.Instance.WorldTime.Now;
+
             //Prob better key than time, but this is fine.
             worldFilter.setFilter("time", currentTime.IsDay ? "Day" : "Night");
 
-
             updateReputationObserver();
-
         }
 
         
-
+        //ToDo: Remove these.
         void updateReputationObserver()
         {
+            string socialGroup = getSocialGroup();
+
+            //For updating the filter for factory
+            //May sometimes need to just check faction directly
+            worldFilter.setFilter("socialGroup", socialGroup);
+
+            //This will include crime changes, maybe last crime committed could also be something in filter.
+        }
 
 
+        //Gets max reputation in socal group array, then assigns corresponding social group in state filter.
+        public string getSocialGroup()
+        {
             short[] reputation = GameManager.Instance.PlayerEntity.SGroupReputations;
+
+            //Player can't belong to specific social group, so no reason to find max.
 
             int maxIndex = 0;
             int max = reputation[0];
 
             for (int i = 1; i < reputation.Length; ++i)
             {
-
-              
-
                 if (reputation[i] > max)
                 {
                     maxIndex = i;
@@ -178,111 +190,156 @@ namespace DaggerfallRandomEncountersMod
                 }
             }
 
-            string faction = "Commoners";
+            string socialGroup = "Commoners";
 
             switch (maxIndex)
             {
 
                 case 1:
-                    faction = "Merchants";
+                    socialGroup = "Merchants";
                     break;
 
                 case 2:
-                    faction = "Nobility";
+                    socialGroup = "Nobility";
                     break;
 
                 case 3:
-                    faction = "Scholars";
+                    socialGroup = "Scholars";
                     break;
                 case 4:
-                    faction = "Underworld";
+                    socialGroup = "Underworld";
                     break;
 
             }
 
-            worldFilter.setFilter("faction", faction);
+
+            //Can also make the player join a guild.
+            //So maybe after an encounter, can just force him to join guild
+            ///Though that will violate game state.
+            //Unless TEMPORARY. Like pretend to be part of guild,
+            //then at end of encounter, remove from guild.
+            //Guild also has eligibility stuff.
+            //So for actually joining can check that bool first, then act accordingly.
+            //Can also check crimes committed when leave town as encounter
+            return socialGroup;
         }
 
-        //Basically set up observers
+        //Basically set up observers to listen to triggers.
         void setUpObservers()
         {
 
-            //Anytime reputation changed should also know, this will added to onEnd() of encounter
-            //check and update reputation.
+            //Perhaps probability of encounter spawning will be skewed by what called it?
+            //If we're putting all into one pool.
 
-            //When leave areas.
-            PlayerEnterExit.OnTransitionDungeonExterior += (PlayerEnterExit.TransitionEventArgs args) =>
+            #region Location Transition Listeners
+
+            //I believe this is any new grid location?
+            //It's honestly hard to say.
+            PlayerGPS.OnEnterLocationRect += (DFLocation location) =>
             {
 
+                //Maybe near dungeon? Can do alot with location.
+                //worldFilter.setFilter("")
+            };
+
+            PlayerGPS.OnClimateIndexChanged += (int climateIndex) =>
+            {
+                MapsFile.Climates currentClimate = (MapsFile.Climates)GameManager.Instance.PlayerGPS.CurrentClimateIndex;
+
+                //G means the word reprsentation.
+                worldFilter.setFilter("climate", currentClimate.ToString());
+
+                trySpawningEncounter(World);
+
+            };
+
+            PlayerGPS.OnRegionIndexChanged += (int regionIndex) =>
+            {
+
+                string newRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionName(regionIndex);
+                Debug.LogError(newRegion);
+                worldFilter.setFilter("region", newRegion);
+                trySpawningEncounter(World);
+            };
+
+            PlayerEnterExit.OnTransitionDungeonExterior += (PlayerEnterExit.TransitionEventArgs args) =>
+            {
 
                 worldFilter.setFilter("lastInside", "dungeon");
-                trySpawnEncounter(World);
+                trySpawningEncounter(World);
             };
 
-
-            PlayerEnterExit.OnTransitionDungeonExterior += (PlayerEnterExit.TransitionEventArgs args) =>
-            {
+            #endregion
 
 
-                worldFilter.setFilter("lastInside", "building");
-                trySpawnEncounter(World);
-            };
-
-
+            //Weather listener.
             WeatherManager.OnWeatherChange += (WeatherType newWeather) =>
             {
                 worldFilter.setFilter("weather", newWeather.ToString());
-                trySpawnEncounter(World);
+                trySpawningEncounter(World);
             };
 
+
+            #region Time Listenters
+
+            WorldTime.OnNewHour += () =>
+            {
+                //This maybe good time to check if player committed new crime or something like that.
+                //As well as resting.
+            };
 
             WorldTime.OnNewDay += () =>
             {
                 worldFilter.setFilter("time", "day");
-                trySpawnEncounter(World);
+                trySpawningEncounter(World);
             };
 
             WorldTime.OnDawn += () =>
             {
                 worldFilter.setFilter("time", "dawn");
-                trySpawnEncounter(World);
+                trySpawningEncounter(World);
             };
 
             
             WorldTime.OnMidnight += () =>
             {
 
-                //This filter is essentially state of game and adds what just happened to it.
 
-                //So keeps what was there before and sets specific spot.
                 worldFilter.setFilter("time", "midnight");
-                trySpawnEncounter(World);
+                trySpawningEncounter(World);
             };
 
-            //When hits dusk, look for where I can force this change.
-            //So the these are essentially the observers that updates filters for encounter.
 
             WorldTime.OnDusk += () =>
             {
-                //If more than 2 encounters currently active, don't make more?
-                if (activeEncounters.Count > 2)
-                {
-                    return;
-                }
+             
 
               
                 worldFilter.setFilter("time", "night");
-                trySpawnEncounter(World);
+                trySpawningEncounter(World);
                 
             };
+
+
+#endregion
 
         }
 
 #region Spawning Encounters
-        void trySpawnEncounter(string s)
+        void trySpawningEncounter(string context)
         {
 
-            bool dontSpawn = (Random.Range(1, 100) & 1) == 0;
+
+            //
+            if (GameManager.Instance.PlayerEnterExit.IsPlayerInside)
+            {
+                return;
+            }
+            //Make this so not such high chance
+            //the layer of filters also has chance to make it so not possible.
+
+            //If even, then don't spawn.
+            bool dontSpawn = (Random.Range(2, 6) & 1) == 0;
 
             if (dontSpawn)
             {
@@ -290,7 +347,7 @@ namespace DaggerfallRandomEncountersMod
             }
 
             RandomEncounter encounter = null;
-            switch (s)
+            switch (context)
             {
                 case World:
 
@@ -315,7 +372,7 @@ namespace DaggerfallRandomEncountersMod
         private void addEncounter(RandomEncounters.RandomEncounter evt)
         {
 
-            //This part will also be repeated.
+            //This should never happen, but it is a safeguard.
             if (evt != null)
             {
                 evt.OnBegin += (RandomEncounters.RandomEncounter a) =>
@@ -334,7 +391,12 @@ namespace DaggerfallRandomEncountersMod
                         activeEncounters.Remove(a);
                     }
 
+                    //So encounters themselves can effect game state directly,
+                    //so the onEnd will see what was updated, then update the filters accordingly.
+
                     //Because if encounter didn't effect reputation don't want to go through time to update it.
+                    //Temporary way of doing, prob will make struct called EncounterEffects, or whatever for what
+                    //in game / player state is mutated within encounter, then that's what's pased in here
                     if (a.EffectReputation)
                     {
                         updateReputationObserver();
@@ -351,8 +413,8 @@ namespace DaggerfallRandomEncountersMod
         // Update is called once per frame
         void Update()
         {
-            if (!hitDusk)
-            DaggerfallUnity.Instance.WorldTime.Now.RaiseTime(60 * 60);
+         //   if (!hitDusk)
+           // DaggerfallUnity.Instance.WorldTime.Now.RaiseTime(60 * 60);
 
         }
 
@@ -376,24 +438,23 @@ namespace DaggerfallRandomEncountersMod
             ModManager.Instance.GetMod(initParams.ModTitle).IsReady = true;
 
         }
+
         [Invoke(StateManager.StateTypes.Start, 0)]
         public static void InitCache(InitParams initParams)
         {
             randomEncounterCache = new Dictionary<string, System.Type>();
-
-            //Initializes cache with all RandomEncounters available.
-
-            Mod mod = initParams.Mod;
             
+            //Initializes cache with all RandomEncounters available in bundle.
             initRandomEncounterCache();
+
+            //Initializes the factories with their prototypes using the json data.
             setUpFactories();
 
 
             //Okay so all of the classes need to be taken via asset
-            ModManager.Instance.GetComponent<MonoBehaviour>().StartCoroutine(mod.LoadAllAssetsFromBundleAsync(true));
+            ModManager.Instance.GetComponent<MonoBehaviour>().StartCoroutine(initParams.Mod.LoadAllAssetsFromBundleAsync(true));
 
-            //Will load up factory prefabs and assign accordingly.
-         //   mod.GetAsset<RandomEncounterFactory>()
+          
         }
 
 
@@ -402,12 +463,13 @@ namespace DaggerfallRandomEncountersMod
         private static void initRandomEncounterCache()
         {
 
+
+            //Goes through assembly of all files within the mod asset bundle.
+
             foreach (System.Reflection.Assembly assembly in System.AppDomain.CurrentDomain.GetAssemblies())
             {
 
                 //Goes through all the types in currenty assembly that inherit from RandomEncounter directly or indirectly.
-
-
                 foreach (System.Type currentType in assembly.GetTypes().Where(_ => typeof(RandomEncounter).IsAssignableFrom(_)))
                 {
 
@@ -456,15 +518,7 @@ namespace DaggerfallRandomEncountersMod
             fastTravelEventsFactory = new RandomEncounterFactory();
             restEventsFactory = new RandomEncounterFactory();
 
-
-            loadEncounterData();
-        }
-
-        //Initializing the factories from json files.
-        private static void loadEncounterData()
-        {
-
-            List<string> encounterJSONData = EncounterUtils.loadEncounterData();
+            List<string> encounterJSONData = EncounterUtils.loadEncounterJson();
             foreach (string jsonFile in encounterJSONData)
             {
 
@@ -474,9 +528,6 @@ namespace DaggerfallRandomEncountersMod
 
                 try
                 {
-
-
-                 
                     if (!EncounterType.defaultTypes.ContainsKey(encounterData.type))
                     {
                         throw new System.Exception("This is not a valid EncounterType: " + encounterData.type);
@@ -491,25 +542,15 @@ namespace DaggerfallRandomEncountersMod
 
 
 
-                    //All of the prototypes are components attached to the manager itself.
-                    //Wait this is bad, that means will instantiate the GameObject.
                     var randomEncounterToLoad = randomEncounterCache[encounterData.encounterId];
                     GameObject holder = new GameObject("Random Encounter:" + encounterData.encounterId);
                     RandomEncounter randomEvent = holder.AddComponent(randomEncounterToLoad) as RandomEncounter;
-                    //  randomEvent = holder.GetComponent<RandomEncounter>();
 
                     //Instantiates filter using filter data within json object.
                     EncounterFilter filter = new EncounterFilter();
-
-
-
-
-
                     foreach (FilterData data in encounterData.filter)
                     {
-
                         filter.setFilter(data.context, data.value);
-
                     }
 
 
@@ -519,26 +560,21 @@ namespace DaggerfallRandomEncountersMod
                     switch (encounterData.context)
                     {
                         case World:
-                            Debug.LogError("inserting into world");
                             worldEventsFactory.addRandomEvent(type, randomEvent, filter);
                             break;
 
                         case Resting:
-                            Debug.LogError("inserting into rest");
 
                             restEventsFactory.addRandomEvent(type, randomEvent, filter);
                             break;
 
                         case FastTravel:
-                            Debug.LogError("inserting into fast travel");
 
                             fastTravelEventsFactory.addRandomEvent(type, randomEvent, filter);
                             break;
 
                         default:
 
-                            //Throws exception, maybe in future make even the factories reside in dictionary
-                            //to further make it extensible.
                             throw new System.Exception("Invalid context: " + encounterData.context);
                     }
 
