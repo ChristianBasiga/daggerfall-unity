@@ -10,7 +10,7 @@ using DaggerfallWorkshop.Game.Utility.ModSupport;
 namespace DaggerfallRandomEncountersMod.RandomEncounters
 {
 
-    [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple= false)]
+    [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple= false, Inherited = false)]
     public class RandomEncounterIdentifierAttribute :  System.Attribute{
 
         public string EncounterId { get; set; }
@@ -58,6 +58,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             }
         }
 
+
         public virtual void begin() {
 
             began = true;
@@ -77,26 +78,34 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             //Only if event considered begun, then do tick for event.
             if (began)
             {
-
                 if (OnTick != null)
                 {
 
                     OnTick(this);
                 }
+                //If player dead, end the encounter, cause not active anymore, then clean up will happen.
+                //GameObject will be parent of motor of encounter, that or move this else where
+                if (GameManager.Instance.PlayerDeath.DeathInProgress)
+                {
+                    end();
+                }
+               
+
+              
             }
         }
         public virtual void end() {
+
+            Debugging.AlertPlayer(closure);
 
             if (OnEnd != null)
             {
                 OnEnd(this);
             }
 
-            Debugging.AlertPlayer(closure);
 
-            began = false;
+          //  Destroy(this);
           //  Debug.Log("random event ended");
-            Destroy(this.gameObject);
 
 
         }

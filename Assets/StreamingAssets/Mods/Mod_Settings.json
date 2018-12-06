@@ -1,0 +1,9 @@
+[
+    {
+        "FileName": "randomencountermod",
+        "Title": "RandomEncounterMod",
+        "Enabled": true,
+        "LoadPriority": 0,
+        "HasSettings": false
+    }
+]

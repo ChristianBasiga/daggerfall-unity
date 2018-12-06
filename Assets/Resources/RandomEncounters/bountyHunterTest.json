@@ -1,0 +1,23 @@
+{
+
+
+	"encounterId": "Summoners",
+	"context" : "World",
+	"type" : "Negative",
+	"filter" : [
+		{
+			"context" : "weather",
+			"value" : "Rain_Normal"
+		
+		}
+	]
+
+
+
+
+
+
+
+
+
+}

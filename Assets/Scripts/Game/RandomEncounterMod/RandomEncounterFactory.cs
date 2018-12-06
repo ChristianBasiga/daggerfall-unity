@@ -5,10 +5,10 @@ using DaggerfallRandomEncountersMod.Enums;
 using DaggerfallRandomEncountersMod.RandomEncounters;
 using DaggerfallWorkshop.Game.Utility.ModSupport;
 
+
+using DaggerfallRandomEncountersMod.Filter;
 namespace DaggerfallRandomEncountersMod
 {
-
-    //Maybe does have to be monobehaviour, atleast to make it buildable with each other.
     public class RandomEncounterFactory
     {
         
@@ -19,6 +19,11 @@ namespace DaggerfallRandomEncountersMod
         //Will add player rep stuff later on.
         public void addRandomEvent(EncounterType type, RandomEncounter evt, EncounterFilter filters)
         {
+            if (evt == null)
+            {
+                Debug.LogError("Adding " + type.ToString() + " but encounter is null");
+                throw new System.Exception("RandomEncounter prototype cannot be null.");
+            }
 
             //Lazy loads the entries.
             if (!possibleEvents.ContainsKey(type))
@@ -30,17 +35,12 @@ namespace DaggerfallRandomEncountersMod
                 possibleEvents[type][filters] = new List<RandomEncounter>();
             }
 
-            
-            //Pushes random evt into that table.
+         
+            //Pushes random evt into that list.
             possibleEvents[type][filters].Add(evt);
         }
 
         
-
-        //So it builds up pool of possibilties.
-        //All filters applied, then just indiviudal filter applied, then just m of the n filters applied.
-        //then random event among that big pool, should work with instance filter instead of creating for each
-        // trigger.
 
         public RandomEncounter getRandomEvent(EncounterFilter filter)
         {
@@ -69,9 +69,11 @@ namespace DaggerfallRandomEncountersMod
 
             if (!possibleEvents.ContainsKey(type))
             {
+                Debug.LogError("Invalid type" + type);
                 //And it's fine it is, then that means no random encounter spawned this time.
                 return null;
             }
+
             List<RandomEncounter> subset;
 
 
@@ -85,12 +87,10 @@ namespace DaggerfallRandomEncountersMod
             }
             
 
-           List<EncounterFilter> split = filter.splitFilters();
-
-            //This could get fucking huge man.
-            //Maybe there's a better structure for this.
-            //Something where like as it goes down, it adds into pool.
-            //Though actually I think would turn out same time complexity.
+            //Below is if filter has weather:rain, time: day, but only check for filter time:day in prototype,
+            //then split to check for them individually as well.
+            List<EncounterFilter> split = filter.splitFilters();
+           
             for (int i = 0; i < split.Count; ++i)
             {
                 if (possibleEvents[type].ContainsKey(split[i]))
@@ -104,14 +104,18 @@ namespace DaggerfallRandomEncountersMod
             
             if (subset.Count == 0)
             {
+                Debug.LogError("no encounters for the filter " + filter.ToString());
+
+                //Which is also fine, not all game states will have encounter.
                 return null;
             }
 
+
             RandomEncounter randomEvent = null;
 
-            //If don't care about above or not possible then actually clone it.
-            int index = Random.Range(0, subset.Count - 2);
-            randomEvent = GameObject.Instantiate(subset[index].gameObject, Vector3.zero, Quaternion.identity).GetComponent<RandomEncounter>();
+            //Chooses random encounter within subset then clones it.
+            int index = subset.Count == 1? 0 : Random.Range(0, subset.Count - 2);
+            randomEvent = GameObject.Instantiate(subset[index]).GetComponent<RandomEncounter>();
 
             return randomEvent;
         }

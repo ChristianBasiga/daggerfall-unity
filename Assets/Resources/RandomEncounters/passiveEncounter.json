@@ -1,0 +1,23 @@
+{
+
+
+	"encounterId": "PassiveEncounter",
+	"context" : "World",
+	"type" : "Neutral",
+	"filter" : [
+		{
+			"context" : "time",
+			"value" : "day"
+		
+		}
+	]
+
+
+
+
+
+
+
+
+
+}

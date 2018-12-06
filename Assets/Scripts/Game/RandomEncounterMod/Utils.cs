@@ -42,6 +42,8 @@ namespace DaggerfallRandomEncountersMod.Utils
     ///
 
 
+    #region Objects for json loading.
+
     [System.Serializable]
     public class EncounterData
     {
@@ -49,14 +51,7 @@ namespace DaggerfallRandomEncountersMod.Utils
         public string context;
         public string type;
 
-        //It it because of linq? Nope
         public List<FilterData> filter;
-
-
-        //For now making it string, then enum.parsing
-        // public EncounterType type;
-
-        
     }
 
 
@@ -65,13 +60,35 @@ namespace DaggerfallRandomEncountersMod.Utils
     {    
         public string context;
         public string value;
+
+        public override bool Equals(object obj)
+        {
+            FilterData other = (FilterData)obj;
+            return string.Equals(context, other.context) && string.Equals(value, other.value);
+        }
+
+        public static bool operator<(FilterData lhs, FilterData rhs)
+        {
+            return string.Compare(lhs.context, rhs.context) < 0;
+        }
+
+        public static bool operator>(FilterData lhs, FilterData rhs)
+        {
+            return string.Compare(lhs.context, rhs.context) > 0;
+        }
+
+        public override int GetHashCode()
+        {
+            return (context + value).GetHashCode();
+        }
     }
 
+    #endregion
 
     public class EncounterUtils
     {
         //Loading in encouner jsons from resources folder to create prototypes for factory.
-        public static List<string> loadEncounterData()
+        public static List<string> loadEncounterJson()
         {
             List<string> encounterData = new List<string>();
 
@@ -90,6 +107,8 @@ namespace DaggerfallRandomEncountersMod.Utils
 
         }
 
+
+        //Later on make this hard type to be EncounterResource
         public static bool hasActiveSpawn(GameObject[] spawns)
         {
             //Cause if null then there wasn't any active objects.
@@ -101,7 +120,7 @@ namespace DaggerfallRandomEncountersMod.Utils
 
             for (int i = 0; i < spawns.Length; ++i)
             {
-                if (spawns[i].activeInHierarchy)
+                if (spawns[i] != null && spawns[i].activeInHierarchy)
                 {
                     return spawns[i];
                 }

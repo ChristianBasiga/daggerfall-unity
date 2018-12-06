@@ -5,8 +5,11 @@
     "type": "Negative",
     "filter": [
         {
-            "context": "time",
-            "value": "night"
+            "context": "weather",
+            "value": "Snow_Normal"
         }
     ]
 }
+
+
+
