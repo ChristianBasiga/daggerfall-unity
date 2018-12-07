@@ -17,6 +17,8 @@ using System.IO;
 using System.Collections.Generic;
 using DaggerfallConnect.Save;
 using DaggerfallWorkshop.Utility;
+using DaggerfallWorkshop.Game.Serialization;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game.MagicAndEffects
 {
@@ -27,6 +29,8 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
     public class EntityEffectBroker : MonoBehaviour
     {
         #region Fields
+
+        const int maxCatchupDays = 2;   // Equal to 2880 game minutes or magic rounds
 
         public const int CurrentSpellVersion = 1;
         public const int MinimumSupportedSpellVersion = 1;
@@ -43,26 +47,36 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
         public const MagicCraftingStations MagicCraftingFlags_None = MagicCraftingStations.None;
         public const MagicCraftingStations MagicCraftingFlags_All = MagicCraftingStations.SpellMaker | MagicCraftingStations.PotionMaker | MagicCraftingStations.ItemMaker;
 
-        const float roundInterval = 5.0f;
+        uint lastGameMinute;
+        int magicRoundsSinceStartup;
 
-        int magicRoundsSinceStartup = 0;
-        float roundTimer = 0f;
-
-        Dictionary<int, string> classicEffectMapping = new Dictionary<int, string>();
-        Dictionary<string, BaseEntityEffect> magicEffectTemplates = new Dictionary<string, BaseEntityEffect>();
-        Dictionary<int, BaseEntityEffect> potionEffectTemplates = new Dictionary<int, BaseEntityEffect>();
-        Dictionary<int, SpellRecord.SpellRecordData> classicSpells = new Dictionary<int, SpellRecord.SpellRecordData>();
+        readonly Dictionary<int, string> classicEffectMapping = new Dictionary<int, string>();
+        readonly Dictionary<string, BaseEntityEffect> magicEffectTemplates = new Dictionary<string, BaseEntityEffect>();
+        readonly Dictionary<int, BaseEntityEffect> potionEffectTemplates = new Dictionary<int, BaseEntityEffect>();
+        readonly Dictionary<int, SpellRecord.SpellRecordData> classicSpells = new Dictionary<int, SpellRecord.SpellRecordData>();
 
         #endregion
 
         #region Properties
 
         /// <summary>
-        /// Gets the number of 5-second "magic rounds" since startup.
+        /// Gets the number of game-minute "magic rounds" since startup.
+        /// Reset to current game time when player loads a game or starts a new game.
         /// </summary>
         public int MagicRoundsSinceStartup
         {
             get { return magicRoundsSinceStartup; }
+        }
+
+        #endregion
+
+        #region Constructors
+
+        public EntityEffectBroker()
+        {
+            SaveLoadManager.OnLoad += SaveLoadManager_OnLoad;
+            StartGameBehaviour.OnNewGame += StartGameBehaviour_OnNewGame;
+            StartGameBehaviour.OnStartGame += StartGameBehaviour_OnStartGame;
         }
 
         #endregion
@@ -78,7 +92,7 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
             // TODO: Provide an external method for mods to register custom effects without reflections
             magicEffectTemplates.Clear();
             IEnumerable<BaseEntityEffect> effectTemplates = ReflectiveEnumerator.GetEnumerableOfType<BaseEntityEffect>();
-            foreach(BaseEntityEffect effect in effectTemplates)
+            foreach (BaseEntityEffect effect in effectTemplates)
             {
                 // Effect must present a key
                 if (string.IsNullOrEmpty(effect.Key))
@@ -126,17 +140,42 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
 
         void Update()
         {
-            // Increment magic round timer when not paused
-            if (!GameManager.IsGamePaused)
+            // Don't tick if lastGameMinute not set (pre-init)
+            if (lastGameMinute == 0)
+                return;
+
+            // Every game minute passing is another magic round, so work out how many minutes have passed
+            // During normal play magic rounds will fire once every game minute like clockwork
+            uint gameMinute = DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.ToClassicDaggerfallTime();
+            uint minutesPassed = gameMinute - lastGameMinute;
+
+            // However, fast travel and prison time can step time forwards by potentially millions of minutes
+            // Most effects either expire or have constant state and simply don't require that many ticks
+            // Setting a 2-day cap (2880 minutes) on catchup rounds limits spell framework from spinning "on empty" and wasting cycles
+            // Maximum catchup rounds have been tuned based on the following observations:
+            //  - Maximum spell duration of 60+60 per 1 level is < 2000 minutes (most durations are much, much lower)
+            //  - Long-running effects such as drains and magic items are constant state and only require a single tick
+            //  - Poisons and diseases have their own catch-up mechanisms and only require a single tick
+            //  - Vast majority of effects will expire within 120 minutes so 2880 is still a very high limit
+            //  - Running empty magic rounds isn't very costly so a small amount of inefficiency is OK
+            int catchupRounds = Mathf.Min(maxCatchupDays * DaggerfallDateTime.MinutesPerDay, (int)minutesPassed);
+
+            // Execute magic rounds for each minute passed up to limit
+            // This ensure effects continue to operate during rest or fast travel
+            if (catchupRounds > 0)
             {
-                roundTimer += Time.deltaTime;
-                if (roundTimer > roundInterval)
+                //System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                //long startTime = stopwatch.ElapsedMilliseconds;
+
+                for (int i = 0; i < catchupRounds; i++)
                 {
                     RaiseOnNewMagicRoundEvent();
                     magicRoundsSinceStartup++;
-                    roundTimer = 0;
-                    //Debug.Log("New magic round starting.");
                 }
+                lastGameMinute = gameMinute;
+
+                //long totalTime = stopwatch.ElapsedMilliseconds - startTime;
+                //Debug.LogFormat("Time to run {0} magic rounds: {1}ms", catchupRounds, totalTime);
             }
         }
 
@@ -218,7 +257,7 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
             List<string> groupNames = new List<string>();
 
             // Get group list
-            foreach(BaseEntityEffect effect in magicEffectTemplates.Values)
+            foreach (BaseEntityEffect effect in magicEffectTemplates.Values)
             {
                 // Skip effects not fitting at least one station requirement
                 if ((craftingStations & effect.Properties.AllowedCraftingStations) == 0)
@@ -449,6 +488,30 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
                     }
                 }
             }
+        }
+
+        // Called when game starts or loaded, after world time has been set/restored
+        // Syncs initial magic round timer with game time for counting magic rounds
+        void InitMagicRoundTimer()
+        {
+            lastGameMinute = DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.ToClassicDaggerfallTime();
+            magicRoundsSinceStartup = 0;
+            //Debug.LogFormat("Resetting magic round timer to minute {0}", lastGameMinute);
+        }
+
+        public void StartGameBehaviour_OnStartGame(object sender, EventArgs e)
+        {
+            InitMagicRoundTimer();
+        }
+
+        void StartGameBehaviour_OnNewGame()
+        {
+            InitMagicRoundTimer();
+        }
+
+        void SaveLoadManager_OnLoad(SaveData_v1 saveData)
+        {
+            InitMagicRoundTimer();
         }
 
         #endregion

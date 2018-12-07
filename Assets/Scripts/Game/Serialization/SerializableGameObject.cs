@@ -4,7 +4,7 @@
 // License:         MIT License (http://www.opensource.org/licenses/mit-license.php)
 // Source Code:     https://github.com/Interkarma/daggerfall-unity
 // Original Author: Gavin Clayton (interkarma@dfworkshop.net)
-// Contributors:    Lypyl (lypyldf@gmail.com), Hazelnut
+// Contributors:    Lypyl (lypyldf@gmail.com), Hazelnut, Numidium
 // 
 // Notes:
 //
@@ -193,6 +193,12 @@ namespace DaggerfallWorkshop.Game.Serialization
         public EntityEffectManager.EffectBundleSaveData_v1[] instancedEffectBundles;
         public PlayerEntity.Crimes crimeCommitted;
         public bool haveShownSurrenderToGuardsDialogue;
+        public ulong lightSourceUID;
+        public short reputationCommoners;
+        public short reputationMerchants;
+        public short reputationNobility;
+        public short reputationScholars;
+        public short reputationUnderworld;
     }
 
     [fsObject("v1")]

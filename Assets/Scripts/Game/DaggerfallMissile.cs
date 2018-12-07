@@ -4,7 +4,7 @@
 // License:         MIT License (http://www.opensource.org/licenses/mit-license.php)
 // Source Code:     https://github.com/Interkarma/daggerfall-unity
 // Original Author: Gavin Clayton (interkarma@dfworkshop.net)
-// Contributors:    
+// Contributors:    Allofich
 // 
 // Notes:
 //
@@ -67,7 +67,6 @@ namespace DaggerfallWorkshop.Game
         Rigidbody myRigidbody;
         DaggerfallBillboard myBillboard;
         bool forceDisableSpellLighting;
-        bool forceDisableSpellShadows;
         float lifespan = 0f;
         float postImpactLifespan = 0f;
         TargetTypes targetType = TargetTypes.None;
@@ -79,8 +78,12 @@ namespace DaggerfallWorkshop.Game
         float initialRange;
         float initialIntensity;
         EntityEffectBundle payload;
+        bool isArrow = false;
+        GameObject goModel = null;
+        EnemySenses enemySenses;
 
         List<DaggerfallEntityBehaviour> targetEntities = new List<DaggerfallEntityBehaviour>();
+        RaycastHit arrowHit;
 
         #endregion
 
@@ -128,6 +131,12 @@ namespace DaggerfallWorkshop.Game
             set { caster = value; }
         }
 
+        public bool IsArrow
+        {
+            get { return isArrow; }
+            set { isArrow = value; }
+        }
+
         /// <summary>
         /// Gets all target entities affected by this missile.
         /// Any effect bundle payload will be applied automatically.
@@ -153,9 +162,8 @@ namespace DaggerfallWorkshop.Game
             myLight = GetComponent<Light>();
             myLight.enabled = EnableLight;
             forceDisableSpellLighting = !DaggerfallUnity.Settings.EnableSpellLighting;
-            forceDisableSpellShadows = !DaggerfallUnity.Settings.EnableSpellShadows;
             if (forceDisableSpellLighting) myLight.enabled = false;
-            if (forceDisableSpellShadows) myLight.shadows = LightShadows.None;
+            if (!DaggerfallUnity.Settings.EnableSpellShadows) myLight.shadows = LightShadows.None;
             initialRange = myLight.range;
             initialIntensity = myLight.intensity;
 
@@ -179,8 +187,45 @@ namespace DaggerfallWorkshop.Game
                 if (targetType == TargetTypes.SingleTargetAtRange ||
                     targetType == TargetTypes.AreaAtRange)
                 {
-                    UseSpellBillboardAnims(elementType);
+                    UseSpellBillboardAnims();
                 }
+            }
+
+            // Setup senses
+            if (caster != GameManager.Instance.PlayerEntityBehaviour)
+            {
+                enemySenses = caster.GetComponent<EnemySenses>();
+            }
+
+            // Setup arrow
+            if (isArrow)
+            {
+                // Create and orient 3d arrow
+                goModel = GameObjectHelper.CreateDaggerfallMeshGameObject(99800, transform);
+
+                Vector3 adjust;
+                // Offset up so it comes from same place LOS check is done from
+                if (caster != GameManager.Instance.PlayerEntityBehaviour)
+                {
+                    CharacterController controller = caster.transform.GetComponent<CharacterController>();
+                    adjust = caster.transform.forward * 0.6f;
+                    adjust.y += controller.height / 3;
+                }
+                else
+                {
+                    // Offset forward to avoid collision with player
+                    adjust = GameManager.Instance.MainCamera.transform.forward * 0.6f;
+                    // Adjust slightly downward to match bow animation
+                    adjust.y -= 0.11f;
+                    // Adjust to the right or left to match bow animation
+                    if (!GameManager.Instance.WeaponManager.ScreenWeapon.FlipHorizontal)
+                        adjust += GameManager.Instance.MainCamera.transform.right * 0.15f;
+                    else
+                        adjust -= GameManager.Instance.MainCamera.transform.right * 0.15f;
+                }
+
+                goModel.transform.localPosition = adjust;
+                goModel.transform.rotation = Quaternion.LookRotation(GetAimDirection());
             }
 
             // Ignore missile collision with caster (this is a different check to AOE targets)
@@ -234,6 +279,32 @@ namespace DaggerfallWorkshop.Game
                     RaiseOnCompleteEvent();
                     AssignPayloadToTargets();
                     impactAssigned = true;
+
+                    // Handle arrow
+                    if (isArrow)
+                    {
+                        // Disable 3d arrow
+                        goModel.gameObject.SetActive(false);
+
+                        if (caster != GameManager.Instance.PlayerEntityBehaviour)
+                        {
+                            DaggerfallEntityBehaviour entityBehaviour = null;
+                            if (arrowHit.transform)
+                                entityBehaviour = arrowHit.transform.GetComponent<DaggerfallEntityBehaviour>();
+                            if (entityBehaviour == caster.Target)
+                            {
+                                EnemyAttack attack = caster.GetComponent<EnemyAttack>();
+                                if (attack)
+                                {
+                                    attack.BowDamage(goModel.transform.forward);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            GameManager.Instance.WeaponManager.WeaponDamage(arrowHit, goModel.transform.forward, true);
+                        }
+                    }
                 }
 
                 // Track post impact lifespan and allow impact clip to finish playing
@@ -250,6 +321,24 @@ namespace DaggerfallWorkshop.Game
             UpdateLight();
         }
 
+        private void FixedUpdate()
+        {
+            if (isArrow && missileReleased && goModel)
+            {
+                // Check for arrow hit. For enemies, ray-casting in direction of the target works well.
+                // Otherwise it is easy for the target to ride on top of the arrow if it doesn't hit exactly head-on.
+                // Using a collider would probably be better.
+                Vector3 sphereCastDir;
+                if (enemySenses && enemySenses.LastKnownTargetPos != EnemySenses.ResetPlayerPos)
+                    sphereCastDir = (enemySenses.LastKnownTargetPos - goModel.transform.position).normalized;
+                else
+                    sphereCastDir = goModel.transform.forward;
+
+                if (Physics.SphereCast(goModel.transform.position, 0.05f, sphereCastDir, out arrowHit, 1f))
+                    impactDetected = true;
+            }
+        }
+
         #endregion
 
         #region Collision Handling
@@ -259,7 +348,7 @@ namespace DaggerfallWorkshop.Game
             // Play spell impact animation, this replaces spell missile animation
             if (elementType != ElementTypes.None && targetType != TargetTypes.ByTouch)
             {
-                UseSpellBillboardAnims(elementType, 1, true);
+                UseSpellBillboardAnims(1, true);
                 myBillboard.FramesPerSecond = ImpactBillboardFramesPerSecond;
                 impactDetected = true;
             }
@@ -330,7 +419,7 @@ namespace DaggerfallWorkshop.Game
 
                 if (ignoreCaster && aoeEntity == caster)
                     continue;
-                
+
                 if (aoeEntity && !targetEntities.Contains(aoeEntity))
                 {
                     entities.Add(aoeEntity);
@@ -369,19 +458,24 @@ namespace DaggerfallWorkshop.Game
             {
                 aimDirection = GameManager.Instance.MainCamera.transform.forward;
             }
-            else
+            else if (enemySenses)
             {
-                EnemySenses enemySenses = caster.GetComponent<EnemySenses>();
-                if (enemySenses)
-                {
-                    aimDirection = enemySenses.DirectionToTarget;
-                }
+                Vector3 predictedPosition;
+                if (DaggerfallUnity.Settings.EnhancedCombatAI)
+                    predictedPosition = enemySenses.PredictNextTargetPos(MovementSpeed);
+                else
+                    predictedPosition = enemySenses.LastKnownTargetPos;
+
+                if (predictedPosition == EnemySenses.ResetPlayerPos)
+                    aimDirection = caster.transform.forward;
+                else
+                    aimDirection = (predictedPosition - caster.transform.position).normalized;
             }
 
             return aimDirection;
         }
 
-        void UseSpellBillboardAnims(ElementTypes elementType, int record = 0, bool oneShot = false)
+        void UseSpellBillboardAnims(int record = 0, bool oneShot = false)
         {
             // Destroy any existing billboard game object
             if (myBillboard)
@@ -391,7 +485,7 @@ namespace DaggerfallWorkshop.Game
             }
 
             // Add new billboard parented to this missile
-            GameObject go = GameObjectHelper.CreateDaggerfallBillboardGameObject(GetMissileTextureArchive(elementType), record, transform);
+            GameObject go = GameObjectHelper.CreateDaggerfallBillboardGameObject(GetMissileTextureArchive(), record, transform);
             go.transform.localPosition = Vector3.zero;
             myBillboard = go.GetComponent<DaggerfallBillboard>();
             myBillboard.FramesPerSecond = BillboardFramesPerSecond;
@@ -414,7 +508,7 @@ namespace DaggerfallWorkshop.Game
             }
         }
 
-        int GetMissileTextureArchive(ElementTypes elementType)
+        int GetMissileTextureArchive()
         {
             switch (elementType)
             {
@@ -454,7 +548,10 @@ namespace DaggerfallWorkshop.Game
             if (audioSource && ImpactSound != SoundClips.None)
             {
                 // Using doppler of zero as classic does not appear to use 3D sound for spell impact
-                audioSource.PlayOneShot(ImpactSound, 0);
+                if (!isArrow)
+                    audioSource.PlayOneShot(ImpactSound, 0);
+                else
+                    audioSource.PlayOneShot(ImpactSound);
             }
         }
 

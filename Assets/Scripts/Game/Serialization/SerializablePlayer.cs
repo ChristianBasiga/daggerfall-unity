@@ -4,7 +4,7 @@
 // License:         MIT License (http://www.opensource.org/licenses/mit-license.php)
 // Source Code:     https://github.com/Interkarma/daggerfall-unity
 // Original Author: Gavin Clayton (interkarma@dfworkshop.net)
-// Contributors:    Hazelnut
+// Contributors:    Hazelnut, Numidium
 // 
 // Notes:
 //
@@ -16,6 +16,8 @@ using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.MagicAndEffects;
 using System.Collections.Generic;
 using System.Linq;
+using DaggerfallWorkshop.Game.Items;
+using DaggerfallConnect.Arena2;
 
 namespace DaggerfallWorkshop.Game.Serialization
 {
@@ -144,6 +146,12 @@ namespace DaggerfallWorkshop.Game.Serialization
             data.playerEntity.spellbook = entity.SerializeSpellbook();
             data.playerEntity.crimeCommitted = entity.CrimeCommitted;
             data.playerEntity.haveShownSurrenderToGuardsDialogue = entity.HaveShownSurrenderToGuardsDialogue;
+            data.playerEntity.lightSourceUID = (entity.LightSource == null) ? 0 : entity.LightSource.UID;
+            data.playerEntity.reputationCommoners = entity.SGroupReputations[(int)FactionFile.SocialGroups.Commoners];
+            data.playerEntity.reputationMerchants = entity.SGroupReputations[(int)FactionFile.SocialGroups.Merchants];
+            data.playerEntity.reputationScholars = entity.SGroupReputations[(int)FactionFile.SocialGroups.Scholars];
+            data.playerEntity.reputationNobility = entity.SGroupReputations[(int)FactionFile.SocialGroups.Nobility];
+            data.playerEntity.reputationUnderworld = entity.SGroupReputations[(int)FactionFile.SocialGroups.Underworld];
 
             data.playerEntity.regionData = entity.RegionData;
             data.playerEntity.rentedRooms = entity.RentedRooms.ToArray();
@@ -284,6 +292,13 @@ namespace DaggerfallWorkshop.Game.Serialization
             entity.CrimeCommitted = data.playerEntity.crimeCommitted;
             entity.HaveShownSurrenderToGuardsDialogue = data.playerEntity.haveShownSurrenderToGuardsDialogue;
             entity.SetCurrentLevelUpSkillSum();
+            if (DaggerfallUnity.Settings.PlayerTorchFromItems)
+                entity.LightSource = entity.Items.GetItem(data.playerEntity.lightSourceUID);
+            entity.SGroupReputations[(int)FactionFile.SocialGroups.Commoners] = data.playerEntity.reputationCommoners;
+            entity.SGroupReputations[(int)FactionFile.SocialGroups.Merchants] = data.playerEntity.reputationMerchants;
+            entity.SGroupReputations[(int)FactionFile.SocialGroups.Scholars] = data.playerEntity.reputationScholars;
+            entity.SGroupReputations[(int)FactionFile.SocialGroups.Nobility] = data.playerEntity.reputationNobility;
+            entity.SGroupReputations[(int)FactionFile.SocialGroups.Underworld] = data.playerEntity.reputationUnderworld;
 
             entity.RentedRooms = (data.playerEntity.rentedRooms != null) ? data.playerEntity.rentedRooms.ToList() : new List<RoomRental_v1>();
 

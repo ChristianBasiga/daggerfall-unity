@@ -28,6 +28,8 @@ namespace DaggerfallWorkshop
     [RequireComponent(typeof(AudioSource))]
     public class DaggerfallAudioSource : MonoBehaviour
     {
+        const float audioClipMaxDelay = 0.150f; //give up if sound takes longer to load
+
         const int minIndex = 0;
         const int maxIndex = 458;
 
@@ -126,7 +128,8 @@ namespace DaggerfallWorkshop
             {
                 PreviewID = (int)dfUnity.SoundReader.GetSoundID(PreviewIndex);
                 PreviewClip = (SoundClips)PreviewIndex;
-                audioSource.PlayOneShot(dfUnity.SoundReader.GetAudioClip(PreviewIndex));
+                AudioClip clip = dfUnity.SoundReader.GetAudioClip(PreviewIndex);
+                DaggerfallUnity.Instance.StartCoroutine(PlayOneShotWhenReady(clip, 1.0f));
             }
         }
 
@@ -206,9 +209,23 @@ namespace DaggerfallWorkshop
                 if (clip)
                 {
                     audioSource.spatialBlend = spatialBlend;
-                    audioSource.PlayOneShot(clip, volumeScale * DaggerfallUnity.Settings.SoundVolume);
+                    DaggerfallUnity.Instance.StartCoroutine(PlayOneShotWhenReady(clip, volumeScale * DaggerfallUnity.Settings.SoundVolume));
                 }
             }
+        }
+
+        private IEnumerator PlayOneShotWhenReady(AudioClip audioClip, float volume)
+        {
+            float loadWaitTimer = 0f;
+            while (audioClip.loadState == AudioDataLoadState.Unloaded ||
+                   audioClip.loadState == AudioDataLoadState.Loading)
+            {
+                loadWaitTimer += Time.deltaTime;
+                if (loadWaitTimer > audioClipMaxDelay)
+                    yield break;
+                yield return null;
+            }
+            audioSource.PlayOneShot(audioClip, volume);
         }
 
         /// <summary>
@@ -317,7 +334,10 @@ namespace DaggerfallWorkshop
             // Manually start sound if playOnAwake true.
             // This is necessary as sound is procedurally created after awake.
             if (audioSource.playOnAwake)
+            {
+                audioSource.volume = DaggerfallUnity.Settings.SoundVolume;
                 audioSource.Play();
+            }
         }
 
         private bool ReadyCheck()

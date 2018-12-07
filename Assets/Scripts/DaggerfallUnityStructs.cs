@@ -218,6 +218,8 @@ namespace DaggerfallWorkshop
         public int ChanceForAttack5;                // Chance to use PrimaryAttackAnimFrames3 for an attack
         public int[] PrimaryAttackAnimFrames5;      // Alternate animation sequence to play when doing primary attack
         public int[] RangedAttackAnimFrames;        // Animation sequence to play when doing bow & arrow attack
+        public bool HasSpellAnimation;              // Whether or not this character has specific animations for casting spells
+        public int[] SpellAnimFrames;               // Animation sequence to play when doing a spell cast
         public MobileTeams Team;                    // Team that this enemy uses if enemy in-fighting is on
     }
 
@@ -524,5 +526,24 @@ namespace DaggerfallWorkshop
     {
         public int SpellID;                     // ID of spell inside SPELLS.STD - used to reference spell itself
         public string SpellName;                // Display name of spell - only used to make file more human readable
+    }
+
+    public struct Border<T>
+    {
+        public Border(T common)
+        {
+            Fill = Top = Bottom = Left = Right = TopLeft =
+                TopRight = BottomLeft = BottomRight = common;
+        }
+
+        public T Fill;
+        public T Top;
+        public T Bottom;
+        public T Left;
+        public T Right;
+        public T TopLeft;
+        public T TopRight;
+        public T BottomLeft;
+        public T BottomRight;
     }
 }

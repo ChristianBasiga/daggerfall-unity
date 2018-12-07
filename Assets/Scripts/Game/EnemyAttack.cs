@@ -26,14 +26,15 @@ namespace DaggerfallWorkshop.Game
     public class EnemyAttack : MonoBehaviour
     {
         public float MeleeAttackSpeed = 1.25f;      // Number of seconds between melee attacks
-        public float MeleeDistance = 3.2f;          // Maximum distance for melee attack
+        public float MeleeDistance = 2.25f;          // Maximum distance for melee attack
+        public float MeleeTimer = 0;                // Must be 0 for a melee attack or touch spell to be done
+        public DaggerfallMissile ArrowMissilePrefab;
 
         //EnemyMotor motor;
         EnemySenses senses;
         EnemySounds sounds;
         DaggerfallMobileUnit mobile;
         DaggerfallEntityBehaviour entityBehaviour;
-        float meleeTimer = 0;
         int damage = 0;
         float classicUpdateTimer = 0f;
         bool classicUpdate = false;
@@ -70,7 +71,7 @@ namespace DaggerfallWorkshop.Game
             // If a bow attack has reached the shoot frame we can shoot an arrow
             else if (mobile.ShootArrow)
             {
-                BowDamage(); // TODO: Shoot 3D projectile instead of doing an instant hit
+                ShootBow();
                 mobile.ShootArrow = false;
 
                 DaggerfallAudioSource dfAudioSource = GetComponent<DaggerfallAudioSource>();
@@ -79,52 +80,70 @@ namespace DaggerfallWorkshop.Game
             }
 
             // Countdown to next melee attack
-            meleeTimer -= Time.deltaTime;
+            MeleeTimer -= Time.deltaTime;
 
-            if (meleeTimer < 0)
-                meleeTimer = 0;
+            if (MeleeTimer < 0)
+                MeleeTimer = 0;
 
             EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
             int speed = entity.Stats.LiveSpeed;
 
             // Note: Speed comparison here is reversed from classic. Classic's way makes fewer attack
             // attempts at higher speeds, so it seems backwards.
-            if (classicUpdate && (DFRandom.rand() % speed >= (speed >> 3) + 6 && meleeTimer == 0))
+            if (classicUpdate && (DFRandom.rand() % speed >= (speed >> 3) + 6 && MeleeTimer == 0))
             {
-                MeleeAnimation();
+                if (!MeleeAnimation())
+                    return;
 
-                meleeTimer = Random.Range(1500, 3001);
-                meleeTimer -= 50 * (GameManager.Instance.PlayerEntity.Level - 10);
-
-                // Note: In classic, what happens here is
-                // meleeTimer += 450 * (enemydata[130] - 2);
-                // Apparently this was meant to reference the game reflexes setting,
-                // which is stored in playerentitydata[130].
-                // Instead enemydata[130] seems to instead always be 0, the equivalent of
-                // "very high" reflexes, regardless of what the game reflexes are.
-                // Here, we use the reflexes data as was intended.
-                meleeTimer += 450 * ((int)GameManager.Instance.PlayerEntity.Reflexes - 2);
-
-                if (meleeTimer > 100000 || meleeTimer < 0)
-                    meleeTimer = 1500;
-
-                meleeTimer /= 980; // Approximates classic frame update
+                ResetMeleeTimer();
             }
+        }
+
+        public void ResetMeleeTimer()
+        {
+            MeleeTimer = Random.Range(1500, 3001);
+            MeleeTimer -= 50 * (GameManager.Instance.PlayerEntity.Level - 10);
+
+            // Note: In classic, what happens here is
+            // meleeTimer += 450 * (enemydata[130] - 2);
+            // Looks like this was meant to reference the game reflexes setting,
+            // which is stored in playerentitydata[130].
+            // Instead enemydata[130] seems to instead always be 0, the equivalent of
+            // "very high" reflexes, regardless of what the game reflexes are.
+            // Here, we use the reflexes data as was intended.
+            MeleeTimer += 450 * ((int)GameManager.Instance.PlayerEntity.Reflexes - 2);
+
+            if (MeleeTimer < 0)
+                MeleeTimer = 0;
+
+            MeleeTimer /= 980; // Approximates classic frame update
+        }
+
+        public void BowDamage(Vector3 direction)
+        {
+            if (entityBehaviour.Target == null)
+                return;
+
+            EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
+            if (entityBehaviour.Target == GameManager.Instance.PlayerEntityBehaviour)
+                damage = ApplyDamageToPlayer(entity.ItemEquipTable.GetItem(Items.EquipSlots.RightHand));
+            else
+                damage = ApplyDamageToNonPlayer(entity.ItemEquipTable.GetItem(Items.EquipSlots.RightHand), direction, true);
+
+            Items.DaggerfallUnityItem arrow = Items.ItemBuilder.CreateItem(Items.ItemGroups.Weapons, (int)Items.Weapons.Arrow);
+            entityBehaviour.Target.Entity.Items.AddItem(arrow);
         }
 
         #region Private Methods
 
-        private void MeleeAnimation()
+        private bool MeleeAnimation()
         {
             // Are we in range and facing target? Then start attack.
             if (senses.TargetInSight)
             {
-                // Take the speed of movement during the attack animation into account when deciding if to attack
-                EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
-                float attackSpeed = ((entity.Stats.LiveSpeed + PlayerSpeedChanger.dfWalkBase) / PlayerSpeedChanger.classicToUnitySpeedUnitRatio) / EnemyMotor.AttackSpeedDivisor;
-
-                if (senses.DistanceToTarget >= MeleeDistance + attackSpeed)
-                    return;
+                // Take the rate of target approach into account when deciding if to attack
+                if (senses.DistanceToTarget >= MeleeDistance + senses.TargetRateOfApproach)
+                    return false;
 
                 // Set melee animation state
                 mobile.ChangeEnemyState(MobileStates.PrimaryAttack);
@@ -134,7 +153,11 @@ namespace DaggerfallWorkshop.Game
                 {
                     sounds.PlayAttackSound();
                 }
+
+                return true;
             }
+
+            return false;
         }
 
         private void MeleeDamage()
@@ -158,12 +181,12 @@ namespace DaggerfallWorkshop.Game
                 damage = 0;
 
                 // Are we still in range and facing target? Then apply melee damage.
-                if (entityBehaviour.Target != null && senses.DistanceToTarget < MeleeDistance && senses.TargetInSight)
+                if (entityBehaviour.Target != null && senses.DistanceToTarget <= MeleeDistance && senses.TargetInSight)
                 {
                     if (entityBehaviour.Target == GameManager.Instance.PlayerEntityBehaviour)
                         damage = ApplyDamageToPlayer(weapon);
                     else
-                        damage = ApplyDamageToNonPlayer(weapon);
+                        damage = ApplyDamageToNonPlayer(weapon, transform.forward);
                 }
                 else
                 {
@@ -183,29 +206,17 @@ namespace DaggerfallWorkshop.Game
             }
         }
 
-        private void BowDamage()
+        private void ShootBow()
         {
             if (entityBehaviour)
             {
-                // Can we see target? Then apply damage.
-                if (senses.TargetInSight)
+                DaggerfallMissile missile = Instantiate(ArrowMissilePrefab);
+                if (missile)
                 {
-                    EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
-                    if (entityBehaviour.Target == GameManager.Instance.PlayerEntityBehaviour)
-                        damage = ApplyDamageToPlayer(entity.ItemEquipTable.GetItem(Items.EquipSlots.RightHand));
-                    else
-                        damage = ApplyDamageToNonPlayer(entity.ItemEquipTable.GetItem(Items.EquipSlots.RightHand), true);
-
-                    // Play arrow sound and add arrow to target inventory
-                    if (entityBehaviour.Target == GameManager.Instance.PlayerEntityBehaviour)
-                        GameManager.Instance.PlayerObject.SendMessage("PlayArrowSound");
-                    else
-                    {
-                        EnemySounds targetSounds = entityBehaviour.Target.GetComponent<EnemySounds>();
-                        targetSounds.PlayArrowSound();
-                    }
-                    Items.DaggerfallUnityItem arrow = Items.ItemBuilder.CreateItem(Items.ItemGroups.Weapons, (int)Items.Weapons.Arrow);
-                    entityBehaviour.Target.Entity.Items.AddItem(arrow);
+                    missile.Caster = entityBehaviour;
+                    missile.TargetType = TargetTypes.SingleTargetAtRange;
+                    missile.ElementType = ElementTypes.None;
+                    missile.IsArrow = true;
                 }
             }
         }
@@ -254,12 +265,16 @@ namespace DaggerfallWorkshop.Game
                 else
                     SendDamageToPlayer();
             }
+            else
+                sounds.PlayMissSound(weapon);
 
             return damage;
         }
 
-        private int ApplyDamageToNonPlayer(Items.DaggerfallUnityItem weapon, bool bowAttack = false)
+        private int ApplyDamageToNonPlayer(Items.DaggerfallUnityItem weapon, Vector3 direction, bool bowAttack = false)
         {
+            if (entityBehaviour.Target == null)
+                return 0;
             // TODO: Merge with hit code in WeaponManager to eliminate duplicate code
             EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
             EnemyEntity targetEntity = entityBehaviour.Target.Entity as EnemyEntity;
@@ -307,7 +322,7 @@ namespace DaggerfallWorkshop.Game
                         if (knockBackSpeed < (15 / (PlayerSpeedChanger.classicToUnitySpeedUnitRatio / 10)))
                             knockBackSpeed = (15 / (PlayerSpeedChanger.classicToUnitySpeedUnitRatio / 10));
                         targetMotor.KnockBackSpeed = knockBackSpeed;
-                        targetMotor.KnockBackDirection = transform.forward;
+                        targetMotor.KnockBackDirection = direction;
                     }
                 }
 

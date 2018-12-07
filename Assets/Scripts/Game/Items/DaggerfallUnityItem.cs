@@ -16,7 +16,6 @@ using DaggerfallConnect.FallExe;
 using DaggerfallWorkshop.Game.Serialization;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.Questing;
-using DaggerfallWorkshop.Utility;
 
 namespace DaggerfallWorkshop.Game.Items
 {
@@ -232,7 +231,7 @@ namespace DaggerfallWorkshop.Game.Items
         /// </summary>
         public bool IsEquipped
         {
-            get { return !(equipSlot == EquipSlots.None); }
+            get { return equipSlot != EquipSlots.None; }
         }
 
         /// <summary>
@@ -259,6 +258,18 @@ namespace DaggerfallWorkshop.Game.Items
         public bool IsArtifact
         {
             get { return (flags & artifactMask) > 0; }
+        }
+
+        /// <summary>
+        /// Checks if this item is light source.
+        /// </summary>
+        public bool IsLightSource
+        {   // Torch, Lantern, Candle, Holy Candle.
+            get { return (itemGroup == ItemGroups.UselessItems2 && 
+                          (TemplateIndex == (int)UselessItems2.Torch ||
+                           TemplateIndex == (int)UselessItems2.Lantern ||
+                           TemplateIndex == (int)UselessItems2.Candle)) ||
+                          IsOfTemplate(ItemGroups.ReligiousItems, (int)ReligiousItems.Holy_candle); }
         }
 
         /// <summary>
@@ -436,7 +447,7 @@ namespace DaggerfallWorkshop.Game.Items
             message = (itemGroup == ItemGroups.Paintings) ? UnityEngine.Random.Range(0, 65535) : 0;
             stackCount = 1;
         }
-        
+
         /// <summary>
         /// Sets item by merging item template and artifact template data.
         /// Result is a normal DaggerfallUnityItem with properties of both base template and magic item template.
@@ -521,23 +532,33 @@ namespace DaggerfallWorkshop.Game.Items
             return (TemplateIndex == templateIndex);
         }
 
+        /// <summary>
         /// Determines if item is stackable.
-        /// Only ingredients, gold pieces and arrows are stackable,
-        /// and quest items are never stackable.
+        /// Only ingredients, gold pieces, oil and arrows are stackable,
+        /// but equipped items, enchanted ingredients and quest items are never stackable.
         /// </summary>
         /// <returns>True if item stackable.</returns>
         public virtual bool IsStackable()
         {
-            if (IsQuestItem)
+            if (IsEquipped || IsQuestItem || IsEnchanted)
                 return false;
-            if (IsIngredient || 
-                IsOfTemplate(ItemGroups.Currency, (int) Currency.Gold_pieces) || 
-                IsOfTemplate(ItemGroups.Weapons, (int) Weapons.Arrow))
+            if (IsIngredient ||
+                IsOfTemplate(ItemGroups.Currency, (int)Currency.Gold_pieces) ||
+                IsOfTemplate(ItemGroups.Weapons, (int)Weapons.Arrow) ||
+                IsOfTemplate(ItemGroups.UselessItems2, (int)UselessItems2.Oil))
                 return true;
             else
                 return false;
         }
 
+        /// <summary>
+        /// Determines if item is a stack.
+        /// </summary>
+        /// <returns><c>true</c> if item is a stack, <c>false</c> otherwise.</returns>
+        public bool IsAStack() 
+        {
+            return stackCount > 1;
+        }
         /// <summary>
         /// Allow use of item to be implemented by item object and overridden
         /// </summary>
@@ -1086,7 +1107,7 @@ namespace DaggerfallWorkshop.Game.Items
         public void IdentifyItem()
         {
             flags = (ushort)(flags | identifiedMask);
-        }        
+        }
 
         #endregion
 
@@ -1342,24 +1363,20 @@ namespace DaggerfallWorkshop.Game.Items
 
         bool IsCloak()
         {
-            // Mens cloaks
-            if (ItemGroup == ItemGroups.MensClothing)
+            // Men's cloaks
+            if (ItemGroup == ItemGroups.MensClothing &&
+               (TemplateIndex == (int)MensClothing.Casual_cloak ||
+                TemplateIndex == (int)MensClothing.Formal_cloak))
             {
-                if (TemplateIndex == (int)MensClothing.Casual_cloak ||
-                    TemplateIndex == (int)MensClothing.Formal_cloak)
-                {
-                    return true;
-                }
+                return true;
             }
 
-            // Womens cloaks
-            if (ItemGroup == ItemGroups.WomensClothing)
+            // Women's cloaks
+            if (ItemGroup == ItemGroups.WomensClothing &&
+               (TemplateIndex == (int)WomensClothing.Casual_cloak ||
+                TemplateIndex == (int)WomensClothing.Formal_cloak))
             {
-                if (TemplateIndex == (int)WomensClothing.Casual_cloak ||
-                    TemplateIndex == (int)WomensClothing.Formal_cloak)
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;
@@ -1374,7 +1391,7 @@ namespace DaggerfallWorkshop.Game.Items
                 return false;
 
             // Check for legacy magic effects
-            for (int i = 0;  i < legacyMagic.Length; i++)
+            for (int i = 0; i < legacyMagic.Length; i++)
             {
                 if (legacyMagic[i].type != EnchantmentTypes.None)
                     return true;

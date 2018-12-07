@@ -495,7 +495,7 @@ namespace DaggerfallWorkshop.Game.Formulas
                         damage = CalculateBackstabDamage(damage, backstabChance);
                     }
                 }
-                else // attacker is monster
+                else if (AIAttacker != null) // attacker is monster
                 {
                     // Handle multiple attacks by AI
                     int attackNumber = 0;
@@ -535,7 +535,7 @@ namespace DaggerfallWorkshop.Game.Formulas
                 }
             }
             // Handle weapon attacks
-            else
+            else if (weapon != null)
             {
                 // Apply weapon material modifier.
                 if (weapon.GetWeaponMaterialModifier() > 0)
@@ -647,8 +647,6 @@ namespace DaggerfallWorkshop.Game.Formulas
             // Here, if an equipped shield covers the hit body part, it takes damage instead.
             if (weapon != null && damage > 0)
             {
-                // TODO: Inflict poison
-                // TODO: Inflict weapon magic effects
                 // TODO: If attacker is AI, apply Ring of Namira effect
                 weapon.DamageThroughPhysicalHit(damage, attacker);
 
@@ -697,7 +695,18 @@ namespace DaggerfallWorkshop.Game.Formulas
                         InflictDisease(target, diseaseListB);
                     break;
                 case (int)MonsterCareers.Spider:
-                    // if target does not have paralyze (spell id 66), cast it
+                case (int)MonsterCareers.GiantScorpion:
+                    EntityEffectManager targetEffectManager = target.EntityBehaviour.GetComponent<EntityEffectManager>();
+                    if (targetEffectManager.FindIncumbentEffect<Paralyze>() == null)
+                    {
+                        SpellRecord.SpellRecordData spellData;
+                        GameManager.Instance.EntityEffectBroker.GetClassicSpellRecord(66, out spellData);
+                        EffectBundleSettings bundle;
+                        GameManager.Instance.EntityEffectBroker.ClassicSpellRecordDataToEffectBundleSettings(spellData, BundleTypes.Spell, out bundle);
+                        EntityEffectBundle spell = new EntityEffectBundle(bundle, attacker.EntityBehaviour);
+                        EntityEffectManager attackerEffectManager = attacker.EntityBehaviour.GetComponent<EntityEffectManager>();
+                        attackerEffectManager.SetReadySpell(spell, true);
+                    }
                     break;
                 case (int)MonsterCareers.Werewolf:
                     //uint random = DFRandom.rand();
@@ -722,17 +731,11 @@ namespace DaggerfallWorkshop.Game.Formulas
                     if (UnityEngine.Random.Range(1, 100 + 1) <= 5)
                         InflictDisease(target, diseaseListC);
                     break;
-                case (int)MonsterCareers.GiantScorpion:
-                    // if target does not have paralyze (spell id 66), cast it
-                    break;
                 case (int)MonsterCareers.Vampire:
                 case (int)MonsterCareers.VampireAncient:
                     uint random = DFRandom.rand();
-                    if (random >= 400)
-                    {
-                        if (UnityEngine.Random.Range(1, 100 + 1) <= 2)
-                            InflictDisease(target, diseaseListA);
-                    }
+                    if (random >= 400 && UnityEngine.Random.Range(1, 100 + 1) <= 2)
+                        InflictDisease(target, diseaseListA);
                     // else
                     //{
                     //    InflictVampirism
@@ -924,16 +927,6 @@ namespace DaggerfallWorkshop.Game.Formulas
 
         public static int SavingThrow(DFCareer.Elements elementType, DFCareer.EffectFlags effectFlags, DaggerfallEntity target, int modifier)
         {
-            // Handle resistances granted by magical effects (classic example)
-            // elementTypes are 0 = fire, 1 = frost, 2 = disease/poison, 3 = shock, 4 = magick
-            // int[] SavingThrowResistFlags = { 0x02, 0x10000000, 0x20000000, 0x40000000, 0x80000000 }; These map to classic magicEffects 1 through 4 concatenated together as 4 bytes.
-            // if (target.magicEffects & SavingThrowResistTypes[elementType]
-            //{
-            //      int chance = target.ResistanceTo(elementType);
-            //      if (UnityEngine.Random.Range(1, 100 + 1) <= chance)
-            //          return 0;
-            //}
-
             // Handle resistances granted by magical effects
             if (target.HasResistanceFlag(elementType))
             {
@@ -948,41 +941,53 @@ namespace DaggerfallWorkshop.Game.Formulas
             int biographyMod = 0;
 
             PlayerEntity playerEntity = GameManager.Instance.PlayerEntity;
-            if (effectFlags == DFCareer.EffectFlags.Paralysis)
-                toleranceFlags = target.Career.Paralysis;
-            if (effectFlags == DFCareer.EffectFlags.Magic)
+            if ((effectFlags & DFCareer.EffectFlags.Paralysis) != 0)
             {
-                toleranceFlags = target.Career.Magic;
-                if (target == playerEntity)
-                    biographyMod = playerEntity.BiographyResistMagicMod;
+                toleranceFlags |= target.Career.Paralysis;
+                // Innate immunity if high elf. Start with 100 saving throw, but can be modified by
+                // tolerance flags. Note this differs from classic, where high elves have 100% immunity
+                // regardless of tolerance flags.
+                if (target == playerEntity && playerEntity.Race == Races.HighElf)
+                    savingThrow = 100;
             }
-            else if (effectFlags == DFCareer.EffectFlags.Poison)
+            if ((effectFlags & DFCareer.EffectFlags.Magic) != 0)
             {
-                toleranceFlags = target.Career.Poison;
+                toleranceFlags |= target.Career.Magic;
                 if (target == playerEntity)
-                    biographyMod = playerEntity.BiographyResistPoisonMod;
+                    biographyMod += playerEntity.BiographyResistMagicMod;
             }
-            else if (effectFlags == DFCareer.EffectFlags.Fire)
-                toleranceFlags = target.Career.Fire;
-            else if (effectFlags == DFCareer.EffectFlags.Frost)
-                toleranceFlags = target.Career.Frost;
-            else if (effectFlags == DFCareer.EffectFlags.Shock)
-                toleranceFlags = target.Career.Shock;
-            else if (effectFlags == DFCareer.EffectFlags.Disease)
+            if ((effectFlags & DFCareer.EffectFlags.Poison) != 0)
             {
-                toleranceFlags = target.Career.Disease;
+                toleranceFlags |= target.Career.Poison;
                 if (target == playerEntity)
-                    biographyMod = playerEntity.BiographyResistDiseaseMod;
+                    biographyMod += playerEntity.BiographyResistPoisonMod;
+            }
+            if ((effectFlags & DFCareer.EffectFlags.Fire) != 0)
+                toleranceFlags |= target.Career.Fire;
+            if ((effectFlags & DFCareer.EffectFlags.Frost) != 0)
+                toleranceFlags |= target.Career.Frost;
+            if ((effectFlags & DFCareer.EffectFlags.Shock) != 0)
+                toleranceFlags |= target.Career.Shock;
+            if ((effectFlags & DFCareer.EffectFlags.Disease) != 0)
+            {
+                toleranceFlags |= target.Career.Disease;
+                if (target == playerEntity)
+                    biographyMod += playerEntity.BiographyResistDiseaseMod;
             }
 
-            if (toleranceFlags == DFCareer.Tolerance.Immune)
-                return 0;
-            if (toleranceFlags == DFCareer.Tolerance.CriticalWeakness)
-                return 100;
-            if (toleranceFlags == DFCareer.Tolerance.LowTolerance)
-                savingThrow = 25;
-            if (toleranceFlags == DFCareer.Tolerance.Resistant)
-                savingThrow = 75;
+            // Note: Differing from classic implementation here. In classic
+            // immune grants always 100% resistance and critical weakness is
+            // always 0% resistance if there is no immunity. Here we are using
+            // a method that allows mixing different tolerance flags, getting
+            // rid of related exploits when creating a character class.
+            if ((toleranceFlags & DFCareer.Tolerance.Immune) != 0)
+                savingThrow += 50;
+            if ((toleranceFlags & DFCareer.Tolerance.CriticalWeakness) != 0)
+                savingThrow -= 50;
+            if ((toleranceFlags & DFCareer.Tolerance.LowTolerance) != 0)
+                savingThrow -= 25;
+            if ((toleranceFlags & DFCareer.Tolerance.Resistant) != 0)
+                savingThrow += 25;
 
             savingThrow += biographyMod + modifier;
             if (elementType == DFCareer.Elements.Frost && target == playerEntity && playerEntity.Race == Races.Nord)
@@ -1279,9 +1284,7 @@ namespace DaggerfallWorkshop.Game.Formulas
             if (condition == max)
                 return 0;
 
-            int cost = baseItemValue;
-
-            cost = 10 * baseItemValue / 100;
+            int cost = 10 * baseItemValue / 100;
 
             if (cost < 1)
                 cost = 1;
@@ -1399,7 +1402,7 @@ namespace DaggerfallWorkshop.Game.Formulas
             for (int i = 0; i < regionData.Length; ++i)
             {
                 FactionFile.FactionData regionFaction;
-                if (player.FactionData.FindFactionByTypeAndRegion(7, i + 1, out regionFaction))
+                if (player.FactionData.FindFactionByTypeAndRegion(7, i, out regionFaction))
                 {
                     for (int j = 0; j < times; ++j)
                     {
@@ -1598,7 +1601,6 @@ namespace DaggerfallWorkshop.Game.Formulas
             int perLevel,
             int skillValue)
         {
-
             //Calculate effect gold cost, spellpoint cost is calculated from gold cost after adding up for duration, chance and magnitude
             goldCost = trunc(costs.OffsetGold + costs.CostA * starting + costs.CostB * trunc(increase / perLevel));
         }

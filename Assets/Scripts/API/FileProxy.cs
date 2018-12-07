@@ -14,7 +14,6 @@ using UnityEngine;
 using System;
 using System.Text;
 using System.IO;
-using DaggerfallConnect;
 #endregion
 
 namespace DaggerfallConnect
@@ -104,9 +103,7 @@ namespace DaggerfallConnect.Utility
         /// <param name="name">Name, filename, or path  to describe memory buffer.</param>
         public FileProxy(byte[] data, string name)
         {
-            fileBuffer = data;
-            managedFilePath = name;
-            fileUsage = FileUsage.UseMemory;
+            Load(data, name);
         }
 
         #endregion
@@ -237,6 +234,18 @@ namespace DaggerfallConnect.Utility
         }
 
         /// <summary>
+        /// Load a binary array.
+        /// </summary>
+        /// <param name="data">Byte array to assign (usage will be set to FileUsage.useMemory).</param>
+        /// <param name="name">Name, filename, or path  to describe memory buffer.</param>
+        public void Load(byte[] data, string name)
+        {
+            fileBuffer = data;
+            managedFilePath = name;
+            fileUsage = FileUsage.UseMemory;
+        }
+
+        /// <summary>
         /// Close open file and free memory used for buffer.
         /// </summary>
         public void Close()
@@ -295,7 +304,7 @@ namespace DaggerfallConnect.Utility
             BinaryReader reader = GetReader(position);
             if (reader == null)
                 return null;
-            
+
             return reader.ReadBytes(length);
         }
 
@@ -410,10 +419,9 @@ namespace DaggerfallConnect.Utility
 
             for (int i = position; i < Buffer.Length; i++)
             {
-                if (Buffer[i] == bytes[0])
+                if (Buffer[i] == bytes[0] && ReadCString(i, pattern.Length) == pattern)
                 {
-                    if (ReadCString(i, pattern.Length) == pattern)
-                        return i;
+                    return i;
                 }
             }
 

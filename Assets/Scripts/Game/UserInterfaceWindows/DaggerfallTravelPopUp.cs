@@ -17,7 +17,7 @@ using DaggerfallConnect.Utility;
 using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.Utility;
-
+using DaggerfallWorkshop.Game.Serialization;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
@@ -82,8 +82,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         bool hasHorse = false;
         bool hasCart = false;
         bool hasShip = false;
-
-        int tripCost = 0;
 
         #endregion
 
@@ -247,7 +245,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             if ((travelTimeMinutes % 1440) > 0)
                 travelTimeDaysTotal += 1;
 
-            tripCost = travelTimeCalculator.CalculateTripCost(
+            travelTimeCalculator.CalculateTripCost(
                 travelTimeMinutes,
                 sleepModeInn,
                 hasShip,
@@ -255,7 +253,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 );
 
             travelTimeLabel.Text = string.Format("{0}", travelTimeDaysTotal);
-            tripCostLabel.Text = tripCost.ToString();
+            tripCostLabel.Text = travelTimeCalculator.TotalCost.ToString();
 
             countdownValueTravelTimeDays = travelTimeDaysTotal;
         }
@@ -281,7 +279,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         // perform fast travel actions
         private void performFastTravel()
         {
-            GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.RandomStartMarker);
+            // Cache scene first, if fast travelling while on ship.
+            if (GameManager.Instance.TransportManager.IsOnShip())
+                SaveLoadManager.CacheScene(GameManager.Instance.StreamingWorld.SceneName);
+            GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
 
             if (speedCautious)
             {
@@ -324,9 +325,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         }
 
         // Return whether player has enough gold for the selected travel options
+        // Taverns only accept gold pieces
         bool enoughGoldCheck()
         {
-            return (GameManager.Instance.PlayerEntity.GoldPieces >= tripCost);
+            return (GameManager.Instance.PlayerEntity.GetGoldAmount() >= travelTimeCalculator.TotalCost) &&
+                   (GameManager.Instance.PlayerEntity.GoldPieces >= travelTimeCalculator.PiecesCost);
         }
 
         void showNotEnoughGoldPopup()
@@ -369,6 +372,12 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
+        public override void CancelWindow()
+        {
+            doFastTravel = false;
+            base.CancelWindow();
+        }
+
         /// <summary>
         /// Button handler for travel-with-incubating-disease confirmation pop up.
         /// </summary>
@@ -392,13 +401,17 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 return;
             }
             else
-                GameManager.Instance.PlayerEntity.GoldPieces -= tripCost;
+            {
+                GameManager.Instance.PlayerEntity.GoldPieces -= travelTimeCalculator.PiecesCost;
+                GameManager.Instance.PlayerEntity.DeductGoldAmount(travelTimeCalculator.TotalCost - travelTimeCalculator.PiecesCost);
+            }
 
             doFastTravel = true; // initiate fast travel (Update() function will perform fast travel when this flag is true)
         }
 
         public void ExitButtonOnClickHandler(BaseScreenComponent sender, Vector2 position)
         {
+            doFastTravel = false;
             DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
         }
 

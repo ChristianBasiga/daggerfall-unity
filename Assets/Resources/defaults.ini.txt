@@ -35,7 +35,6 @@ EnableToolTips=True
 ToolTipDelayInSeconds=0.0
 ToolTipBackgroundColor=404040D2
 ToolTipTextColor=E6E6C8FF
-AutomapNumberOfDungeons=5
 ShopQualityPresentation=0
 ShopQualityHUDDelay=4
 ShowQuestJournalClocksAsCountdown=False
@@ -45,8 +44,10 @@ EnableVitalsIndicators=True
 EnableModernConversationStyleInTalkWindow=False
 HelmAndShieldMaterialDisplay=0
 InteractionModeIcon = minimal
+EnableArrowCounter=True
 AccelerateUICopyTexture=False
 SDFFontRendering=True
+EnableGeographicBackgrounds=False
 
 [Spells]
 EnableSpellLighting=True
@@ -66,6 +67,11 @@ CameraRecoilStrength = 3
 SoundVolume = 1.0
 MusicVolume = 1.0
 
+[Map]
+AutomapNumberOfDungeons=5
+ExteriorMapDefaultZoomLevel=8
+ExteriorMapResetZoomLevelOnNewLocation=True
+
 [Startup]
 StartCellX=109
 StartCellY=158
@@ -77,7 +83,7 @@ TerrainDistance=3
 [Enhancements]
 LypyL_GameConsole=True
 LypyL_ModSystem=True
-MeshAndTextureReplacement=False
+AssetInjection=True
 CompressModdedTextures=True
 NearDeathWarning=True
 AdvancedClimbing=True
@@ -85,5 +91,7 @@ AlternateRandomEnemySelection=False
 DungeonAmbientLightScale=1.0
 NightAmbientLightScale=1.0
 PlayerTorchLightScale=1.0
+PlayerTorchFromItems=False
 CombatVoices=True
 EnemyInfighting=True
+EnhancedCombatAI=True

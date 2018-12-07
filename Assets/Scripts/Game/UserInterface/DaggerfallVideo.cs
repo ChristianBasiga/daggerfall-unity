@@ -35,6 +35,7 @@ namespace DaggerfallWorkshop.Game.UserInterface
         AudioSource[] audioSources = new AudioSource[clipQueueLength];
         int flip = 0;
         double nextEventTime;
+        bool lastPlayedAudioFrame;
 
         public bool Playing { get; set; }
         public VidFile VidFile { get { return vidFile; } }
@@ -113,9 +114,11 @@ namespace DaggerfallWorkshop.Game.UserInterface
 
                         // Schedule clip
                         audioSources[flip].clip = clips[flip];
+                        audioSources[flip].volume = DaggerfallUnity.Settings.SoundVolume;
                         audioSources[flip].PlayScheduled(nextEventTime);
                         nextEventTime += vidFile.FrameDelay;
                         flip = (clipQueueLength - 1) - flip;
+                        lastPlayedAudioFrame = true;
                     }
 
                     if (vidFile.LastBlockType == VidBlockTypes.Video_StartFrame ||
@@ -125,6 +128,15 @@ namespace DaggerfallWorkshop.Game.UserInterface
                         // Update video
                         vidTexture.SetPixels32(vidFile.FrameBuffer);
                         vidTexture.Apply(false);
+
+                        // Several videos have parts that are only video frames.
+                        // If nextEventTime is not updated, the playback becomes too fast in these parts.
+                        if (!lastPlayedAudioFrame)
+                        {
+                            nextEventTime += vidFile.FrameDelay;
+                        }
+
+                        lastPlayedAudioFrame = false;
                     }
                 }
             }

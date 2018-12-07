@@ -107,7 +107,7 @@ namespace DaggerfallWorkshop.Game
 
                 // Play attack sound only about half the time
                 if (Random.value > 0.5f)
-                    dfAudioSource.AudioSource.PlayOneShot(attackClip);
+                    dfAudioSource.AudioSource.PlayOneShot(attackClip, volumeScale * DaggerfallUnity.Settings.SoundVolume);
             }
         }
 
@@ -135,14 +135,6 @@ namespace DaggerfallWorkshop.Game
             {
                 int sound = (int)SoundClips.Parry1 + UnityEngine.Random.Range(0, 9);
                 dfAudioSource.PlayOneShot(sound, 1, 1.1f);
-            }
-        }
-
-        public void PlayArrowSound()
-        {
-            if (IsReady())
-            {
-                dfAudioSource.PlayOneShot(SoundClips.ArrowHit, 1, 1.1f);
             }
         }
 

@@ -41,6 +41,8 @@ namespace DaggerfallWorkshop.Game
         public static Color DaggerfallDefaultInputTextColor = new Color32(227, 223, 0, 255);
         public static Color DaggerfallHighlightTextColor = new Color32(219, 130, 40, 255);
         public static Color DaggerfallAlternateHighlightTextColor = new Color32(255, 130, 40, 255);
+        public static Color DaggerfallQuestionTextColor = new Color(0.698f, 0.812f, 1.0f);
+        public static Color DaggerfallAnswerTextColor = DaggerfallDefaultInputTextColor;
         public static Color DaggerfallDefaultShadowColor = new Color32(93, 77, 12, 255);
         public static Color DaggerfallAlternateShadowColor1 = new Color32(44, 60, 60, 255);
         public static Color DaggerfallDefaultSelectedTextColor = new Color32(162, 36, 12, 255);
@@ -72,6 +74,7 @@ namespace DaggerfallWorkshop.Game
         SpellIconCollection spellIconCollection;
 
         Texture2D[] daggerfallParchmentTextures;
+        Vector2Int daggerfallParchmentTexturesSize;
         DaggerfallFont[] daggerfallFonts = new DaggerfallFont[5];
         char lastCharacterTyped;
         KeyCode lastKeyCode;
@@ -457,7 +460,8 @@ namespace DaggerfallWorkshop.Game
                     uiManager.PushWindow(dfUnityMouseControlsWindow);
                     break;
                 case DaggerfallUIMessages.dfuiOpenSpellBookWindow:
-                    uiManager.PushWindow(dfSpellBookWindow);
+                    if (!GameManager.Instance.PlayerSpellCasting.IsPlayingAnim)
+                        uiManager.PushWindow(dfSpellBookWindow);
                     break;
                 case DaggerfallUIMessages.dfuiOpenCourtWindow:
                     uiManager.PushWindow(dfCourtWindow);
@@ -466,7 +470,11 @@ namespace DaggerfallWorkshop.Game
                     uiManager.PushWindow(dfSpellMakerWindow);
                     break;
                 case DaggerfallUIMessages.dfuiOpenTravelMapWindow:
-                    if (!GameManager.Instance.IsPlayerInside)
+                    if (GameManager.Instance.IsPlayerInside)
+                    {
+                        AddHUDText(HardStrings.cannotTravelIndoors);
+                    }
+                    else
                     {
                         if (GameManager.Instance.AreEnemiesNearby())
                         {
@@ -480,7 +488,7 @@ namespace DaggerfallWorkshop.Game
                     }
                     break;
                 case DaggerfallUIMessages.dfuiOpenAutomap:
-                    if (GameManager.Instance.PlayerEnterExit.IsPlayerInside) // open automap only if player is in interior or dungeon - TODO: location automap for exterior locations
+                    if (GameManager.Instance.IsPlayerInside) // open automap only if player is in interior or dungeon - TODO: location automap for exterior locations
                     {
                         GameManager.Instance.PauseGame(true);
                         uiManager.PushWindow(dfAutomapWindow);
@@ -504,19 +512,20 @@ namespace DaggerfallWorkshop.Game
                         const int enemiesNearby = 354;
                         MessageBox(enemiesNearby);
                     }
-                    else if (GameManager.Instance.PlayerEnterExit.IsPlayerSwimming)
+                    else if (GameManager.Instance.PlayerEnterExit.IsPlayerSwimming ||
+                             !GameManager.Instance.PlayerController.isGrounded)
                     {
                         const int cannotRestNow = 355;
                         MessageBox(cannotRestNow);
                     }
-                    else if (GameManager.Instance.PlayerController.isGrounded)
+                    else
                     {
                         if (!GiveOffer())
                             uiManager.PushWindow(new DaggerfallRestWindow(uiManager));
                     }
                     break;
                 case DaggerfallUIMessages.dfuiOpenTransportWindow:
-                    if (GameManager.Instance.PlayerEnterExit.IsPlayerInside)
+                    if (GameManager.Instance.IsPlayerInside)
                     {
                         AddHUDText(HardStrings.cannotChangeTransportationIndoors);
                     }
@@ -530,6 +539,11 @@ namespace DaggerfallWorkshop.Game
                     uiManager.PushWindow(dfBookReaderWindow);
                     break;
                 case DaggerfallUIMessages.dfuiOpenQuestJournalWindow:
+                    dfQuestJournalWindow.DisplayMode = DaggerfallQuestJournalWindow.JournalDisplay.ActiveQuests;
+                    uiManager.PushWindow(dfQuestJournalWindow);
+                    break;
+                case DaggerfallUIMessages.dfuiOpenNotebookWindow:
+                    dfQuestJournalWindow.DisplayMode = DaggerfallQuestJournalWindow.JournalDisplay.Notebook;
                     uiManager.PushWindow(dfQuestJournalWindow);
                     break;
                 case DaggerfallUIMessages.dfuiOpenPlayerHistoryWindow:
@@ -680,7 +694,8 @@ namespace DaggerfallWorkshop.Game
                     daggerfallParchmentTextures[6],
                     daggerfallParchmentTextures[7],
                     daggerfallParchmentTextures[8],
-                    globalFilterMode);
+                    globalFilterMode,
+                    new Border<Vector2Int>(daggerfallParchmentTexturesSize));
             }
 
             panel.SetMargins(Margins.All, 10);
@@ -693,6 +708,8 @@ namespace DaggerfallWorkshop.Game
                 CifRciFile cif = new CifRciFile(Path.Combine(dfUnity.Arena2Path, parchmentBorderRCIFile), FileUsage.UseMemory, true);
                 cif.LoadPalette(Path.Combine(dfUnity.Arena2Path, cif.PaletteName));
 
+                DFSize recordSize = cif.GetSize(0);
+                daggerfallParchmentTexturesSize = new Vector2Int(recordSize.Width, recordSize.Height);
                 daggerfallParchmentTextures = new Texture2D[cif.RecordCount];
                 for (int i = 0; i < cif.RecordCount; i++)
                 {
@@ -709,7 +726,7 @@ namespace DaggerfallWorkshop.Game
         public void PlayOneShot(AudioClip clip)
         {
             if (audioSource)
-                audioSource.PlayOneShot(clip);
+                audioSource.PlayOneShot(clip, DaggerfallUnity.Settings.SoundVolume);
         }
 
         public void PlayOneShot(SoundClips clip)

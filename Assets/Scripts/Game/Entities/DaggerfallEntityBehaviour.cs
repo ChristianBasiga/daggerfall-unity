@@ -11,6 +11,7 @@
 
 using UnityEngine;
 using DaggerfallWorkshop.Game.MagicAndEffects;
+using DaggerfallWorkshop.Game.Questing;
 
 namespace DaggerfallWorkshop.Game.Entity
 {
@@ -93,7 +94,26 @@ namespace DaggerfallWorkshop.Game.Entity
         /// <param name="assignMultiplier">Optionally assign fatigue multiplier.</param>
         public void DamageFatigueFromSource(IEntityEffect sourceEffect, int amount, bool assignMultiplier = false)
         {
+            // Skip fatigue damage from effects if this is a non-hostile enemy
+            // This is a hack to support N0B00Y08 otherwise warrior will aggro if player casts Sleep on them
+            // Warrior does not aggro in classic and it seems impossible to cast this class of spell on non-hostiles in classic
+            // Would prefer a better system such as a quest action to whitelist certain spells on a Foe resource
+            // But this will get job done in this case and we can expand/improve later
+            if (!IsHostileEnemy())
+                return;
+
             DamageFatigueFromSource(sourceEffect.Caster, amount, assignMultiplier);
+        }
+
+        /// <summary>
+        /// Check if this entity is a hostile enemy.
+        /// Currently only used to block damage and aggro from Sleep spell in N0B00Y08.
+        /// </summary>
+        /// <returns>True if this entity is a hostile enemy.</returns>
+        bool IsHostileEnemy()
+        {
+            EnemyMotor enemyMotor = transform.GetComponent<EnemyMotor>();
+            return enemyMotor && enemyMotor.IsHostile;
         }
 
         /// <summary>
@@ -121,7 +141,7 @@ namespace DaggerfallWorkshop.Game.Entity
         /// <summary>
         /// Cause fatigue damage to entity with additional logic.
         /// </summary>
-        /// <param name="source">Source entity behaviour.</param>
+        /// <param name="sourceEntityBehaviour">Source entity behaviour.</param>
         /// <param name="amount">Amount to damage fatigue.</param>
         /// <param name="assignMultiplier">Optionally assign fatigue multiplier.</param>
         public void DamageFatigueFromSource(DaggerfallEntityBehaviour sourceEntityBehaviour, int amount, bool assignMultiplier = false)
@@ -136,7 +156,7 @@ namespace DaggerfallWorkshop.Game.Entity
         /// <summary>
         /// Cause damage to entity health with additional logic.
         /// </summary>
-        /// <param name="source">Source entity behaviour.</param>
+        /// <param name="sourceEntityBehaviour">Source entity behaviour.</param>
         /// <param name="amount">Amount to damage health.</param>
         /// <param name="showBlood">Show blood splash.</param>
         /// <param name="bloodPosition">Blood splash position.</param>
@@ -160,7 +180,7 @@ namespace DaggerfallWorkshop.Game.Entity
         /// <summary>
         /// Cause spell point damage to entity with additional logic.
         /// </summary>
-        /// <param name="source">Source entity behaviour.</param>
+        /// <param name="sourceEntityBehaviour">Source entity behaviour.</param>
         /// <param name="amount">Amount to damage spell points.</param>
         public void DamageMagickaFromSource(DaggerfallEntityBehaviour sourceEntityBehaviour, int amount)
         {
@@ -232,7 +252,7 @@ namespace DaggerfallWorkshop.Game.Entity
 
         void SetEntityType(EntityTypes type)
         {
-            switch(type)
+            switch (type)
             {
                 case EntityTypes.None:
                     Entity = null;

@@ -12,13 +12,11 @@
 using UnityEngine;
 using System;
 using System.IO;
-using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
 using DaggerfallConnect;
 using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.Formulas;
-using DaggerfallWorkshop.Game.Player;
 using DaggerfallWorkshop.Game.Items;
 using DaggerfallWorkshop.Game.Serialization;
 using DaggerfallWorkshop.Game.Utility;
@@ -54,6 +52,7 @@ namespace DaggerfallWorkshop.Game.Entity
         protected int currentHealth;
         protected int currentFatigue;
         protected int currentMagicka;
+        protected int maxMagicka;
         protected int currentBreath;
         protected WeaponMaterialTypes minMetalToHit;
         protected sbyte[] armorValues = new sbyte[NumberBodyParts];
@@ -65,7 +64,7 @@ namespace DaggerfallWorkshop.Game.Entity
         int[] resistanceChances = new int[5];
 
         // Temp entity spellbook
-        List<EffectBundleSettings> spellbook = new List<EffectBundleSettings>();
+        protected List<EffectBundleSettings> spellbook = new List<EffectBundleSettings>();
 
         #endregion
 
@@ -107,7 +106,7 @@ namespace DaggerfallWorkshop.Game.Entity
         /// </summary>
         public bool IsParalyzed
         {
-            get { return (!IsImmuneToParalysis) ? isParalyzed : false; }
+            get { return (!IsImmuneToParalysis && isParalyzed); }
             set { isParalyzed = value; }
         }
 
@@ -166,7 +165,7 @@ namespace DaggerfallWorkshop.Game.Entity
         /// </summary>
         public bool IsBlending
         {
-            get { return (HasConcealment(MagicalConcealmentFlags.BlendingNormal) || HasConcealment(MagicalConcealmentFlags.BlendingTrue)); } 
+            get { return (HasConcealment(MagicalConcealmentFlags.BlendingNormal) || HasConcealment(MagicalConcealmentFlags.BlendingTrue)); }
         }
 
         /// <summary>
@@ -219,6 +218,7 @@ namespace DaggerfallWorkshop.Game.Entity
             }
         }
 
+        /// <summary>
         /// Gets or sets world context of this entity for floating origin support.
         /// Not required by all systems but this is a nice central place for mobiles.
         /// </summary>
@@ -233,7 +233,7 @@ namespace DaggerfallWorkshop.Game.Entity
         #region Entity Properties
 
         public Genders Gender { get { return gender; } set { gender = value; } }
-        public DFCareer Career { get { return career; } set { career = value; } } 
+        public DFCareer Career { get { return career; } set { career = value; } }
         public string Name { get { return name; } set { name = value; } }
         public int Level { get { return level; } set { level = value; } }
         public DaggerfallStats Stats { get { return stats; } set { stats.Copy(value); } }
@@ -246,7 +246,7 @@ namespace DaggerfallWorkshop.Game.Entity
         public float CurrentHealthPercent { get { return GetCurrentHealth() / (float)maxHealth; } }
         public int MaxFatigue { get { return (stats.LiveStrength + stats.LiveEndurance) * 64; } }
         public int CurrentFatigue { get { return GetCurrentFatigue(); } set { SetFatigue(value); } }
-        public int MaxMagicka { get { return FormulaHelper.SpellPoints(stats.LiveIntelligence, career.SpellPointMultiplierValue); } }
+        public int MaxMagicka { get { return (this == GameManager.Instance.PlayerEntity ? FormulaHelper.SpellPoints(stats.LiveIntelligence, career.SpellPointMultiplierValue) : maxMagicka); } set { maxMagicka = value; } }
         public int CurrentMagicka { get { return GetCurrentMagicka(); } set { SetMagicka(value); } }
         public int MaxBreath { get { return stats.LiveEndurance / 2; } }
         public int CurrentBreath { get { return currentBreath; } set { SetBreath(value); } }
@@ -493,9 +493,9 @@ namespace DaggerfallWorkshop.Game.Entity
                     int armorBonus = armor.GetShieldArmorValue();
                     BodyParts[] protectedBodyParts = armor.GetShieldProtectedBodyParts();
 
-                    foreach (var BodyParts in protectedBodyParts)
+                    foreach (var BodyPart in protectedBodyParts)
                     {
-                        values[(int)BodyParts] = armorBonus;
+                        values[(int)BodyPart] = armorBonus;
                     }
 
                     for (int i = 0; i < armorValues.Length; i++)
@@ -520,7 +520,7 @@ namespace DaggerfallWorkshop.Game.Entity
         /// <returns>True if matching.</returns>
         public bool HasConcealment(MagicalConcealmentFlags flags)
         {
-            return ((MagicalConcealmentFlags & flags) == flags) ? true : false;
+            return ((MagicalConcealmentFlags & flags) == flags);
         }
 
         /// <summary>

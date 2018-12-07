@@ -61,6 +61,8 @@ vitalsIndicators,									Vitals Indicators
 vitalsIndicatorsInfo,								Show indicators on vitals bars that display changes in vitals
 interactionModeIcon,                                Interaction Mode Icon
 interactionModeIconInfo,                            Style of contex icon for interaction mode
+arrowCounter,                                       Arrow counter
+arrowCounterInfo,                                   Enable an arrow counter on the HUD when using bows
 freeScaling,										Free scaling
 freeScalingInfo,									UI is stretched as required to fill entire viewport with no regard to aspect ratio
 showQuestJournalClocksAsCountdown,                  Countdown quest journal clocks
@@ -73,11 +75,13 @@ enableModernConversationStyleInTalkWindow,          TalkWindow Modern Style
 enableModernConversationStyleInTalkWindowInfo,      Modern Conversation Style In TalkWindow
 helmAndShieldMaterialDisplay,                       Helm and Shield Material Display
 helmAndShieldMaterialDisplayInfo,                   Show material for helms and shields in info popups and tooltips
+geographicBackgrounds,                              Geographic backgrounds
+geographicBackgroundsInfo,                          Contextual character backgrounds based on geographic location
 
 modSystem,                                          Mod System
 modSystemInfo,                                      Enable support for mods.
-assetImport,                                        Allow Custom Assets
-assetImportInfo,                                    Import assets from enabled mods and loose files.
+assetInjection,                                     Asset Injection
+assetInjectionInfo,                                 Import asset overrides from enabled mods and loose files.
 compressModdedTextures,                             Compress Modded Textures
 compressModdedTexturesInfo,                         Import textures with a compressed format which uses less graphics memory.
 gameConsole,                                        Game Console
@@ -94,10 +98,14 @@ nightAmbientLightScale,								Night ambient light
 nightAmbientLightScaleInfo,							Scale of the ambient light at night in interiors and exteriors
 playerTorchLightScale,								Player torch light 
 playerTorchLightScaleInfo,							Scale of player personal light
+playerTorchFromItems,								Item based player torch
+playerTorchFromItemsInfo,							Player torch light is enabled by in-game light sources
 combatVoices,										Combat vocalizations
 combatVoicesInfo,									Player and NPCs will vocalize when attacking or being hit
 enemyInfighting,									Enemy infighting
-enemyInfightingInfo,								AI characters will fight others that they aren't allied with
+enemyInfightingInfo,                                AI characters will fight others that they aren't allied with
+enhancedCombatAI,                                   Enhanced combat AI
+enhancedCombatAIInfo,                               Enable various enhancements to combat AI not in original Daggerfall
 
 resolution,                                         Resolution
 resolutionInfo,                                     Screen resolution

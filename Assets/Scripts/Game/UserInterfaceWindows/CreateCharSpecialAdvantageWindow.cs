@@ -1,4 +1,4 @@
-﻿// Project:         Daggerfall Tools For Unity
+// Project:         Daggerfall Tools For Unity
 // Copyright:       Copyright (C) 2009-2018 Daggerfall Workshop
 // Web Site:        http://www.dfworkshop.net
 // License:         MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -47,6 +47,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         DFCareer advantageData;
         List<SpecialAdvDis> advDisList;
+        List<SpecialAdvDis> otherList;
 
         Texture2D nativeTexture;
         Texture2D nativeOverlayTexture;
@@ -202,11 +203,12 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #endregion
 
-        public CreateCharSpecialAdvantageWindow(IUserInterfaceManager uiManager, List<SpecialAdvDis> advDisList, DFCareer careerData, IUserInterfaceWindow previous = null, bool isDisadvantages = false)
+        public CreateCharSpecialAdvantageWindow(IUserInterfaceManager uiManager, List<SpecialAdvDis> advDisList, List<SpecialAdvDis> otherList, DFCareer careerData, IUserInterfaceWindow previous = null, bool isDisadvantages = false)
             : base(uiManager, previous)
         {
             this.isDisadvantages = isDisadvantages;
             this.advDisList = advDisList;
+            this.otherList = otherList;
             this.advantageData = careerData;
         }
 
@@ -375,9 +377,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
             if (secondaryList == null)
             {
-                if (IsDuplicateAdvantage(s))
+                if (CannotAddAdvantage(s))
                 {
-                    return; // advantage/disadvantage already exists, move on
+                    return;
                 }
                 s = new SpecialAdvDis 
                 {
@@ -409,9 +411,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             CloseWindow();
             string primary = advDisList[advDisList.Count - 1].primaryString;
             SpecialAdvDis item = new SpecialAdvDis { primaryString = primary, secondaryString = itemString, difficulty = GetAdvDisAdjustment(primary, itemString) };
-            if (IsDuplicateAdvantage(item))
+            if (CannotAddAdvantage(item))
             {
-                advDisList.RemoveAt(advDisList.Count - 1); // advantage/disadvantage already exists
+                advDisList.RemoveAt(advDisList.Count - 1);
                 return;
             }
             advDisList[advDisList.Count - 1] = item;
@@ -532,14 +534,47 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
-        bool IsDuplicateAdvantage(SpecialAdvDis advDis)
+        bool CannotAddAdvantage(SpecialAdvDis advDis)
         {
-            for (int i = 0; i < advDisList.Count; i++)
+            // Combine advantage and disadvantage lists
+            List<SpecialAdvDis> adList = new List<SpecialAdvDis>();
+            adList.AddRange(advDisList);
+            adList.AddRange(otherList);
+            for (int i = 0; i < adList.Count; i++)
             {
-                if (advDis.primaryString == advDisList[i].primaryString && advDis.secondaryString == advDisList[i].secondaryString)
-                {
+                // Duplicate
+                if (advDis.primaryString == adList[i].primaryString && advDis.secondaryString == adList[i].secondaryString)
                     return true;
-                }
+                // Incompatible advantage/disadvantage pairs
+                if (IsMatchingAdvPair(HardStrings.bonusToHit, HardStrings.phobia, advDis, adList[i]))
+                    return true;
+                if (IsMatchingAdvPair(HardStrings.expertiseIn, HardStrings.forbiddenWeaponry, advDis, adList[i]))
+                    return true;
+                // No immunity, resistance, low tolerance, or critical weakness may co-exist
+                if (IsMatchingAdvPair(HardStrings.immunity, HardStrings.resistance, advDis, adList[i]))
+                    return true;
+                if (IsMatchingAdvPair(HardStrings.immunity, HardStrings.criticalWeakness, advDis, adList[i]))
+                    return true;
+                if (IsMatchingAdvPair(HardStrings.immunity, HardStrings.lowTolerance, advDis, adList[i]))
+                    return true;
+                if (IsMatchingAdvPair(HardStrings.resistance, HardStrings.lowTolerance, advDis, adList[i]))
+                    return true;
+                if (IsMatchingAdvPair(HardStrings.resistance, HardStrings.criticalWeakness, advDis, adList[i]))
+                    return true;
+                if (IsMatchingAdvPair(HardStrings.lowTolerance, HardStrings.criticalWeakness, advDis, adList[i]))
+                    return true;
+            }
+
+            return false;
+        }
+
+        bool IsMatchingAdvPair(string str1, string str2, SpecialAdvDis candidate, SpecialAdvDis incumbent)
+        {
+            if ((candidate.primaryString == str1 && incumbent.primaryString == str2
+                || candidate.primaryString == str2 && incumbent.primaryString == str1)
+                && candidate.secondaryString == incumbent.secondaryString)
+            {
+                return true;
             }
 
             return false;
@@ -572,21 +607,87 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             {
                 case HardStrings.axe:
                     advantageData.Axes = mod;
+                    switch (mod)
+                    {
+                        case DFCareer.Proficiency.Expert:
+                            advantageData.ExpertProficiencies |= DFCareer.ProficiencyFlags.Axes;
+                            break;
+                        case DFCareer.Proficiency.Forbidden:
+                            advantageData.ForbiddenProficiencies |= DFCareer.ProficiencyFlags.Axes;
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 case HardStrings.bluntWeapon:
                     advantageData.BluntWeapons = mod;
+                    switch (mod)
+                    {
+                        case DFCareer.Proficiency.Expert:
+                            advantageData.ExpertProficiencies |= DFCareer.ProficiencyFlags.BluntWeapons;
+                            break;
+                        case DFCareer.Proficiency.Forbidden:
+                            advantageData.ForbiddenProficiencies |= DFCareer.ProficiencyFlags.BluntWeapons;
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 case HardStrings.handToHand:
                     advantageData.HandToHand = mod;
+                    switch (mod)
+                    {
+                        case DFCareer.Proficiency.Expert:
+                            advantageData.ExpertProficiencies |= DFCareer.ProficiencyFlags.HandToHand;
+                            break;
+                        case DFCareer.Proficiency.Forbidden:
+                            advantageData.ForbiddenProficiencies |= DFCareer.ProficiencyFlags.HandToHand;
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 case HardStrings.longBlade:
                     advantageData.LongBlades = mod;
+                    switch (mod)
+                    {
+                        case DFCareer.Proficiency.Expert:
+                            advantageData.ExpertProficiencies |= DFCareer.ProficiencyFlags.LongBlades;
+                            break;
+                        case DFCareer.Proficiency.Forbidden:
+                            advantageData.ForbiddenProficiencies |= DFCareer.ProficiencyFlags.LongBlades;
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 case HardStrings.missileWeapon:
                     advantageData.MissileWeapons = mod;
+                    switch (mod)
+                    {
+                        case DFCareer.Proficiency.Expert:
+                            advantageData.ExpertProficiencies |= DFCareer.ProficiencyFlags.MissileWeapons;
+                            break;
+                        case DFCareer.Proficiency.Forbidden:
+                            advantageData.ForbiddenProficiencies |= DFCareer.ProficiencyFlags.MissileWeapons;
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 case HardStrings.shortBlade:
                     advantageData.ShortBlades = mod;
+                    switch (mod)
+                    {
+                        case DFCareer.Proficiency.Expert:
+                            advantageData.ExpertProficiencies |= DFCareer.ProficiencyFlags.ShortBlades;
+                            break;
+                        case DFCareer.Proficiency.Forbidden:
+                            advantageData.ForbiddenProficiencies |= DFCareer.ProficiencyFlags.ShortBlades;
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 default:
                     break;

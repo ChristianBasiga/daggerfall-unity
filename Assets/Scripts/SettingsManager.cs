@@ -39,6 +39,7 @@ namespace DaggerfallWorkshop
         const string sectionGUI = "GUI";
         const string sectionSpells = "Spells";
         const string sectionControls = "Controls";
+        const string sectionMap = "Map";
         const string sectionStartup = "Startup";
         const string sectionExperimental = "Experimental";
         const string sectionEnhancements = "Enhancements";
@@ -97,7 +98,6 @@ namespace DaggerfallWorkshop
         public float ToolTipDelayInSeconds { get; set; }
         public Color32 ToolTipBackgroundColor { get; set; }
         public Color32 ToolTipTextColor { get; set; }
-        public int AutomapNumberOfDungeons { get; set; }
         public int ShopQualityPresentation { get; set; }
         public int ShopQualityHUDDelay { get; set; }
         public bool ShowQuestJournalClocksAsCountdown { get; set; }
@@ -108,6 +108,8 @@ namespace DaggerfallWorkshop
         public bool AccelerateUICopyTexture { get; set; }
         public bool EnableVitalsIndicators { get; set; }
         public bool SDFFontRendering { get; set; }
+        public bool EnableGeographicBackgrounds { get; set; }
+        public bool EnableArrowCounter { get; set; }
 
         // [Spells]
         public bool EnableSpellLighting { get; set; }
@@ -127,6 +129,11 @@ namespace DaggerfallWorkshop
         public float MusicVolume { get; set; }
         public float SoundVolume { get; set; }
 
+        // [Map]
+        public int AutomapNumberOfDungeons { get; set; }
+        public float ExteriorMapDefaultZoomLevel { get; set; }
+        public bool ExteriorMapResetZoomLevelOnNewLocation { get; set; }
+
         // [Startup]
         public int StartCellX { get; set; }
         public int StartCellY { get; set; }
@@ -138,7 +145,7 @@ namespace DaggerfallWorkshop
         // [Enhancements]
         public bool LypyL_GameConsole { get; set; }
         public bool LypyL_ModSystem { get; set; }
-        public bool MeshAndTextureReplacement { get; set; }
+        public bool AssetInjection { get; set; }
         public bool CompressModdedTextures { get; set; }
         public bool NearDeathWarning { get; set; }
         public bool AlternateRandomEnemySelection { get; set; }
@@ -146,8 +153,10 @@ namespace DaggerfallWorkshop
         public float DungeonAmbientLightScale { get; set; }
         public float NightAmbientLightScale { get; set; }
         public float PlayerTorchLightScale { get; set; }
+        public bool PlayerTorchFromItems { get; set; }
         public bool CombatVoices { get; set; }
         public bool EnemyInfighting { get; set; }
+        public bool EnhancedCombatAI { get; set; }
 
         #endregion
 
@@ -198,14 +207,15 @@ namespace DaggerfallWorkshop
             EnableInventoryInfoPanel = GetBool(sectionGUI, "EnableInventoryInfoPanel");
             EnableEnhancedItemLists = GetBool(sectionGUI, "EnableEnhancedItemLists");
             EnableModernConversationStyleInTalkWindow = GetBool(sectionGUI, "EnableModernConversationStyleInTalkWindow");
-            HelmAndShieldMaterialDisplay = GetInt(sectionGUI, "HelmAndShieldMaterialDisplay", 0, 3);
-            AutomapNumberOfDungeons = GetInt(sectionGUI, "AutomapNumberOfDungeons", 0, 100);
+            HelmAndShieldMaterialDisplay = GetInt(sectionGUI, "HelmAndShieldMaterialDisplay", 0, 3);            
             ShopQualityPresentation = GetInt(sectionGUI, "ShopQualityPresentation", 0, 2);
             ShopQualityHUDDelay = GetInt(sectionGUI, "ShopQualityHUDDelay", 1, 10);
             ShowQuestJournalClocksAsCountdown = GetBool(sectionGUI, "ShowQuestJournalClocksAsCountdown");
             AccelerateUICopyTexture = GetBool(sectionGUI, "AccelerateUICopyTexture");
             EnableVitalsIndicators = GetBool(sectionGUI, "EnableVitalsIndicators");
             SDFFontRendering = GetBool(sectionGUI, "SDFFontRendering");
+            EnableGeographicBackgrounds = GetBool(sectionGUI, "EnableGeographicBackgrounds");
+            EnableArrowCounter = GetBool(sectionGUI, "EnableArrowCounter");
 
             EnableSpellLighting = GetBool(sectionSpells, "EnableSpellLighting");
             EnableSpellShadows = GetBool(sectionSpells, "EnableSpellShadows");
@@ -223,6 +233,10 @@ namespace DaggerfallWorkshop
             SoundVolume = GetFloat(sectionControls, "SoundVolume", 0f, 1.0f);
             MusicVolume = GetFloat(sectionControls, "MusicVolume", 0f, 1.0f);
 
+            AutomapNumberOfDungeons = GetInt(sectionMap, "AutomapNumberOfDungeons", 0, 100);
+            ExteriorMapDefaultZoomLevel = GetFloat(sectionMap, "ExteriorMapDefaultZoomLevel", 4, 31);
+            ExteriorMapResetZoomLevelOnNewLocation = GetBool(sectionMap, "ExteriorMapResetZoomLevelOnNewLocation");
+
             StartCellX = GetInt(sectionStartup, "StartCellX", 2, 997);
             StartCellY = GetInt(sectionStartup, "StartCellY", 2, 497);
             StartInDungeon = GetBool(sectionStartup, "StartInDungeon");
@@ -231,7 +245,7 @@ namespace DaggerfallWorkshop
 
             LypyL_GameConsole = GetBool(sectionEnhancements, "LypyL_GameConsole");
             LypyL_ModSystem = GetBool(sectionEnhancements, "LypyL_ModSystem");
-            MeshAndTextureReplacement = GetBool(sectionEnhancements, "MeshAndTextureReplacement");
+            AssetInjection = GetBool(sectionEnhancements, "AssetInjection");
             CompressModdedTextures = GetBool(sectionEnhancements, "CompressModdedTextures");
             NearDeathWarning = GetBool(sectionEnhancements, "NearDeathWarning");
             AlternateRandomEnemySelection = GetBool(sectionEnhancements, "AlternateRandomEnemySelection");
@@ -239,8 +253,10 @@ namespace DaggerfallWorkshop
             DungeonAmbientLightScale = GetFloat(sectionEnhancements, "DungeonAmbientLightScale", 0.0f, 1.0f);
             NightAmbientLightScale = GetFloat(sectionEnhancements, "NightAmbientLightScale", 0.0f, 1.0f);
             PlayerTorchLightScale = GetFloat(sectionEnhancements, "PlayerTorchLightScale", 0.0f, 1.0f);
+            PlayerTorchFromItems = GetBool(sectionEnhancements, "PlayerTorchFromItems");
             CombatVoices = GetBool(sectionEnhancements, "CombatVoices");
             EnemyInfighting = GetBool(sectionEnhancements, "EnemyInfighting");
+            EnhancedCombatAI = GetBool(sectionEnhancements, "EnhancedCombatAI");
         }
 
         /// <summary>
@@ -292,6 +308,8 @@ namespace DaggerfallWorkshop
             SetBool(sectionGUI, "AccelerateUICopyTexture", AccelerateUICopyTexture);
             SetBool(sectionGUI, "EnableVitalsIndicators", EnableVitalsIndicators);
             SetBool(sectionGUI, "SDFFontRendering", SDFFontRendering);
+            SetBool(sectionGUI, "EnableGeographicBackgrounds", EnableGeographicBackgrounds);
+            SetBool(sectionGUI, "EnableArrowCounter", EnableArrowCounter);
 
             SetBool(sectionSpells, "EnableSpellLighting", EnableSpellLighting);
             SetBool(sectionSpells, "EnableSpellShadows", EnableSpellShadows);
@@ -317,7 +335,7 @@ namespace DaggerfallWorkshop
 
             SetBool(sectionEnhancements, "LypyL_GameConsole", LypyL_GameConsole);
             SetBool(sectionEnhancements, "LypyL_ModSystem", LypyL_ModSystem);
-            SetBool(sectionEnhancements, "MeshAndTextureReplacement", MeshAndTextureReplacement);
+            SetBool(sectionEnhancements, "MeshAndTextureReplacement", AssetInjection);
             SetBool(sectionEnhancements, "CompressModdedTextures", CompressModdedTextures);
             SetBool(sectionEnhancements, "NearDeathWarning", NearDeathWarning);
             SetBool(sectionEnhancements, "AlternateRandomEnemySelection", AlternateRandomEnemySelection);
@@ -325,8 +343,10 @@ namespace DaggerfallWorkshop
             SetFloat(sectionEnhancements, "DungeonAmbientLightScale", DungeonAmbientLightScale);
             SetFloat(sectionEnhancements, "NightAmbientLightScale", NightAmbientLightScale);
             SetFloat(sectionEnhancements, "PlayerTorchLightScale", PlayerTorchLightScale);
+            SetBool(sectionEnhancements, "PlayerTorchFromItems", PlayerTorchFromItems);
             SetBool(sectionEnhancements, "CombatVoices", CombatVoices);
             SetBool(sectionEnhancements, "EnemyInfighting", EnemyInfighting);
+            SetBool(sectionEnhancements, "EnhancedCombatAI", EnhancedCombatAI);
 
             // Write settings to persistent file
             WriteSettingsFile();
