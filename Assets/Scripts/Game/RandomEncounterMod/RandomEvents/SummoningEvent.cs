@@ -7,6 +7,7 @@ using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Utility;
 using DaggerfallRandomEncountersMod.Utils;
+using DaggerfallWorkshop.Game.Entity;
 
 namespace DaggerfallRandomEncountersMod.RandomEncounters
 {
@@ -15,16 +16,17 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
     public class SummoningEvent : RandomEncounter
     {
 
-        FoeSpawner foeSpawner;
+        GameObject spawner;
 
         //Either ust mage or sorcerer, mage for now until I know more about lore of game.
         //Array of mage gameobjects.
         GameObject[] summoners;
-        GameObject summon;
+        GameObject[] summon;
 
         
 
-        float summoningTime = 200.0f;
+        //Separate because mage may begin summoning again.
+        const float summoningTime = 10.0f   ;
         float timeLeftToSummon;
 
 
@@ -35,7 +37,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
         //Same as above, maybe ancient Lich later.
         //It kills people, look into other options they can summon.
-        MobileTypes summonType = MobileTypes.Lich;
+        MobileTypes summonType = MobileTypes.SkeletalWarrior;
 
 
         //Two by default.
@@ -53,18 +55,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             }
         }
 
-        public float SummoningTime
-        {
-            set
-            {
-                summoningTime = value;
-            }
-            get
-            {
-
-                return summoningTime;
-            }
-        }
+      
       
         public override void begin()
         {
@@ -74,118 +65,103 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             Debug.LogError("summoners event began");
 
-            timeLeftToSummon = summoningTime;
 
             //Why are they not staying passive? Works for robber.
             summoners = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position, summonerType,1, MobileReactions.Passive);
 
+            summoners[0].transform.parent = this.transform;
 
-            foeSpawner = GameObjectHelper.CreateFoeSpawner(false, summonerType, 1, 10, 30, this.transform).GetComponent<FoeSpawner>();
+            //It didn't make sense that provide count and mobile type same time.
+            //So if want to pass custom paramesters into foe spawner, create own array of Enemies
+            //using the prefab, not CreateFoeGameObjects,but then cnt set to passive
+            //unless get component.
+            spawner = GameObjectHelper.CreateFoeSpawner();
 
 
             //Same thing happening.
-            foeSpawner.SetFoeGameObjects(summoners);
+            spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(summoners);
 
-
+            timeLeftToSummon = summoningTime;
             base.begin();
         }
-        /*
-        IEnumerator summonMagesInGroup()
-        {
-            
-            doneSummoningMages = false;
-            summoners = new GameObject[SummonerCount];
 
-            Vector3 spawnPosition = GameManager.Instance.PlayerObject.transform.position;
-
-            FoeSpawner spawner = GameObjectHelper.CreateFoeSpawner(false, summonerType, 1, 50, 60).GetComponent<FoeSpawner>();
-
-
-            for (int i = 1; i <= SummonerCount; ++i)
-            {
-                GameObject[] mage = GameObjectHelper.CreateFoeGameObjects(spawnPosition, summonerType, 1, MobileReactions.Passive);
-                Debug.LogError("Creating new mage");
-                spawner.SetFoeGameObjects(mage);
-                Debug.LogError("AFter setting mage to spawn, mage is ");
-                Debug.LogError(mage[0]);
-                //Loads into list of mages.
-                 
-                mage[0].name = "SummonerEncounter" + (i - 1);
-                Debug.LogError("After inserting spawned mage into summoenrs array, mage is ");
-                Debug.LogError(mage[0]);
-
-                Debug.LogError("Spawned first mage, waiting for spawner to be null to reuse again");
-                //Wait until done spawning mage before moving on.
-                spawnPosition = mage[0].transform.position;
-                yield return new WaitUntil(() => { return spawner == null; });
-                Debug.LogError("Done waiting, resetting spawner and mage");
-                summoners[i - 1] = GameObject.Find("SummonerEncounter" + (i - 1));
-                //So some point ater the wait until it becomes null
-                //so when spawner done spawnnning the references to mages become null, lol.
-                //A work around for this which shouldn't have to happen, is tagging them then adding back in
-                if (summoners[i-1] == null)
-                {
-                    Debug.LogError("previous mage set to null??");
-                }
-                //Will play around with values for grouping
-                spawner = GameObjectHelper.CreateFoeSpawner(false, summonerType, 1, 5, 10).GetComponent<FoeSpawner>();
-                Debug.LogError("creating new spawner");
-
-              
-            }
-
-
-            doneSummoningMages = true;
-            
-        }
-        */
         // Update is called once per frame
         public override void Update()
         {
+            base.Update();
+
 
             if (Began)
             {
-                if (foeSpawner == null)
+                if (spawner == null)
                 {
 
-                    if (!GameManager.Instance.PlayerEnterExit.IsPlayerInside)
+                    //If mage is dead.
+                    if (!summoners[0].activeInHierarchy)
                     {
-                        if (EncounterUtils.hasActiveSpawn(summoners))
+                        //If summon never happened
+                        if (summon == null)
                         {
-                            return;
+                            end();
                         }
-
-                        //If didn't return then all dead, end encounter
-                        end();
-                        return;
                     }
+
+                    //Otherwise if mage is still alive and time left to spawn, then tick
+                    //summon time.
+                    else if (timeLeftToSummon > 0)
+                    {
+                        //Debug.LogError("ticking summon");
+                        timeLeftToSummon -= Time.deltaTime;
+                    }
+                    //Otherwise if time has run out, then summon.
+                    else if (summon == null)
+                    {
+                        Debug.LogError("Begin summon");
+
+                        //Ideally 
+                        Debugging.AlertPlayer("You hear bones rattling");
+
+                        summon = new GameObject[1];
+                        summon[0] = GameObjectHelper.InstantiatePrefab(DaggerfallUnity.Instance.Option_EnemyPrefab.gameObject, "summon", null,
+                            summoners[0].transform.position);
+                        //summon[0].SetActive(false);
+                        summon = GameObjectHelper.CreateFoeGameObjects(summoners[0].transform.position, summonType,
+                            1);
+                            
+                        //Maybe assign an ondeath to summon, but not really needed cause of this update happening anyway.
+
+
+                       spawner = GameObjectHelper.CreateFoeSpawner(false, summonType, 1, 4, 5, this.transform);
+                        DaggerfallEntityBehaviour daggerfallEntityBehaviour = summon[0].GetComponent<DaggerfallEntityBehaviour>();
+
+                        daggerfallEntityBehaviour.Entity.OnDeath += (DaggerfallEntity entity) =>
+                        {
+
+                            //If both summoner and summon dead.
+                            if (summoners[0] == null)
+                            {
+                                end();
+                            }
+                        };
+
+                        spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(summon);
+
+                    }
+                    
                 }
+
+
             }
-            base.Update();
 
 
         }
 
         public override void end()
         {
+            //If summon failed and mage dead, increase stealth skil.
 
-            //If summon was successful, then drop loot at that point.
-
-
-            /*if (summon.Length > 0 && summon[0] == null)
-            {
-
-                //Cause when lich is killed, has own corpose and that should be lootable.
-                //Okay that's already created via EnemyDeath script, but I could use that method for that Ghost Event.
-
-                //Then in EnemyDeath script, it generates the items via enemy entity id, so it's set already what will
-                //be dropped. What I could do instead is drop something if summon not work.
-               
-            }*/
-
-
-          //  closure = summon == null ? "You don't hear anymore chanting" : "You have slain the beast, it seems there are no more mages around.";
-            //base.end();
+            closure = summon == null ? "You stopped the summon" : "You don't hear anymore chanting";
+            base.end();
 
         }
     }

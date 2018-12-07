@@ -39,6 +39,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         protected string warning;
         protected string closure;
 
+        //If encounter caused player to die.
+        protected bool playerDied;
         bool began = false;
         protected bool effectReputation;
 
@@ -87,15 +89,22 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                 //GameObject will be parent of motor of encounter, that or move this else where
                 if (GameManager.Instance.PlayerDeath.DeathInProgress)
                 {
+                    playerDied = true;
                     end();
                 }
-               
 
-              
+                if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown())
+                {
+                    end();
+                }
+
+
             }
         }
         public virtual void end() {
 
+            //Prob their own closures for when player is dead.
+           
             Debugging.AlertPlayer(closure);
 
             if (OnEnd != null)

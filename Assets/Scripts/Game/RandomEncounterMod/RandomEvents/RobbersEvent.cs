@@ -60,13 +60,16 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                 //If done spawning.
                 if (spawner == null)
                 {
+                    Debug.LogError(robbers[0]);
+
                     if (GameManager.Instance.PlayerEntity.IsResting)
                     {
 
                         //TODO:Then steal from player's inventory.
 
                     }
-                    else if (!GameManager.Instance.PlayerEnterExit.IsPlayerInside)
+                    //Alot of repition with this specific check
+                    else if (!GameManager.Instance.PlayerGPS.IsPlayerInTown(false,true) && !GameManager.Instance.PlayerEnterExit.IsPlayerInside)
                     {
                         if (EncounterUtils.hasActiveSpawn(robbers))
                         {

@@ -69,8 +69,7 @@ namespace DaggerfallRandomEncountersMod
 
             if (!possibleEvents.ContainsKey(type))
             {
-                Debug.LogError("Invalid type" + type);
-                //And it's fine it is, then that means no random encounter spawned this time.
+                //And it's fine it is, then that means no random encounter spawned for this type right now.
                 return null;
             }
 
