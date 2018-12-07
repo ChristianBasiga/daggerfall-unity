@@ -148,8 +148,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                         spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(summon);
 
                         //so summon is set, so mage should go hostile to player
-                        //This makes sure mage and summon don't fight each other.
-                        GameManager.Instance.MakeEnemiesHostile();
+                        summoners[0].GetComponent<EnemyMotor>().IsHostile = true;
                     }
                     else
                     {
