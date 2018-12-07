@@ -103,12 +103,13 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                         if (summon == null)
                         {
                             end();
+                            return;
                         }
                     }
 
                     //Otherwise if mage is still alive and time left to spawn, then tick
                     //summon time.
-                    else if (timeLeftToSummon > 0)
+                    if (timeLeftToSummon > 0)
                     {
                         //Debug.LogError("ticking summon");
                         timeLeftToSummon -= Time.deltaTime;
@@ -116,24 +117,24 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     //Otherwise if time has run out, then summon.
                     else if (summon == null)
                     {
-                        Debug.LogError("Begin summon");
+                       
+                        //TODo: make it so they don't fight each other lol.
 
-                        //Ideally 
                         Debugging.AlertPlayer("You hear bones rattling");
 
                         summon = new GameObject[1];
                         summon[0] = GameObjectHelper.InstantiatePrefab(DaggerfallUnity.Instance.Option_EnemyPrefab.gameObject, "summon", null,
                             summoners[0].transform.position);
-                        //summon[0].SetActive(false);
                         summon = GameObjectHelper.CreateFoeGameObjects(summoners[0].transform.position, summonType,
                             1);
                             
-                        //Maybe assign an ondeath to summon, but not really needed cause of this update happening anyway.
 
 
-                       spawner = GameObjectHelper.CreateFoeSpawner(false, summonType, 1, 4, 5, this.transform);
+                       spawner = GameObjectHelper.CreateFoeSpawner(false, summonType, 1, 2, 2);
                         DaggerfallEntityBehaviour daggerfallEntityBehaviour = summon[0].GetComponent<DaggerfallEntityBehaviour>();
 
+                        //Because right now their spawner sets if pass in non defalt arguments
+                        //reference to null, so I can't check that to be dead, this is better anyhow.
                         daggerfallEntityBehaviour.Entity.OnDeath += (DaggerfallEntity entity) =>
                         {
 
@@ -146,6 +147,14 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
                         spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(summon);
 
+                        //so summon is set, so mage should go hostile to player
+                        //This makes sure mage and summon don't fight each other.
+                        GameManager.Instance.MakeEnemiesHostile();
+                    }
+                    else
+                    {
+                        //So at this point summmon has been done.
+                        //Mak
                     }
                     
                 }
