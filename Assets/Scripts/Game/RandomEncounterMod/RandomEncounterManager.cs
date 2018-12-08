@@ -453,17 +453,13 @@ namespace DaggerfallRandomEncountersMod
                     }
 
                 }
-                  
-                
+                            
             }
 
         }
 
 
         #region Initializing Factories
-
-
-
         private static void setUpFactories()
         {
             worldEventsFactory = new RandomEncounterFactory();
@@ -471,16 +467,17 @@ namespace DaggerfallRandomEncountersMod
             restEventsFactory = new RandomEncounterFactory();
 
             //Retrieves all json files.
-            List<string> encounterJSONData = EncounterUtils.loadEncounterJson();
-            foreach (string jsonFile in encounterJSONData)
+            List<TextAsset> encounterJSONData = EncounterUtils.loadEncounterJson();
+            foreach (TextAsset jsonFile in encounterJSONData)
             {
-
-                //Loads json into object.
-                EncounterData encounterData = JsonConvert.DeserializeObject<EncounterData>(jsonFile);
-                //EncounterData encounterData = JsonUtility.FromJson<EncounterData>(jsonFile);
 
                 try
                 {
+                    //Loads json into object.
+                    EncounterData encounterData = JsonConvert.DeserializeObject<EncounterData>(jsonFile.text);
+                    //EncounterData encounterData = JsonUtility.FromJson<EncounterData>(jsonFile);
+
+               
                     if (!EncounterType.defaultTypes.ContainsKey(encounterData.type))
                     {
                         throw new System.Exception("This is not a valid EncounterType: " + encounterData.type);
@@ -534,19 +531,12 @@ namespace DaggerfallRandomEncountersMod
                     }
 
                 }
-                catch (System.ArgumentException argExcept)
-                {
-
-                    //Then will actually log it for ourselves later on, this is all polish.
-
-                    //In this case can only mean that the value they put in json was invalid.
-                    Debug.LogError("Failed to load encounter from " + jsonFile);
-
-                }
+               
                 //Will make more specific catches later.
                 catch (System.Exception exception)
                 {
-                    Debug.LogError(exception.Message);
+                    Debug.LogError("Failed to load encounter data from " + jsonFile.name + ". Error: " + exception.Message);
+                    
                 }
             }
 

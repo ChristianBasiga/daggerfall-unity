@@ -88,9 +88,9 @@ namespace DaggerfallRandomEncountersMod.Utils
     public class EncounterUtils
     {
         //Loading in encouner jsons from resources folder to create prototypes for factory.
-        public static List<string> loadEncounterJson()
+        public static List<TextAsset> loadEncounterJson()
         {
-            List<string> encounterData = new List<string>();
+            List<TextAsset> encounterData = new List<TextAsset>();
 
             
 
@@ -99,8 +99,21 @@ namespace DaggerfallRandomEncountersMod.Utils
             foreach (Object json in jsonData)
             {
                 TextAsset textAsset = (TextAsset)json;
-                //So it loads it in correctly.
-                encounterData.Add(textAsset.text);
+
+                //Incase there are any TextAssets in their that aren't json.
+                //Like if for some reason people decide to put scripts in here.
+                if (textAsset.name.Contains(".json"))
+                {
+                   
+                    encounterData.Add(textAsset);
+
+                }
+                else
+                {
+                    //No need to debug log error cause fine, unless
+                    //enforce that must be json.
+                    Debug.LogError("Files in this folder must be of json type");
+                }
             }
 
             return encounterData;
