@@ -100,20 +100,11 @@ namespace DaggerfallRandomEncountersMod.Utils
             {
                 TextAsset textAsset = (TextAsset)json;
 
-                //Incase there are any TextAssets in their that aren't json.
-                //Like if for some reason people decide to put scripts in here.
-                if (textAsset.name.Contains(".json"))
-                {
-                   
-                    encounterData.Add(textAsset);
 
-                }
-                else
-                {
-                    //No need to debug log error cause fine, unless
-                    //enforce that must be json.
-                    Debug.LogError("Files in this folder must be of json type");
-                }
+
+                encounterData.Add(textAsset);
+
+
             }
 
             return encounterData;
