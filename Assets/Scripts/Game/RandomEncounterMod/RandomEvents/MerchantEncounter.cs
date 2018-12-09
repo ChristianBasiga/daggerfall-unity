@@ -14,6 +14,14 @@ using DaggerfallWorkshop.Game.Items;
 
 namespace DaggerfallRandomEncountersMod.RandomEncounters
 {
+    /// <summary>
+    /// Note: Daggerfall Unity auto spawns city guards when pickpocket or kill npcs.
+    /// Also onDeath for NPC not automaticall triggered because of conflict with WeaponManager
+    /// And DaggerfallEntityBehaviour.
+    /// Also merchant window not work right now because it is only allowed to be open in a building.
+    /// So changes had to be made to source code for this to work fully.
+    /// OnDeath code would have to be moved to tick and death checked another way to work without changes.
+    /// </summary>
     [RandomEncounterIdentifier(EncounterId = "MerchantEncounter")]
     public class MerchantEncounter : RandomEncounter
     {
@@ -52,6 +60,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             goldPlayerHeld = GameManager.Instance.PlayerEntity.GoldPieces;
 
 
+            
             npc.GetComponent<DaggerfallEntityBehaviour>().Entity.OnDeath += (DaggerfallEntity entity) =>
             {
                 //Random chance that dropped gold, offset by pickpocket attempt.
@@ -88,12 +97,20 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             base.begin();
         }
 
+
+
         public override void tick()
         {
 
             base.tick();
 
+            //ToDo: Make check for death here instead as OnDeath isn't always triggered.
 
+            //If no longer active in scene, then dead.
+            if (!npc.gameObject.activeInHierarchy)
+            {
+                dropLoot();
+            }
 
             //Only problem is city guards come, which makes no sense.
             if (npc.GetComponent<MobilePersonNPC>().PickpocketByPlayerAttempted)
@@ -132,6 +149,39 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         }
 
 
+        private void dropLoot()
+        {
+            //Random chance that dropped gold, offset by pickpocket attempt.
+
+            DaggerfallEntity entity = npc.GetComponent<DaggerfallEntityBehaviour>().Entity;
+            Debug.LogError("I happen");
+            closure = "He dropped some loot";
+            // Randomise container texture
+
+            //entity.EntityBehaviour.GetComponent<MobilePersonMotor>(). I want tdropped there, but o 
+            int iconIndex = UnityEngine.Random.Range(0, DaggerfallLootDataTables.randomTreasureIconIndices.Length);
+            int iconRecord = DaggerfallLootDataTables.randomTreasureIconIndices[iconIndex];
+
+            //ToDo: Make it so dropped on floor of position not floating lol.
+            DaggerfallLoot loot = GameObjectHelper.CreateLootContainer(LootContainerTypes.CorpseMarker, InventoryContainerImages.Merchant,
+                entity.EntityBehaviour.transform.position, null, DaggerfallLootDataTables.randomTreasureArchive,
+                iconRecord);
+
+            //
+            Debug.LogError("item count of npc " + entity.Items.Count);
+
+            //So makes sense to npc, not civilian having the best treasure in the fucking worldu
+            //Would make more sense, but they have no items.
+            //I think I just found the key to doing thieving.
+            loot.Items.TransferAll(entity.Items);
+
+            if (loot.Items.Count == 0)
+            {
+                //Getting loot table to populate container
+                LootTables.GenerateLoot(loot, (int)GameManager.Instance.PlayerGPS.CurrentLocationType);
+            }
+            end();
+        }
 
 
         public override void end()
