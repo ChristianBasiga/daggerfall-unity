@@ -134,7 +134,7 @@ namespace DaggerfallRandomEncountersMod
             //If player dies, clears encounters, so then garbage collected.
             GameManager.Instance.PlayerEntity.OnDeath += (DaggerfallEntity entity) =>
             {
-                activeEncounters.Clear();
+                killActive();
             };
 
         }
@@ -188,6 +188,9 @@ namespace DaggerfallRandomEncountersMod
             //It's honestly hard to say.
             PlayerGPS.OnEnterLocationRect += (DFLocation location) =>
             {
+                //Let's see how often this is called... idk
+                //happened once on load, then never again as I walked.
+                Debug.LogError("New location is " + location.ToString());
 
                 //Maybe near dungeon? Can do alot with location.
                 //worldFilter.setFilter("")
@@ -239,8 +242,14 @@ namespace DaggerfallRandomEncountersMod
 
             WorldTime.OnNewHour += () =>
             {
-                //This maybe good time to check if player committed new crime or something like that.
-                //As well as resting.
+                //If new hour passed, check if this was while resting.
+                if (GameManager.Instance.PlayerEntity.IsResting)
+                {
+                    DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+
+                    //Checking if isResting auto set to false when pop this window.
+                    GameManager.Instance.PlayerEntity.IsResting = false;
+                }
             };
 
             WorldTime.OnMidday += () =>
@@ -294,10 +303,17 @@ namespace DaggerfallRandomEncountersMod
         }
 
         #region Spawning Encounters
+        //Maybe only try spawning encounter for location rects,
+        //not neccesarrily the other parts, so only observe those
+        //to update filter, but only try when enter new rect.
         void trySpawningEncounter(string context)
         {
 
+            //Okay, cause much of these trigger when load cause technically all that stuff changes.
+            //I mean honestly not really an error, adds immersion.
+            //The world continues without us so we can load game and run into encounter
 
+            //Debug.LogError("I am called");
 
             //Becaues only spawn in world.
             if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false,true))
@@ -307,8 +323,8 @@ namespace DaggerfallRandomEncountersMod
             //Make this so not such high chance
             //the layer of filters also has chance to make it so not possible.
 
-            //If even, then don't spawn, just for quick testing.
-            bool dontSpawn = (Random.Range(2, 6) & 1) == 0;
+            //Only 20% of the time spawn.
+            bool dontSpawn = Random.Range(1, 10) > 2;
 
             RandomEncounter encounter = null;
             switch (context)
@@ -363,10 +379,8 @@ namespace DaggerfallRandomEncountersMod
 
                     //Cause if cancelled means change in scene like loading game,
                     //so it will be destroyed anyway, unless make them to not destroy on load.
-                    if (!cancelled)
-                    {
-                        Destroy(a.gameObject);
-                    }
+                    
+                    Destroy(a.gameObject);
                 };
 
                 //Begin the encounter
@@ -390,40 +404,16 @@ namespace DaggerfallRandomEncountersMod
             {
                 foreach (RandomEncounter randomEncounter in activeEncounters)
                 {
-                    Debug.LogError("ticking encounter " + randomEncounter.ToString());
                     randomEncounter.tick();
                 }
             }
         }
 
 
-        //this method will be called automatically by the modmanager after the main game scene is loaded.
-        //The following requirements must be met to be invoked automatically by the ModManager during setup for this to happen:
-        //1. Marked with the [Invoke] custom attribute
-        //2. Be public & static class method
-        //3. Take in an InitParams struct as the only parameter
-        [Invoke(StateManager.StateTypes.Game, 0)]
-        public static void Init(InitParams initParams)
-        {
-
-            //Adds object of manager into scene.
-            GameObject randomEncounter = new GameObject("RandomEncounterManager");
-
-            randomEncounter.AddComponent<RandomEncounterManager>();
 
 
-            //Cancel all encounters, also since is static in itself prob move this to invoke method in mod loading.
-            StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
-            {
-                activeEncounters.Clear();
-            };
-
-            
-
-            ModManager.Instance.GetMod(initParams.ModTitle).IsReady = true;
-
-        }
-
+        #region Mod Initialization
+       
         [Invoke(StateManager.StateTypes.Start, 0)]
         public static void InitEngineData(InitParams initParams)
         {
@@ -438,7 +428,34 @@ namespace DaggerfallRandomEncountersMod
             setUpFactories();
 
 
-           
+            //Adds object of manager into scene.
+            GameObject randomEncounter = new GameObject("RandomEncounterManager");
+
+            randomEncounter.AddComponent<RandomEncounterManager>();
+
+
+            //Cancel all encounters, also since is static in itself prob move this to invoke method in mod loading.
+            StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
+            {
+                //So this not hannen
+                //OnDestroy should be auto triggered for them when lose reference.
+                killActive();
+            };
+
+            StateManager.OnStateChange += (StateManager.StateTypes newState) =>
+            {
+                Debug.LogError("Prev state is " + GameManager.Instance.StateManager.LastState);
+                Debug.LogError("new State is " + newState.ToString());
+                if (newState == StateManager.StateTypes.Start)
+                {
+                    killActive();
+                }
+            };
+
+
+            ModManager.Instance.GetMod(initParams.ModTitle).IsReady = true;
+
+
         }
 
 
@@ -572,13 +589,25 @@ namespace DaggerfallRandomEncountersMod
         #endregion
 
 
+        private static void killActive()
+        {
+            foreach (RandomEncounter randomEncounter in activeEncounters)
+            {
+                Destroy(randomEncounter.gameObject);
+            }
+
+            activeEncounters.Clear();
+        }
+
+#endregion
+
         #region Event Handlers
 
         //Invoked anytime enter building, town, dungeon, etc.
         private void OnLeaveWorld(PlayerEnterExit.TransitionEventArgs args)
         {
 
-            activeEncounters.Clear();
+            killActive();
         }
 
 #endregion
