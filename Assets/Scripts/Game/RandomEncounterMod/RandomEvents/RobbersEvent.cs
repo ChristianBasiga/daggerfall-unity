@@ -49,39 +49,38 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         }
 
         // Update is called once per frame
-        public override void Update()
+        public override void tick()
         {
-            base.Update();
+            base.tick();
 
             //For world encounter nothing special, they just attack the player, then when none left in world
             //encounter is over.
-            if (Began)
+
+            //If done spawning.
+            if (spawner == null)
             {
-                //If done spawning.
-                if (spawner == null)
+                Debug.LogError(robbers[0]);
+
+                if (GameManager.Instance.PlayerEntity.IsResting)
                 {
-                    Debug.LogError(robbers[0]);
 
-                    if (GameManager.Instance.PlayerEntity.IsResting)
+                    //TODO:Then steal from player's inventory.
+
+                }
+                //Alot of repition with this specific check
+                else if (!GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true) && !GameManager.Instance.PlayerEnterExit.IsPlayerInside)
+                {
+                    if (EncounterUtils.hasActiveSpawn(robbers))
                     {
-
-                        //TODO:Then steal from player's inventory.
-
-                    }
-                    //Alot of repition with this specific check
-                    else if (!GameManager.Instance.PlayerGPS.IsPlayerInTown(false,true) && !GameManager.Instance.PlayerEnterExit.IsPlayerInside)
-                    {
-                        if (EncounterUtils.hasActiveSpawn(robbers))
-                        {
-                            return;
-                        }
-
-                        //If didn't return then all dead, end encounter
-                        end();
                         return;
                     }
+
+                    //If didn't return then all dead, end encounter
+                    end();
+                    return;
                 }
             }
+
         }
 
         public override void end()

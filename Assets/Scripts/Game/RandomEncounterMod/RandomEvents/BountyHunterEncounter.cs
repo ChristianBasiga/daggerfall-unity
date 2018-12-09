@@ -89,30 +89,22 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
         }
 
-        public override void Update()
+        public override void tick()
         {
 
-            base.Update();
-            
-            if (Began)
+            base.tick();
+            if (foeSpawner == null)
             {
-                if (foeSpawner == null)
+                if (!EncounterUtils.hasActiveSpawn(hunters))
                 {
-                    if (!EncounterUtils.hasActiveSpawn(hunters))
-                    {
-                        end();
-                        return;
-                    }
-
+                    end();
+                    return;
                 }
 
             }
+
         }
 
-       
-
-       
-        
 
         public override void end()
         {
