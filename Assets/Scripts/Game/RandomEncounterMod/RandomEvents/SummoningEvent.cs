@@ -18,15 +18,14 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
         GameObject spawner;
 
-        //Either ust mage or sorcerer, mage for now until I know more about lore of game.
-        //Array of mage gameobjects.
+        
         GameObject[] summoners;
-        GameObject[] summon;
+        GameObject summon;
 
         
 
         //Separate because mage may begin summoning again.
-        const float summoningTime = 10.0f   ;
+        const float summoningTime = 10.0f;
         float timeLeftToSummon;
 
 
@@ -43,20 +42,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         //Two by default.
         int summonerCount = 2;
 
-        public int SummonerCount
-        {
-            get
-            {
-                return summonerCount;
-            }
-            set
-            {
-                summonerCount = value;
-            }
-        }
-
-      
-      
         public override void begin()
         {
 
@@ -64,10 +49,14 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
            
 
             Debug.LogError("summoners event began");
-
+            Debug.LogError(this);
 
             //Why are they not staying passive? Works for robber.
             summoners = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position, summonerType,1, MobileReactions.Passive);
+
+
+            //The position of encounter itself should be somehow within area,
+            //though the onDeath or onLeave should be enough to callback to end encounters
 
             summoners[0].transform.parent = this.transform;
 
@@ -77,9 +66,33 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             //unless get component.
             spawner = GameObjectHelper.CreateFoeSpawner();
 
+            Debug.LogError(summoners[0].GetComponent<DaggerfallEntityBehaviour>().Entity);
+
+
+            //Okay, so the problem is setting it in the tick.
+
+            summoners[0].GetComponent<DaggerfallEntityBehaviour>().Entity.OnDeath += (DaggerfallEntity entity) =>
+            {
+                //Okay works here.
+                Debug.LogError("summoner dead");
+
+
+                //If stil time left to summon, then end it.
+                
+                if (timeLeftToSummon > 0)
+                {
+                    end();
+                }
+            };
+
+            summon = null;
+
+           
 
             //Same thing happening.
             spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(summoners);
+
+
 
             timeLeftToSummon = summoningTime;
             base.begin();
@@ -90,70 +103,49 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         {
             base.tick();
 
-
+           
             if (spawner == null)
             {
 
-                //If mage is dead.
-                if (!summoners[0].activeInHierarchy)
+                //This is enough of a check
+                //Because turned hostile from beign attacked or from summon succeeding.
+                if (summoners[0].GetComponent<EnemyMotor>().IsHostile)
                 {
-                    //If summon never happened
-                    if (summon == null)
-                    {
-                        end();
-                        return;
-                    }
+                    stayOnTarget();
                 }
 
-                //Otherwise if mage is still alive and time left to spawn, then tick
-                //summon time.
                 if (timeLeftToSummon > 0)
                 {
-                    //Debug.LogError("ticking summon");
                     timeLeftToSummon -= Time.deltaTime;
                 }
                 //Otherwise if time has run out, then summon.
                 else if (summon == null)
                 {
-
-                    //TODo: make it so they don't fight each other lol.
-
                     Debugging.AlertPlayer("You hear bones rattling");
 
-                    summon = new GameObject[1];
-                    summon[0] = GameObjectHelper.InstantiatePrefab(DaggerfallUnity.Instance.Option_EnemyPrefab.gameObject, "summon", null,
-                        summoners[0].transform.position);
-                    summon = GameObjectHelper.CreateFoeGameObjects(summoners[0].transform.position, summonType,
-                        1);
+                    //They both focus on player at beginning, but still
+                    //could end up targeting each other.
+                    summoners[0].GetComponent<EnemyMotor>().IsHostile = true;
 
+                    //Forces their target to be player.
+                    summoners[0].GetComponent<DaggerfallEntityBehaviour>().Target = GameManager.Instance.PlayerEntityBehaviour;
 
+                    summon = GameObjectHelper.CreateEnemy("summon", summonType, GameManager.Instance.PlayerObject.transform.position);
 
-                    spawner = GameObjectHelper.CreateFoeSpawner(false, summonType, 1, 2, 2);
-                    DaggerfallEntityBehaviour daggerfallEntityBehaviour = summon[0].GetComponent<DaggerfallEntityBehaviour>();
-
-                    //Because right now their spawner sets if pass in non defalt arguments
-                    //reference to null, so I can't check that to be dead, this is better anyhow.
-                    daggerfallEntityBehaviour.Entity.OnDeath += (DaggerfallEntity entity) =>
+                    summon.GetComponent<DaggerfallEntityBehaviour>().Entity.OnDeath += (DaggerfallEntity entity) =>
                     {
+                        Debug.LogError("Killed summon");
 
-                            //If both summoner and summon dead.
-                            if (summoners[0] == null)
+                        //If both summoner and summon dead.
+                        if (summoners[0] == null)
                         {
                             end();
                         }
                     };
 
-                    spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(summon);
-
-                    //so summon is set, so mage should go hostile to player
-                    summoners[0].GetComponent<EnemyMotor>().IsHostile = true;
+                    summon.GetComponent<DaggerfallEntityBehaviour>().Target = GameManager.Instance.PlayerEntityBehaviour;
+                    //It may be averted as it goes on.
                 }
-                else
-                {
-                    //So at this point summmon has been done.
-                    //Mak
-                }
-
             }
         }
 
@@ -163,6 +155,38 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             closure = summon == null ? "You stopped the summon" : "You don't hear anymore chanting";
             base.end();
+
+        }
+
+        private void OnDestroy()
+        {
+
+            if (summoners != null && summoners[0] != null)
+                Destroy(summoners[0].gameObject);
+
+            if (summon != null)
+                Destroy(summon.gameObject);
+
+            // end();
+        }
+
+        private void stayOnTarget()
+        {
+            DaggerfallEntityBehaviour player = GameManager.Instance.PlayerEntityBehaviour;
+
+            if (summon != null)
+            {
+                if (summon.GetComponent<DaggerfallEntityBehaviour>().Target != player)
+                {
+                    summon.GetComponent<DaggerfallEntityBehaviour>().Target = player;
+                }
+            }
+
+
+            if (summoners[0].GetComponent<DaggerfallEntityBehaviour>().Target != player)
+            {
+                summoners[0].GetComponent<DaggerfallEntityBehaviour>().Target = player;
+            }
 
         }
     }
