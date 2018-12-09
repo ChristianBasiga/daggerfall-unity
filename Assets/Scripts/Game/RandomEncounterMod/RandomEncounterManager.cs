@@ -138,6 +138,7 @@ namespace DaggerfallRandomEncountersMod
             //If player dies, clears encounters, so then garbage collected.
             GameManager.Instance.PlayerEntity.OnDeath += (DaggerfallEntity entity) =>
             {
+                Debug.LogError("I happen");
                 killActive();
             };
 
@@ -317,15 +318,18 @@ namespace DaggerfallRandomEncountersMod
             //Debug.LogError("I am called");
 
             //Becaues only spawn in world.
-            if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false,true))
+            if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false,true) ||
+
+                //Only one encounter active during rest, this was mainly for testing but makes sense to have too.
+               (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0))
+
             {
                 return;
             }
-            //Make this so not such high chance
-            //the layer of filters also has chance to make it so not possible.
+
 
             //Only 20% of the time spawn.
-            bool dontSpawn = Random.Range(1, 10) > 2;
+            bool dontSpawn = Random.Range(0, 10) > 2;
 
             RandomEncounter encounter = null;
             switch (context)
@@ -357,12 +361,6 @@ namespace DaggerfallRandomEncountersMod
             if (evt != null)
             {
 
-                //Only one encounter at time for resting trigger.   
-                if (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0)
-                {
-                    Debug.LogError("Only one encounter during resting");
-                    return;
-                }
 
                 evt.OnBegin += (RandomEncounters.RandomEncounter a) =>
                 {
@@ -385,8 +383,18 @@ namespace DaggerfallRandomEncountersMod
                     //Once encounter over, remove from active encounters.
                     // activeEncounters.Remove(a);
                     //Remove the encounter from the scene.
-                    
+
+                    //Not only put back in pool, but remove the encounter script on it.
+                    //So still instantiating the scripts, but not game objects.
+                    //Could pool the randomencounters themselves somehow too
+                    //then I would need to convert it to dictionary.
+                    //and add an interface to add another pool into it.
+                    //but not really worth because there isn't going to be alot
+                    //of same encounter happening, it may still be worth to, then just simple key string or type
+                    //whatever.
+                    Destroy(a.GetComponent<RandomEncounter>());
                     a.GetComponent<Reusable>().OnDone();
+
                     //Destroy(a.gameObject);
                 };
 
@@ -608,11 +616,15 @@ namespace DaggerfallRandomEncountersMod
         #endregion
 
 
+        //Kills all active encounters and invokes method to place them back into pool
         private static void killActive()
         {
             foreach (RandomEncounter randomEncounter in activeEncounters)
             {
-                Destroy(randomEncounter.gameObject);
+                Debug.LogError("Me too?" + randomEncounter.gameObject.name);
+                GameObject holder = randomEncounter.gameObject;
+                Destroy(randomEncounter);
+                holder.GetComponent<Reusable>().OnDone();
             }
 
             activeEncounters.Clear();
