@@ -93,7 +93,8 @@ namespace DaggerfallRandomEncountersMod.Utils
             List<TextAsset> encounterData = new List<TextAsset>();
 
             
-
+            //Repository won't work out for single folder when some of it is in resources.
+            //unless instead of in scripts just straight in assets
             Object[] jsonData = Resources.LoadAll("RandomEncounters", typeof(TextAsset));
 
             foreach (Object json in jsonData)

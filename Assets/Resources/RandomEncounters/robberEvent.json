@@ -5,8 +5,8 @@
     "type": "Negative",
     "filter": [
         {
-            "context": "weather",
-            "value": "Snow_Normal"
+            "context": "time",
+            "value": "day"
         }
     ]
 }

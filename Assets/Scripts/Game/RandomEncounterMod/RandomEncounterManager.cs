@@ -33,7 +33,7 @@ namespace DaggerfallRandomEncountersMod
 
         static Dictionary<string, System.Type> concreteRandomEncounters;
 
-
+        PoolManager objectPool;
 
         #region Contexts
 
@@ -48,7 +48,7 @@ namespace DaggerfallRandomEncountersMod
         #region Encounter Info
 
         //Also static because it is activeEncounters in game, and there is only one instance of game..
-        static List<RandomEncounters.RandomEncounter> activeEncounters;
+        static LinkedList<RandomEncounters.RandomEncounter> activeEncounters;
         
 
         //Same for these
@@ -123,7 +123,11 @@ namespace DaggerfallRandomEncountersMod
 
         void Start()
         {
-            activeEncounters = new List<RandomEncounters.RandomEncounter>();
+            objectPool = PoolManager.Instance;
+
+            objectPool.PoolCapacity = 20;
+
+            activeEncounters = new LinkedList<RandomEncounters.RandomEncounter>();
 
             Debug.LogError("encounter type count " + concreteRandomEncounters.Count);
 
@@ -242,13 +246,10 @@ namespace DaggerfallRandomEncountersMod
 
             WorldTime.OnNewHour += () =>
             {
-                //If new hour passed, check if this was while resting.
                 if (GameManager.Instance.PlayerEntity.IsResting)
                 {
-                    DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
-
-                    //Checking if isResting auto set to false when pop this window.
-                    GameManager.Instance.PlayerEntity.IsResting = false;
+                    Debug.LogError(GameManager.Instance.StateManager.CurrentState.ToString());
+                    trySpawningEncounter(World);
                 }
             };
 
@@ -355,9 +356,17 @@ namespace DaggerfallRandomEncountersMod
             //This should never happen, but it is a safeguard.
             if (evt != null)
             {
+
+                //Only one encounter at time for resting trigger.   
+                if (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0)
+                {
+                    Debug.LogError("Only one encounter during resting");
+                    return;
+                }
+
                 evt.OnBegin += (RandomEncounters.RandomEncounter a) =>
                 {
-                    activeEncounters.Add(evt);
+                    activeEncounters.AddLast(evt);
                 };
 
                 
@@ -374,16 +383,15 @@ namespace DaggerfallRandomEncountersMod
                     }
 
                     //Once encounter over, remove from active encounters.
-                    activeEncounters.Remove(a);
+                    // activeEncounters.Remove(a);
                     //Remove the encounter from the scene.
-
-                    //Cause if cancelled means change in scene like loading game,
-                    //so it will be destroyed anyway, unless make them to not destroy on load.
                     
-                    Destroy(a.gameObject);
+                    a.GetComponent<Reusable>().OnDone();
+                    //Destroy(a.gameObject);
                 };
 
                 //Begin the encounter
+
                 evt.begin();
             }
         }
@@ -393,18 +401,29 @@ namespace DaggerfallRandomEncountersMod
         // Update is called once per frame
         void Update()
         {
-            //Before switched to monobehaviours would be calling update on each encounter,
-            //there was error with mod compiler for doing that, cause may have been something else though.
-
-
-            //Only if game in progress tick encounters.
-            //Should stop if UI not up
-            if (GameManager.Instance.StateManager.GameInProgress &&
-                !(GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.UI || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Paused))
+            
+            if ((GameManager.Instance.StateManager.GameInProgress && GameManager.Instance.StateManager.CurrentState != StateManager.StateTypes.UI) ||
+                DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
             {
-                foreach (RandomEncounter randomEncounter in activeEncounters)
+
+                //Problem with this is it may be mutated when I do the tick.
+                List<RandomEncounter> toRemove = new List<RandomEncounter>();
+                foreach (RandomEncounter encounter in activeEncounters)
                 {
-                    randomEncounter.tick();
+                    encounter.tick();
+
+                    //Instead of began prob rename to be more accurate.
+                    //But basically this means done using it.
+                    if (!encounter.Began)
+                    {
+                        toRemove.Add(encounter);
+                    }
+
+                }
+
+                foreach( var encounter in toRemove)
+                {
+                    activeEncounters.Remove(encounter);
                 }
             }
         }

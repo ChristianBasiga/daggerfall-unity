@@ -7,6 +7,7 @@ using DaggerfallWorkshop.Game.Utility.ModSupport;
 
 
 using DaggerfallRandomEncountersMod.Filter;
+using DaggerfallRandomEncountersMod.Utils;
 namespace DaggerfallRandomEncountersMod
 {
     public class RandomEncounterFactory
@@ -66,6 +67,7 @@ namespace DaggerfallRandomEncountersMod
                 type = EncounterType.defaultTypes["Negative"];
             }
 
+            type = EncounterType.defaultTypes["Negative"];
 
             if (!possibleEvents.ContainsKey(type))
             {
@@ -110,11 +112,14 @@ namespace DaggerfallRandomEncountersMod
             }
 
 
-            RandomEncounter randomEvent = null;
 
+            Reusable holder = PoolManager.Instance.acquireObject();
+            Debug.LogError(holder);
             //Chooses random encounter within subset then clones it.
             int index = subset.Count == 1? 0 : Random.Range(0, subset.Count - 2);
-            randomEvent = GameObject.Instantiate(subset[index]).GetComponent<RandomEncounter>();
+
+
+            RandomEncounter randomEvent = (RandomEncounter)holder.gameObject.AddComponent((subset[index].GetComponent<RandomEncounter>().GetType()));
 
             return randomEvent;
         }

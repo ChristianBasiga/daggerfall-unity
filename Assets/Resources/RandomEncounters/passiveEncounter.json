@@ -1,9 +1,9 @@
 {
 
 
-	"encounterId": "PassiveEncounter",
+	"encounterId": "MerchantEncounter",
 	"context" : "World",
-	"type" : "Neutral",
+	"type" : "Positive",
 	"filter" : [
 		{
 			"context" : "time",

@@ -110,7 +110,10 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             if (OnEnd != null)
             {
-                OnEnd(this, false);
+                if (this != null)
+                {
+                    OnEnd(this, false);
+                }
             }
 
         }
