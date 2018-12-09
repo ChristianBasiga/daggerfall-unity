@@ -98,6 +98,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
                 }
                 //If gone, then wait until rest window gone for them to be notified that they lost something.
+                //Maybe change to contains, but will take more time, it's something to do later incase it is not the top and resting.
+                //even if it's not, though it's somewhre below and those above will pop
                 else if (!(DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow))
                 {
                     closure = "You notice you're missing something from your inventory";
@@ -151,6 +153,12 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     spawner = GameObjectHelper.CreateFoeSpawner();
                     spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(robbers);
                 }
+            }
+            else if (!wokeUp)
+            {
+                //If rest window not up anymore, then they woke up either on thier own or some other reason.
+                Debugging.AlertPlayer("You notice thief rummaging through your inventory");
+                wokeUp = true;
             }
             
             
