@@ -339,7 +339,7 @@ namespace DaggerfallRandomEncountersMod
                 };
 
                 
-                evt.OnEnd += (RandomEncounters.RandomEncounter a) =>
+                evt.OnEnd += (RandomEncounters.RandomEncounter a, bool cancelled) =>
                 {
 
                     //Because if encounter didn't effect reputation don't want to go through time to update it.
@@ -354,8 +354,13 @@ namespace DaggerfallRandomEncountersMod
                     //Once encounter over, remove from active encounters.
                     activeEncounters.Remove(a);
                     //Remove the encounter from the scene.
-                    Destroy(a.gameObject);
 
+                    //Cause if cancelled means change in scene like loading game,
+                    //so it will be destroyed anyway, unless make them to not destroy on load.
+                    if (!cancelled)
+                    {
+                        Destroy(a.gameObject);
+                    }
                 };
 
                 //Begin the encounter
