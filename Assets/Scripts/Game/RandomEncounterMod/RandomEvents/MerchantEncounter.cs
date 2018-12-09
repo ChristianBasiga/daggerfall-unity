@@ -10,6 +10,8 @@ using DaggerfallRandomEncountersMod.Utils;
 
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
+using DaggerfallWorkshop.Game.Items;
+
 namespace DaggerfallRandomEncountersMod.RandomEncounters
 {
     [RandomEncounterIdentifier(EncounterId = "MerchantEncounter")]
@@ -44,32 +46,12 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             npc.transform.parent = this.transform;
 
-            //This should trigger it
-            //later on I'll make my own npc attack.
-            //npc.AddComponent<EnemyAttack>();
-            //Sets npc to be noble.
-
             //So instance is, but not component, for now I'll set it directly until they fix the prefab themselves.
             npc.GetComponent<MobilePersonNPC>().Motor = npc.GetComponent<MobilePersonMotor>();
 
-            // Destroy(npc.GetComponent<MobilePersonNPC>());
-            // npc.RandomiseNPC(Races.Breton);
-            //  merchantWindow = new DaggerfallMerchantServicePopupWindow(DaggerfallUI.Instance.UserInterfaceManager, merchant, DaggerfallMerchantServicePopupWindow.Services.Sell);
-
-            //Gold pieces not get current gold, cause that will include credits.
             goldPlayerHeld = GameManager.Instance.PlayerEntity.GoldPieces;
 
 
-            //If npc dies, then no interaction can happen
-
-            //Why is this not happening?
-            //Works for enemies for sure, but maybe not this.
-            //Oh wait, player entity, que
-            Debug.LogError(npc.GetComponent<DaggerfallEntityBehaviour>().Entity);
-
-            //Why even have this.
-
-            //So that is one issue.
             npc.GetComponent<DaggerfallEntityBehaviour>().Entity.OnDeath += (DaggerfallEntity entity) =>
             {
                 //Random chance that dropped gold, offset by pickpocket attempt.
@@ -77,11 +59,29 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                 Debug.LogError("I happen");
                 closure = "He dropped some loot";
                 // Randomise container texture
+
+                //entity.EntityBehaviour.GetComponent<MobilePersonMotor>(). I want tdropped there, but o 
                 int iconIndex = UnityEngine.Random.Range(0, DaggerfallLootDataTables.randomTreasureIconIndices.Length);
                 int iconRecord = DaggerfallLootDataTables.randomTreasureIconIndices[iconIndex];
-                GameObjectHelper.CreateLootContainer(LootContainerTypes.CorpseMarker, InventoryContainerImages.Merchant,
-                    entity.EntityBehaviour.gameObject.transform.position, null, DaggerfallLootDataTables.randomTreasureArchive,
+
+                //ToDo: Make it so dropped on floor of position not floating lol.
+                DaggerfallLoot loot = GameObjectHelper.CreateLootContainer(LootContainerTypes.CorpseMarker, InventoryContainerImages.Merchant,
+                    entity.EntityBehaviour.transform.position, null, DaggerfallLootDataTables.randomTreasureArchive,
                     iconRecord);
+
+                //
+                Debug.LogError("item count of npc " + entity.Items.Count);
+
+                //So makes sense to npc, not civilian having the best treasure in the fucking worldu
+                //Would make more sense, but they have no items.
+                //I think I just found the key to doing thieving.
+                loot.Items.TransferAll(entity.Items);
+
+                if (loot.Items.Count == 0)
+                {
+                    //Getting loot table to populate container
+                    LootTables.GenerateLoot(loot, (int)GameManager.Instance.PlayerGPS.CurrentLocationType);
+                }
                 end();
             };
 
