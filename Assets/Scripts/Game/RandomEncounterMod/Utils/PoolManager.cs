@@ -57,6 +57,7 @@ namespace DaggerfallRandomEncountersMod.Utils
                     //Assigning callback to insert itself back into pool.
                     reusable.OnDoneUsing += (Reusable doneUsing) =>
                     {
+                        doneUsing.gameObject.SetActive(false);
                         pool.Enqueue(doneUsing);
                     };
 
