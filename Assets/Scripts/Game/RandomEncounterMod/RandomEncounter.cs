@@ -31,6 +31,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         //This should just have extra param for cancelled
         //cause no other case where attribute for cancelled would be check except when they end?
         //If can argue the point then we'll add as property too.
+        //Perhaps make this second argument be another struct for OnEnd information.
         public delegate void OnEndEventHandler(RandomEncounter evt, bool cancelled);
         public event OnEndEventHandler OnEnd;
 
@@ -45,7 +46,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         //If encounter caused player to die.
         protected bool playerDied;
         bool began = false;
-        bool paused = false;
         protected bool effectReputation;
 
         public bool Began
@@ -53,14 +53,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             get
             {
                 return began;
-            }
-        }
-
-        public bool Paused
-        {
-            get
-            {
-                return paused;
             }
         }
 
@@ -74,27 +66,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
 
         public virtual void begin() {
-
-
-            //If load new game, then end encounter.
-            //Or rather, cancel cause not really ended.
-            StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
-            {
-                cancel();
-            };
-
-            //Pause encounter.
-            StateManager.OnStateChange += (StateManager.StateTypes newState) =>
-            {
-
-                if (newState == StateManager.StateTypes.Paused || newState == StateManager.StateTypes.UI)
-                {
-                    paused = true;
-                }
-
-                Debug.LogError("new state " + newState.ToString());
-            };
-
+           
             began = true;
             Debugging.AlertPlayer(warning);
 
@@ -112,61 +84,23 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
         //I could still use tick instead of update so still optimal
         //so updates aren't always happening
-        public virtual void Update() {
-
-            //Debug.LogError(GameManager.Instance.StateManager.CurrentState.ToString());
-            //Only if event considered begun, then do tick for event.
-            if (began && !paused)
-            {
-                if (OnTick != null)
-                {
-                    OnTick(this);
-                }
-                //If player dead, end the encounter, cause not active anymore, then clean up will happen.
-                //GameObject will be parent of motor of encounter, that or move this else where
-                if (GameManager.Instance.PlayerDeath.DeathInProgress)
-                {
-                    playerDied = true;
-                    end();
-                }
-
-
-                //The encounter manager should realistically manage this pausing.
-                //If not Game as well as not paused.
-                else if ((!paused && GameManager.Instance.StateManager.CurrentState != StateManager.StateTypes.Game) || GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown())
-                {
-                    Debug.LogError("I happen");
-                    end();
-                }
-                else
-                {
-                    //Otherwise unpause and continue encounter.
-                    paused = false;
-                }
-
-
-            }
-        }
-
-        //Also todo: make these uppercase cause that's practice in C#
-        protected virtual void cancel()
+        public virtual void tick()
         {
-            //Gotta figure out why this is called 3 times, but for now quick fix.
-            //If already cancelled don't trigger callback again.
-            if (!began) return;
-
-            began = false;
-            Debug.LogError("Cancelling");
-            if (OnEnd != null)
+            //If Began check still needs to happen, to make sure.
+            if (!began)
             {
-                OnEnd(this, true);
+                throw new System.Exception("Error:Encounters must have began to tick them");
+            }
+            if (OnTick != null)
+            {
+                OnTick(this);
             }
         }
 
         public virtual void end() {
 
 
-            if (!began) return;
+            //if (!began) return;
 
             began = false;
 
@@ -178,11 +112,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             {
                 OnEnd(this, false);
             }
-
-
-          //  Destroy(this);
-          //  Debug.Log("random event ended");
-
 
         }
     }

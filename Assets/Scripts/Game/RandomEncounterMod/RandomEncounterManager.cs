@@ -21,7 +21,7 @@ using DaggerfallRandomEncountersMod.Filter;
 
 
 using Newtonsoft.Json;
-
+using DaggerfallWorkshop.Game.Entity;
 
 namespace DaggerfallRandomEncountersMod
 {
@@ -125,18 +125,18 @@ namespace DaggerfallRandomEncountersMod
         {
             activeEncounters = new List<RandomEncounters.RandomEncounter>();
 
-         //   RandomEncounter encounter = new PassiveEncounter();
-
             Debug.LogError("encounter type count " + concreteRandomEncounters.Count);
+
             initStates();
             setUpObservers();
 
-            GameManager.Instance.PlayerEntity.PreventEnemySpawns = true;
 
-            GameManager.Instance.PlayerEntity.GodMode = true;
+            //If player dies, clears encounters, so then garbage collected.
+            GameManager.Instance.PlayerEntity.OnDeath += (DaggerfallEntity entity) =>
+            {
+                activeEncounters.Clear();
+            };
 
-            //Okay, so it's not issue of doing in console.
-           // GameManager.Instance.WeatherManager.SetWeather(WeatherType.Rain_Normal);
         }
 
         //Sets filters / observer states to current state of game on load.
@@ -220,6 +220,10 @@ namespace DaggerfallRandomEncountersMod
                 trySpawningEncounter(World);
             };
 
+            //If go inside, prob will make a method for OnLeaveWorld then clear encounters.
+            PlayerEnterExit.OnTransitionDungeonInterior += OnLeaveWorld;
+            PlayerEnterExit.OnTransitionInterior += OnLeaveWorld;
+
             #endregion
 
 
@@ -278,6 +282,8 @@ namespace DaggerfallRandomEncountersMod
 #endregion
 
         }
+
+        
 
         void updateTimeState(string state)
         {
@@ -376,6 +382,18 @@ namespace DaggerfallRandomEncountersMod
             //Before switched to monobehaviours would be calling update on each encounter,
             //there was error with mod compiler for doing that, cause may have been something else though.
 
+
+            //Only if game in progress tick encounters.
+            //Should stop if UI not up
+            if (GameManager.Instance.StateManager.GameInProgress &&
+                !(GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.UI || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Paused))
+            {
+                foreach (RandomEncounter randomEncounter in activeEncounters)
+                {
+                    Debug.LogError("ticking encounter " + randomEncounter.ToString());
+                    randomEncounter.tick();
+                }
+            }
         }
 
 
@@ -394,13 +412,20 @@ namespace DaggerfallRandomEncountersMod
             randomEncounter.AddComponent<RandomEncounterManager>();
 
 
+            //Cancel all encounters, also since is static in itself prob move this to invoke method in mod loading.
+            StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
+            {
+                activeEncounters.Clear();
+            };
+
+            
 
             ModManager.Instance.GetMod(initParams.ModTitle).IsReady = true;
 
         }
 
         [Invoke(StateManager.StateTypes.Start, 0)]
-        public static void InitConcreteTypes(InitParams initParams)
+        public static void InitEngineData(InitParams initParams)
         {
             concreteRandomEncounters = new Dictionary<string, System.Type>();
 
@@ -413,9 +438,7 @@ namespace DaggerfallRandomEncountersMod
             setUpFactories();
 
 
-         
-
-          
+           
         }
 
 
@@ -547,6 +570,22 @@ namespace DaggerfallRandomEncountersMod
 
         }
         #endregion
+
+
+        #region Event Handlers
+
+        //Invoked anytime enter building, town, dungeon, etc.
+        private void OnLeaveWorld(PlayerEnterExit.TransitionEventArgs args)
+        {
+
+            activeEncounters.Clear();
+        }
+
+#endregion
     }
+
+
+
+    
 }
  
