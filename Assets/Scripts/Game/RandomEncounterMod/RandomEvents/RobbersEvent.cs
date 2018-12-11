@@ -32,6 +32,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         //Will have timer here for time it takes robber to steal, and time to leave.
       
         GameObject[] robbers;
+
+
         //Default one.
         int spawnCount = 1;
 
@@ -114,9 +116,34 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             {
 
                 //Transfer random item from player inventory into robber stolen Inventory.
-
-                int itemIndex = UnityEngine.Random.Range(0, GameManager.Instance.PlayerEntity.Items.Count - 1);
+                //ToDo: Instead of completely random, filter out quest items and items they can't get back.
+                //cause that would break the game / quest they're on..
+                
                 ItemCollection playerItems = GameManager.Instance.PlayerEntity.Items;
+
+
+                List<int> indicesOfItemsCanSteal= new List<int>();
+
+
+
+                //Filtering to only range indicies of items that are valid to steal,
+                //ie: not quest items.
+                //There might be better way, but this seems fine.
+                for (int i = 0; i <  playerItems.Count; ++i)
+                {
+
+                    DaggerfallUnityItem item = playerItems.GetItem(i);
+
+                    //Maybe allow to steal from equipped from higher chance
+                    //will wake up player.
+                    if (!item.IsArtifact && !item.IsQuestItem && !item.IsEnchanted && !item.IsEquipped)
+                    {
+                        indicesOfItemsCanSteal.Add(i);
+                    }
+                }
+                //Since adding in order the first one is min and last one is max index of item can get.
+                int itemIndex = UnityEngine.Random.Range(indicesOfItemsCanSteal[0], indicesOfItemsCanSteal[indicesOfItemsCanSteal.Count]);
+
                 DaggerfallUnityItem itemToSteal = playerItems.GetItem(itemIndex);
 
 
@@ -170,6 +197,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         private void tryWakeUp()
         {
             //Compare players luck with thief's stealth and maybe luck too?
+            //ToDo: Make wake up criterion closer to what would look at for game.
+
             int playerLuckLevel = GameManager.Instance.PlayerEntity.Stats.LiveLuck;
 
             DaggerfallEntity robberEntity = robbers[0].GetComponent<DaggerfallEntityBehaviour>().Entity;
