@@ -57,8 +57,17 @@ namespace DaggerfallRandomEncountersMod.Utils
                     //Assigning callback to insert itself back into pool.
                     reusable.OnDoneUsing += (Reusable doneUsing) =>
                     {
-                        doneUsing.gameObject.SetActive(false);
-                        pool.Enqueue(doneUsing);
+                        //If already at capactiy don't put back in pool, just deallocate it.
+                        if (pool.Count == PoolCapacity)
+                        {
+                            MonoBehaviour.Destroy(doneUsing.gameObject);
+                        }
+                        else
+                        {
+                            doneUsing.gameObject.SetActive(false);
+
+                            pool.Enqueue(doneUsing);
+                        }
                     };
 
                     pool.Enqueue(reusable);
@@ -70,7 +79,12 @@ namespace DaggerfallRandomEncountersMod.Utils
 
         public Reusable acquireObject()
         {
-            if (pool == null || pool.Count == 0) return new Reusable();
+            if (pool == null || pool.Count == 0) {
+
+                 GameObject holder = new GameObject();
+                //This is actually bad, since I don't want to be reusable cause then capacity is wrong.
+                return holder.AddComponent<Reusable>();
+             }
 
 
             //I usually have manager assign the callbacks to put back into queueu
