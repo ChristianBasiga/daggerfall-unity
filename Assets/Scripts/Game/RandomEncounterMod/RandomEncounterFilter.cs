@@ -11,11 +11,15 @@ namespace DaggerfallRandomEncountersMod.Filter
 
         //Dictionary instead, this way it will work for fast travel encounters too.
 
-        List<FilterData> filters;
+        //Keeping Dictionary probably would've been better.
+        //
+        Dictionary<string, string> filters;
+        List<FilterData> oldFilters;
         public EncounterFilter()
         {
 
-            filters = new List<FilterData>();
+            oldFilters = new List<FilterData>();
+            filters = new Dictionary<string, string>();
         }
 
         //Returning FilterObjects of each individual split/
@@ -27,7 +31,7 @@ namespace DaggerfallRandomEncountersMod.Filter
             List<EncounterFilter> split = new List<EncounterFilter>();
 
             //Also only adds single filter, todo: make it so gets sub combinations too.
-            foreach (FilterData filterData in filters)
+            foreach (FilterData filterData in oldFilters)
             {
                 EncounterFilter encounterFilter = new EncounterFilter();
                 encounterFilter.setFilter(filterData);
@@ -40,30 +44,62 @@ namespace DaggerfallRandomEncountersMod.Filter
 
 
 
+
+
         public void setFilter(string context, string value)
         {
-            FilterData filterData = new FilterData();
-            filterData.context = context;
-            filterData.value = value;
-            filters.Add(filterData);
-            filters.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
+
+            filters[context] = value;
+            return;
+
+            //Filter data makes more sense and more concrete, but problem is now I have to do this.
+            FilterData prevEntry = oldFilters.Find((FilterData data) => { return string.Equals(context, data.context); });
+
+            if (prevEntry != null)
+            {
+                prevEntry.value = value;
+            }
+            else
+            {
+                FilterData filterData = new FilterData();
+                filterData.context = context;
+                filterData.value = value;
+                oldFilters.Add(filterData);
+                oldFilters.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
+            }
         }
 
         public void setFilter(FilterData filterData)
         {
-            filters.Add(filterData);
-            filters.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
+            filters[filterData.context] = filterData.value;
+            return;
 
+            FilterData found = oldFilters.Find((FilterData data) => string.Equals(filterData.context, data.context));
+            if ( found != null)
+            {
+                found.value = filterData.value;
+            }
+            else
+            {
+                oldFilters.Add(filterData);
+                oldFilters.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
+            }
         }
 
 
         public bool Equals(EncounterFilter other)
         {
 
-            foreach (FilterData filter in other.filters)
+            foreach( KeyValuePair<string,string> entry in other.filters)
+            //foreach (FilterData filter in other.oldFilters)
             {
-                //If at any point it doesn't contain filter then not equal
-                if (!filters.Contains(filter))
+                //If doesn't have same key, then not right.
+                if (!filters.ContainsKey(entry.Key))
+                {
+                    return false;
+                }
+                //otherwise compare values.
+                else if (!filters[entry.Key].Equals(entry.Value))
                 {
                     return false;
                 }
@@ -76,9 +112,11 @@ namespace DaggerfallRandomEncountersMod.Filter
         public override string ToString()
         {
             string rep = "";
-            foreach (FilterData entry in filters)
+
+            foreach (KeyValuePair<string,string> entry in filters)
+
             {
-                rep += "context: " + entry.context + " Value: " + entry.value + "\n";
+                rep += "context: " + entry.Key + " Value: " + entry.Value + "\n";
             }
             return rep;
         }
@@ -92,10 +130,11 @@ namespace DaggerfallRandomEncountersMod.Filter
         {
             string totalFilter = "";
 
-            foreach (FilterData entry in filters)
+            //foreach (FilterData entry in oldFilters)
+            foreach (KeyValuePair<string,string> entry in filters)
             {
 
-                totalFilter += entry.context + entry.value;
+                totalFilter += entry.Key + entry.Value;
             }
 
 
