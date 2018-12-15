@@ -31,15 +31,20 @@ namespace DaggerfallRandomEncountersMod.GUI
         }
 
         //For now here, reoganize where filte ris.
-        static readonly string weather = "Weather";
-        static readonly string crime = "Crime";
+        static readonly string weather = "weather";
+        static readonly string crime = "crime";
 
         int encounterIdIndex;
         string[] possibleEncounterIds;
         int chosenEncounterTypeIndex;
         List<FilterEntry> filtersAdded;
 
+
+        /// <summary>
+        /// All of these will be in their own respective files / class later.
+        /// </summary>
         static string[] encounterTypes = new string[] { "Positive", "Negative", "Neutral" };
+        static string[] possibleTimes = new string[] { "day", "night", "dawn", "dusk", "midday", "midnight" };
 
         //Will have weather types, crimes etc, so essentially prototype filters they can choose from.
 
@@ -52,7 +57,7 @@ namespace DaggerfallRandomEncountersMod.GUI
 
         //Dictionary<string, string[]> possibleFilters;
 
-        [MenuItem("Window/RandomEncountersLoader")]
+        [MenuItem("RandomEncountersMod/RandomEncountersLoader")]
         static EncounterLoadWindow Init()
         {
 
@@ -102,6 +107,10 @@ namespace DaggerfallRandomEncountersMod.GUI
 
             temp.Add(crime);
             filterDomains.Add(System.Enum.GetNames(typeof(DaggerfallWorkshop.Game.Entity.PlayerEntity.Crimes)));
+
+
+            temp.Add("time");
+            filterDomains.Add(possibleTimes);
 
 
 

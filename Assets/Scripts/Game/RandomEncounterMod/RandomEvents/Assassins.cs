@@ -31,10 +31,12 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             if (!GameManager.Instance.PlayerEntity.IsResting)
             {
                 warning = "You feel bloodlust";
+                assassin.SetActive(true);
             }
             else
             {
                 Debug.LogError("assassin encounter started");
+
             }
 
             DaggerfallEntity entity = assassin.GetComponent<DaggerfallEntityBehaviour>().Entity;

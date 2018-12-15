@@ -448,12 +448,17 @@ namespace DaggerfallRandomEncountersMod
         [Invoke(StateManager.StateTypes.Start, 0)]
         public static void InitEngineData(InitParams initParams)
         {
-            concreteRandomEncounters = new Dictionary<string, System.Type>();
 
             //Okay so all of the classes need to be taken via asset
             initParams.Mod.LoadAllAssetsFromBundle();
             //Initializes cache with all RandomEncounters available in bundle.
-            initRandomEncounterCache();
+            //This is happening everytime window to add encounters is open, so only do this if not already set.
+            //ie: they didn't open the window.
+            if (concreteRandomEncounters == null)
+            {
+                
+                initRandomEncounterCache();
+            }
 
             //Initializes the factories with their prototypes using the json data.
             setUpFactories();
