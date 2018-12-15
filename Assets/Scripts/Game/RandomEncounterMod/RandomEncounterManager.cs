@@ -33,6 +33,10 @@ namespace DaggerfallRandomEncountersMod
 
         static Dictionary<string, System.Type> concreteRandomEncounters;
 
+        public static string[] getConcreteTypes(){
+            return concreteRandomEncounters.Keys.ToArray();
+        }
+
         PoolManager objectPool;
 
         #region Contexts
@@ -487,10 +491,12 @@ namespace DaggerfallRandomEncountersMod
 
 
 
-
-        private static void initRandomEncounterCache()
+        //Temporarily public to generate valid list of encounter types.
+        //Will reorgnaize everything later.
+        public static void initRandomEncounterCache()
         {
 
+            concreteRandomEncounters = new Dictionary<string, System.Type>();
 
             //Goes through assembly of all files within the mod asset bundle.
             
@@ -545,6 +551,8 @@ namespace DaggerfallRandomEncountersMod
 
                 try
                 {
+                    Debug.LogError(jsonFile.name);
+
                     //Loads json into object.
                     EncounterData encounterData = JsonConvert.DeserializeObject<EncounterData>(jsonFile.text);
                     //EncounterData encounterData = JsonUtility.FromJson<EncounterData>(jsonFile);
