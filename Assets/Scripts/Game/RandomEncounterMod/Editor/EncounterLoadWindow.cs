@@ -34,8 +34,9 @@ namespace DaggerfallRandomEncountersMod.GUI
         static readonly string weather = "Weather";
         static readonly string crime = "Crime";
 
-        string encounterId;
-        int chosenEncounterType;
+        int encounterIdIndex;
+        string[] possibleEncounterIds;
+        int chosenEncounterTypeIndex;
         List<FilterEntry> filtersAdded;
 
         static string[] encounterTypes = new string[] { "Positive", "Negative", "Neutral" };
@@ -65,6 +66,7 @@ namespace DaggerfallRandomEncountersMod.GUI
 
             // Get existing open window or if none, make a new one:
             EncounterLoadWindow wow =  EditorWindow.GetWindow(typeof(EncounterLoadWindow)) as EncounterLoadWindow;
+            
 
             return wow;
           // encounterLoadWindow.Show();
@@ -74,15 +76,18 @@ namespace DaggerfallRandomEncountersMod.GUI
         //Called when window open
         private void Awake()
         {
-            encounterId = "";
 
 
             
             
 
             filtersAdded = new List<FilterEntry>();
+            //For now doing this everytime ope, make it so only if different somehow later.
+            RandomEncounterManager.initRandomEncounterCache();
+            possibleEncounterIds = RandomEncounterManager.getConcreteTypes();
 
-            
+
+
         }
 
         private static void initFilterValues()
@@ -108,13 +113,14 @@ namespace DaggerfallRandomEncountersMod.GUI
         private void OnGUI()
         {
 
-            GUILayout.Label("Encounter Info", EditorStyles.boldLabel);
-           // encounterId = EditorGUILayout.TextField("Encounter Id", encounterId);
-            encounterId = EditorGUILayout.TextField("Enter encounter Id", encounterId);
+            
+            GUILayout.Label("Encounter Id", EditorStyles.boldLabel);
+            // encounterId = EditorGUILayout.TextField("Encounter Id", encounterId);
+            encounterIdIndex = EditorGUILayout.Popup(encounterIdIndex, possibleEncounterIds) ;
 
             GUILayout.Label("Encounter Type", EditorStyles.boldLabel);
 
-            chosenEncounterType = EditorGUILayout.Popup(0, encounterTypes);
+            chosenEncounterTypeIndex = EditorGUILayout.Popup(chosenEncounterTypeIndex, encounterTypes);
 
 
 
@@ -172,7 +178,7 @@ namespace DaggerfallRandomEncountersMod.GUI
 
             //based on fields create EncounterData object.
             EncounterData encounterData = new EncounterData();
-            encounterData.encounterId = encounterId;
+            encounterData.encounterId = possibleEncounterIds[encounterIdIndex];
             encounterData.context = "World";
 
             List<FilterData> filters = new List<FilterData>();
@@ -184,13 +190,13 @@ namespace DaggerfallRandomEncountersMod.GUI
             {
                 FilterData filterData = new FilterData();
                 filterData.context = possibleFilters[entry.contextIndex];
-                filterData.value = possibleFilters[entry.valueIndex];
+                filterData.value = filterDomains[entry.contextIndex][entry.valueIndex];
                 filters.Add(filterData);
             }
 
             encounterData.filter = filters;
 
-            encounterData.type = encounterTypes[chosenEncounterType];
+            encounterData.type = encounterTypes[chosenEncounterTypeIndex];
 
             //Then serialize it, no checks needed here as options allowed to be set aren't invalid.
             string json = JsonConvert.SerializeObject(encounterData);
@@ -201,7 +207,9 @@ namespace DaggerfallRandomEncountersMod.GUI
 
             //Will add as file instead.
             //Loading as text assets is fine though, but for consistency, may chage that too.
-            File.WriteAllText("Assets/Resources/RandomEncounters/test.json", json);
+            //random uids here instead.
+            //There to be unique name, which would be filter
+            File.WriteAllText("Assets/Resources/RandomEncounters/"+ encounterData.encounterId + "_" + encounterData.type+ "_" + encounterData.filter[0].ToString()+".json" , json);
             //Okay, adding as text asset adds alot of shit.
            // AssetDatabase.CreateAsset(textAssetJson, "Assets/Resources/RandomEncounters/test.json");
         }
