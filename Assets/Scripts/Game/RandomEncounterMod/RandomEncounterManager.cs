@@ -22,6 +22,7 @@ using DaggerfallRandomEncountersMod.Filter;
 
 using Newtonsoft.Json;
 using DaggerfallWorkshop.Game.Entity;
+using DaggerfallConnect.Utility;
 
 namespace DaggerfallRandomEncountersMod
 {
@@ -137,7 +138,7 @@ namespace DaggerfallRandomEncountersMod
 
             initStates();
             setUpObservers();
-
+            //randomEncounterWildernessTrigger();
 
             //If player dies, clears encounters, so then garbage collected.
             GameManager.Instance.PlayerEntity.OnDeath += (DaggerfallEntity entity) =>
@@ -174,8 +175,31 @@ namespace DaggerfallRandomEncountersMod
 
         }
 
-      
-        
+        //Chance to for random encounter to occur in wilderness
+        void randomEncounterWildernessTrigger()
+        {
+            //Random Chance 
+            int rand = Random.Range(0, 100);
+            //I believe this is the wilderness? Was looking at pixel first... If not will change later
+            PlayerGPS.OnRegionIndexChanged += (int regionIndex) =>
+            {
+
+                string newRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionName(regionIndex);
+                Debug.LogError(newRegion);
+                worldFilter.setFilter("region", newRegion);
+                if (rand < 50) //50%
+                {
+                    // Create encounter but still has conditions present I believe
+                    trySpawningEncounter(World);
+                }
+                else
+                {
+                    //Retrigger?
+                    randomEncounterWildernessTrigger();
+                }
+                
+            };
+        }
 
         //Basically set up observers to listen to triggers.
         void setUpObservers()
@@ -334,6 +358,10 @@ namespace DaggerfallRandomEncountersMod
 
             //Only 20% of the time spawn.
             bool dontSpawn = Random.Range(0, 10) > 2;
+
+            PlayerEntity.Crimes crime = GameManager.Instance.PlayerEntity.CrimeCommitted;
+
+            worldFilter.setFilter("Crime", crime.ToString());
 
             RandomEncounter encounter = null;
             switch (context)
