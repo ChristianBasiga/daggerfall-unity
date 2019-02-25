@@ -94,6 +94,8 @@ namespace DaggerfallRandomEncountersMod
            
             for (int i = 0; i < split.Count; ++i)
             {
+                Debug.LogError("filter splitting " + split[i].ToString());
+
                 if (possibleEvents[type].ContainsKey(split[i]))
                 {
                     foreach (RandomEncounter evt in possibleEvents[type][split[i]])

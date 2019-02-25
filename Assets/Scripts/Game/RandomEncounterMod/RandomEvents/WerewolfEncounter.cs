@@ -55,6 +55,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             base.tick();
             if (foeSpawner == null)
             {
+
                 if (!EncounterUtils.hasActiveSpawn(werebeasts))
                 {
                     end();

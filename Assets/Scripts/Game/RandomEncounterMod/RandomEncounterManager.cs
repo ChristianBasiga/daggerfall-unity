@@ -23,6 +23,7 @@ using DaggerfallRandomEncountersMod.Filter;
 using Newtonsoft.Json;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallConnect.Utility;
+using System.Collections;
 
 namespace DaggerfallRandomEncountersMod
 {
@@ -73,8 +74,9 @@ namespace DaggerfallRandomEncountersMod
 
         #endregion
 
-       
 
+
+        private IEnumerator randomWildernessTriggerCoroutine;
 
         private static RandomEncounterManager instance;
 
@@ -172,33 +174,39 @@ namespace DaggerfallRandomEncountersMod
 
             //Prob better key than time, but this is fine.
             worldFilter.setFilter("time", currentTime.IsDay ? "day" : "night");
-
+            randomWildernessTriggerCoroutine = randomEncounterWildernessTrigger();
+            
+            StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
+            {
+                StartCoroutine(randomWildernessTriggerCoroutine);
+            };
         }
 
         //Chance to for random encounter to occur in wilderness
-        void randomEncounterWildernessTrigger()
+        IEnumerator randomEncounterWildernessTrigger()
         {
-            //Random Chance 
-            int rand = Random.Range(0, 100);
-            //I believe this is the wilderness? Was looking at pixel first... If not will change later
-            PlayerGPS.OnRegionIndexChanged += (int regionIndex) =>
+
+            //GameManager.Instance.StateManager.GameInProgress
+            while (true)
             {
 
-                string newRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionName(regionIndex);
-                Debug.LogError(newRegion);
-                worldFilter.setFilter("region", newRegion);
+                
+                //Random Chance 
+                int rand = Random.Range(0, 100);
+                //I believe this is the wilderness? Was looking at pixel first... If not will change later
+
+                Debug.LogError("Random chance to spawn " + rand);
+
+                //Todo: Add check to make sure player in wilderness, look in Update.
                 if (rand < 50) //50%
                 {
                     // Create encounter but still has conditions present I believe
                     trySpawningEncounter(World);
                 }
-                else
-                {
-                    //Retrigger?
-                    randomEncounterWildernessTrigger();
-                }
-                
-            };
+
+                //Can change to seconds, look up coroutines.
+                yield return new WaitForEndOfFrame();
+            }
         }
 
         //Basically set up observers to listen to triggers.
@@ -207,6 +215,15 @@ namespace DaggerfallRandomEncountersMod
 
             //Perhaps probability of encounter spawning will be skewed by what called it?
             //If we're putting all into one pool.
+
+            PlayerGPS.OnRegionIndexChanged += (int regionIndex) =>
+            {
+
+                string newRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionName(regionIndex);
+                Debug.LogError(newRegion);
+                worldFilter.setFilter("region", newRegion);
+
+            };
 
             StreamingWorld.OnTeleportToCoordinates += (DaggerfallConnect.Utility.DFPosition pos) =>
             {
@@ -356,8 +373,6 @@ namespace DaggerfallRandomEncountersMod
             }
 
 
-            //Only 20% of the time spawn.
-            bool dontSpawn = Random.Range(0, 10) > 2;
 
             PlayerEntity.Crimes crime = GameManager.Instance.PlayerEntity.CrimeCommitted;
 
