@@ -42,8 +42,13 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
         public override void begin()
         {
+            //Change this to just stealing while resting.
             if (!GameManager.Instance.PlayerEntity.IsResting)
             {
+                Debug.LogError("here");
+                end();
+                return;
+
                 warning = "You hear footsteps coming towards you";
 
                 robbers = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position,
@@ -59,7 +64,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                 spawner = GameObjectHelper.CreateFoeSpawner();
                 spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(robbers);
             }
-
+           
         
             
           
@@ -69,10 +74,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
 
             timeTillThiefGone = thiefEscapeTime;
-            Debug.LogError("Item count before" + GameManager.Instance.PlayerEntity.Items.Count);
 
             //So fucking true here, yet,
-            Debug.LogError("Is resting from robber event" + GameManager.Instance.PlayerEntity.IsResting);
             stolenItems = new ItemCollection();
 
             Debug.LogError(DaggerfallUI.Instance.UserInterfaceManager.TopWindow);
@@ -149,7 +152,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
                 stolenItems.Transfer(itemToSteal, playerItems);
 
-                Debug.LogError("Item count After" + GameManager.Instance.PlayerEntity.Items.Count);
                 stoleItem = true;
 
                 robbers = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position,
@@ -159,7 +161,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
                 if (wokeUp)
                 {
-                  
+
+                    //If woke up, from attempt, pop rest window and wake up.
                     DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
                     Debugging.DebugLog("You hear someone rummaging through your inventory.");
                     //In this case the enemy will force the interrupt, so not good case of that, but still cool.
@@ -181,14 +184,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(robbers);
                 }
             }
-            else if (!wokeUp)
-            {
-                //If rest window not up anymore, then they woke up either on thier own or some other reason.
-                Debugging.AlertPlayer("You notice thief rummaging through your inventory");
-                wokeUp = true;
-            }
-            
-            
             
 
         }

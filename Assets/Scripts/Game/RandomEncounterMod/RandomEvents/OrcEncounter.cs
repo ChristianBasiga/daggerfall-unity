@@ -32,13 +32,11 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             closure = "The orcs have been slain!";
 
 
-
+            base.begin();
 
             MobileTypes orcType = MobileTypes.Orc;
 
 
-            //Spawn number of hunters based on crime.
-            //
             switch (GameManager.Instance.PlayerEntity.CrimeCommitted)
             {
 
@@ -64,6 +62,10 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     orcCount = 6;
                     orcType = MobileTypes.OrcWarlord;
                     break;
+                default:
+                    orcCount = 3;
+                    orcType = MobileTypes.Orc;
+                    break;
             }
 
             orcs = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position, orcType, 1, MobileReactions.Hostile);
@@ -71,7 +73,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             foeSpawner.SetFoeGameObjects(orcs);
 
-            base.begin();
         }
 
         public override void tick()

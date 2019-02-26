@@ -130,6 +130,10 @@ namespace DaggerfallRandomEncountersMod
 
         void Start()
         {
+
+            GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Trespassing;
+            Debug.LogError("Crime committed "  + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
+
             objectPool = PoolManager.Instance;
 
             objectPool.PoolCapacity = 20;
@@ -140,6 +144,8 @@ namespace DaggerfallRandomEncountersMod
 
             initStates();
             setUpObservers();
+
+
             //randomEncounterWildernessTrigger();
 
             //If player dies, clears encounters, so then garbage collected.
@@ -175,7 +181,10 @@ namespace DaggerfallRandomEncountersMod
             //Prob better key than time, but this is fine.
             worldFilter.setFilter("time", currentTime.IsDay ? "day" : "night");
             randomWildernessTriggerCoroutine = randomEncounterWildernessTrigger();
-            
+
+            worldFilter.setFilter("crime", PlayerEntity.Crimes.Trespassing.ToString());
+
+
             StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
             {
                 StartCoroutine(randomWildernessTriggerCoroutine);
@@ -186,8 +195,8 @@ namespace DaggerfallRandomEncountersMod
         IEnumerator randomEncounterWildernessTrigger()
         {
 
-            //GameManager.Instance.StateManager.GameInProgress
-            while (true)
+
+            while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
             {
 
                 
@@ -195,17 +204,18 @@ namespace DaggerfallRandomEncountersMod
                 int rand = Random.Range(0, 100);
                 //I believe this is the wilderness? Was looking at pixel first... If not will change later
 
-                Debug.LogError("Random chance to spawn " + rand);
+                //  Debug.LogError("Random chance to spawn " + rand);
 
                 //Todo: Add check to make sure player in wilderness, look in Update.
-                if (rand < 50) //50%
-                {
-                    // Create encounter but still has conditions present I believe
+                // if (rand < 50) //50%
+                //{
+                // Create encounter but still has conditions present I believe
+                Debug.LogError("Trigger happening ");
                     trySpawningEncounter(World);
-                }
+                //}
 
                 //Can change to seconds, look up coroutines.
-                yield return new WaitForEndOfFrame();
+                yield return new WaitForSeconds(5.0f);
             }
         }
 
@@ -253,7 +263,7 @@ namespace DaggerfallRandomEncountersMod
                 //G means the word reprsentation.
                 worldFilter.setFilter("climate", currentClimate.ToString());
 
-                trySpawningEncounter(World);
+              //  trySpawningEncounter(World);
 
             };
 
@@ -263,14 +273,14 @@ namespace DaggerfallRandomEncountersMod
                 string newRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionName(regionIndex);
                 Debug.LogError(newRegion);
                 worldFilter.setFilter("region", newRegion);
-                trySpawningEncounter(World);
+                //trySpawningEncounter(World);
             };
 
             PlayerEnterExit.OnTransitionDungeonExterior += (PlayerEnterExit.TransitionEventArgs args) =>
             {
 
                 worldFilter.setFilter("lastInside", "dungeon");
-                trySpawningEncounter(World);
+                //trySpawningEncounter(World);
             };
 
             //If go inside, prob will make a method for OnLeaveWorld then clear encounters.
@@ -284,7 +294,7 @@ namespace DaggerfallRandomEncountersMod
             WeatherManager.OnWeatherChange += (WeatherType newWeather) =>
             {
                 worldFilter.setFilter("weather", newWeather.ToString());
-                trySpawningEncounter(World);
+                //trySpawningEncounter(World);
             };
 
 
@@ -295,7 +305,7 @@ namespace DaggerfallRandomEncountersMod
                 if (GameManager.Instance.PlayerEntity.IsResting)
                 {
                     Debug.LogError(GameManager.Instance.StateManager.CurrentState.ToString());
-                    trySpawningEncounter(World);
+                  //  trySpawningEncounter(World);
                 }
             };
 
@@ -345,7 +355,7 @@ namespace DaggerfallRandomEncountersMod
         {
             worldFilter.setFilter("time", state);
             //Try spawning.
-            trySpawningEncounter(World);
+         //   trySpawningEncounter(World);
 
         }
 
@@ -376,13 +386,14 @@ namespace DaggerfallRandomEncountersMod
 
             PlayerEntity.Crimes crime = GameManager.Instance.PlayerEntity.CrimeCommitted;
 
-            worldFilter.setFilter("Crime", crime.ToString());
+
 
             RandomEncounter encounter = null;
             switch (context)
             {
                 case World:
 
+                    Debug.LogError("world");
                     encounter = worldEventsFactory.getRandomEvent(worldFilter);
                     break;
 
@@ -456,25 +467,31 @@ namespace DaggerfallRandomEncountersMod
         // Update is called once per frame
         void Update()
         {
+            Debug.LogError(DaggerfallUI.Instance.UserInterfaceManager.TopWindow.ToString());
             
             if ((GameManager.Instance.StateManager.GameInProgress && GameManager.Instance.StateManager.CurrentState != StateManager.StateTypes.UI) ||
                 DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
             {
 
+
                 //Problem with this is it may be mutated when I do the tick.
                 List<RandomEncounter> toRemove = new List<RandomEncounter>();
                 foreach (RandomEncounter encounter in activeEncounters)
                 {
-                    encounter.tick();
+                    Debug.LogError("encounter " +  encounter.ToString());
 
-                    //Instead of began prob rename to be more accurate.
-                    //But basically this means done using it.
-                    if (!encounter.Began)
+                    if (encounter.Began)
+                    {
+                        encounter.tick();
+                    }
+
+                    else if (!encounter.Began)
                     {
                         toRemove.Add(encounter);
                     }
 
                 }
+
 
                 foreach( var encounter in toRemove)
                 {
@@ -618,18 +635,19 @@ namespace DaggerfallRandomEncountersMod
                         throw new System.Exception("There is no RandomEncounter with the id: " + encounterData.encounterId);
                     }
 
-                    Debug.LogError("Encounter: " + encounterData.encounterId + " type is " + type);
 
                     var randomEncounterToLoad = concreteRandomEncounters[encounterData.encounterId];
-                  //  RandomEncounter randomEncounter = (RandomEncounter)System.Activator.CreateInstance(randomEncounterToLoad);
+
+                    //  RandomEncounter randomEncounter = (RandomEncounter)System.Activator.CreateInstance(randomEncounterToLoad);
                     GameObject holder = new GameObject(encounterData.encounterId + "Encounter");
                     RandomEncounter randomEncounter = holder.AddComponent(randomEncounterToLoad) as RandomEncounter;
-
-
+                    
                     //Instantiates filter using filter data within json object.
                     EncounterFilter filter = new EncounterFilter();
                     foreach (FilterData data in encounterData.filter)
                     {
+
+                        //So problem for orc is here.
                         filter.setFilter(data);
                     }
 
@@ -663,6 +681,7 @@ namespace DaggerfallRandomEncountersMod
                 //Will make more specific catches later.
                 catch (System.Exception exception)
                 {
+
                     Debug.LogError("Failed to load encounter data from " + jsonFile.name + ". Error: " + exception.Message);
                     
                 }
