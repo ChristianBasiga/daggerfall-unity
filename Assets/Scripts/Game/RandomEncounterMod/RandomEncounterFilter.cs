@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using DaggerfallRandomEncountersMod.Utils;
 
-namespace DaggerfallRandomEncountersMod.Filter
+    namespace DaggerfallRandomEncountersMod.Filter
 { 
 
     public class EncounterFilter : System.IEquatable<EncounterFilter>
@@ -14,33 +14,24 @@ namespace DaggerfallRandomEncountersMod.Filter
         //Keeping Dictionary probably would've been better.
         //
         Dictionary<string, string> filters;
-        List<FilterData> oldFilters;
+        List<FilterData> split;
+        
         public EncounterFilter()
         {
 
-            oldFilters = new List<FilterData>();
+            split = new List<FilterData>();
             filters = new Dictionary<string, string>();
         }
 
-        //Returning FilterObjects of each individual split/
-        //Consider doing this within factory, so can split and use filters to get rest of random encounters
-        //at the same time to reduce the overall time complexity, not huge change but something.
-
-        public List<EncounterFilter> splitFilters()
+        public List<FilterData> splitFilters
         {
-            List<EncounterFilter> split = new List<EncounterFilter>();
-
-            //Also only adds single filter, todo: make it so gets sub combinations too.
-            foreach (FilterData filterData in oldFilters)
+            get
             {
-                EncounterFilter encounterFilter = new EncounterFilter();
-                encounterFilter.setFilter(filterData);
-                split.Add(encounterFilter);
+                return split;
             }
-
-            return split;
         }
 
+      
 
 
 
@@ -50,10 +41,9 @@ namespace DaggerfallRandomEncountersMod.Filter
         {
 
             filters[context] = value;
-            return;
 
             //Filter data makes more sense and more concrete, but problem is now I have to do this.
-            FilterData prevEntry = oldFilters.Find((FilterData data) => { return string.Equals(context, data.context); });
+            FilterData prevEntry = split.Find((FilterData data) => { return string.Equals(context, data.context); });
 
             if (prevEntry != null)
             {
@@ -64,25 +54,26 @@ namespace DaggerfallRandomEncountersMod.Filter
                 FilterData filterData = new FilterData();
                 filterData.context = context;
                 filterData.value = value;
-                oldFilters.Add(filterData);
-                oldFilters.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
+                split.Add(filterData);
+                split.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
             }
         }
 
         public void setFilter(FilterData filterData)
         {
-            filters[filterData.context] = filterData.value;
-            return;
 
-            FilterData found = oldFilters.Find((FilterData data) => string.Equals(filterData.context, data.context));
+            filters[filterData.context] = filterData.value;
+            
+            FilterData found = split.Find((FilterData data) => string.Equals(filterData.context, data.context));
             if ( found != null)
             {
                 found.value = filterData.value;
             }
             else
             {
-                oldFilters.Add(filterData);
-                oldFilters.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
+                split.Add(filterData);
+
+                split.Sort((FilterData a, FilterData b) => { return string.Compare(a.context, b.context); });
             }
         }
 
@@ -129,16 +120,18 @@ namespace DaggerfallRandomEncountersMod.Filter
         public override int GetHashCode()
         {
             string totalFilter = "";
-
+            int hash = 0;
             //foreach (FilterData entry in oldFilters)
+
+            //This makes it so don't gotta sort, but feel like bound to fail, need to come up with better hash.
             foreach (KeyValuePair<string,string> entry in filters)
             {
 
-                totalFilter += entry.Key + entry.Value;
+                hash += entry.Value.GetHashCode();
             }
 
 
-            return totalFilter.GetHashCode();
+            return hash;
 
         }
     }

@@ -45,10 +45,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             //Change this to just stealing while resting.
             if (!GameManager.Instance.PlayerEntity.IsResting)
             {
-                Debug.LogError("here");
-                end();
                 return;
-
                 warning = "You hear footsteps coming towards you";
 
                 robbers = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position,
