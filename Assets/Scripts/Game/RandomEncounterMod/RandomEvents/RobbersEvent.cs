@@ -44,6 +44,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         {
             if (!GameManager.Instance.PlayerEntity.IsResting)
             {
+                return;
                 warning = "You hear footsteps coming towards you";
 
                 robbers = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position,

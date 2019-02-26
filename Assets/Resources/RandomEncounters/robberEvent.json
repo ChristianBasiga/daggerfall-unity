@@ -1,12 +1,16 @@
 {
 
-    "encounterId": "Robbers",
+    "encounterId": "Robbersd",
     "context": "World",
     "type": "Negative",
     "filter": [
         {
             "context": "time",
             "value": "day"
+        },
+        {
+            "context": "resting",
+            "value": "true"
         }
     ]
 }
