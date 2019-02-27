@@ -198,21 +198,23 @@ namespace DaggerfallRandomEncountersMod
 
             while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
             {
-
-                
                 //Random Chance 
                 int rand = Random.Range(0, 100);
-                //I believe this is the wilderness? Was looking at pixel first... If not will change later
+                if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true))
+                {
+                    //I believe this is the wilderness? Was looking at pixel first... If not will change later
 
-                //  Debug.LogError("Random chance to spawn " + rand);
+                    //  Debug.LogError("Random chance to spawn " + rand);
 
-                //Todo: Add check to make sure player in wilderness, look in Update.
-                // if (rand < 50) //50%
-                //{
-                // Create encounter but still has conditions present I believe
-                Debug.LogError("Trigger happening ");
+                    //Todo: Add check to make sure player in wilderness, look in Update.
+                    // if (rand < 50) //50%
+                    //{
+                    // Create encounter but still has conditions present I believe
+                    Debug.LogError("Trigger happening ");
                     trySpawningEncounter(World);
-                //}
+                    //}
+                }
+
 
                 //Can change to seconds, look up coroutines.
                 yield return new WaitForSeconds(5.0f);
