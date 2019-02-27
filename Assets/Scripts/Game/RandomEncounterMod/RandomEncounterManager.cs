@@ -146,7 +146,7 @@ namespace DaggerfallRandomEncountersMod
             setUpObservers();
 
 
-            //randomEncounterWildernessTrigger();
+            randomEncounterWildernessTrigger();
 
             //If player dies, clears encounters, so then garbage collected.
             GameManager.Instance.PlayerEntity.OnDeath += (DaggerfallEntity entity) =>
@@ -200,7 +200,7 @@ namespace DaggerfallRandomEncountersMod
             {
                 //Random Chance 
                 int rand = Random.Range(0, 100);
-                if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true))
+                if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true) || (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0))
                 {
                     //I believe this is the wilderness? Was looking at pixel first... If not will change later
 
@@ -375,14 +375,6 @@ namespace DaggerfallRandomEncountersMod
             //Debug.LogError("I am called");
 
             //Becaues only spawn in world.
-            if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false,true) ||
-
-                //Only one encounter active during rest, this was mainly for testing but makes sense to have too.
-               (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0))
-
-            {
-                return;
-            }
 
 
 
