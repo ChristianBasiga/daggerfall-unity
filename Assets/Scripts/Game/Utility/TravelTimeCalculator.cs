@@ -10,6 +10,8 @@
 //
 
 using UnityEngine;
+using System;
+using DaggerfallConnect;
 using DaggerfallConnect.Utility;
 using DaggerfallConnect.Arena2;
 
@@ -127,6 +129,11 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                 }
 
+                //Debug.log(positionX);
+
+                tryInterrupt(position.X, position.Y);
+                break;
+
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
                 if (terrain == (int)MapsFile.Climates.Ocean)
@@ -154,6 +161,24 @@ namespace DaggerfallWorkshop.Game.Utility
                 minutesTakenTotal = minutesTakenTotal >> 1;
 
             return minutesTakenTotal;
+        }
+
+        private void tryInterrupt(int pixelX, int pixelY)
+        {
+            DaggerfallTerrain terrain = GameManager.Instance.StreamingWorld.GetTerrainTransform(pixelX, pixelY).GetComponent<DaggerfallTerrain>();
+            Debug.LogError(terrain.MapData.mapRegionIndex);
+
+            DFRegion region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegion(terrain.MapData.mapRegionIndex);
+
+            Debug.LogError(region.Name);
+
+            DFRegion.RegionMapTable[] mapTable = region.MapTable;
+            string[] mapNames = region.MapNames;
+            Debug.LogError(mapNames[0]);
+            Int32 interruptX = mapTable[0].Longitude;
+            Int32 interruptY = mapTable[0].Latitude;
+
+            GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(interruptX, interruptY);
         }
 
         public void CalculateTripCost(int travelTimeInMinutes, bool sleepModeInn, bool hasShip, bool travelShip)
