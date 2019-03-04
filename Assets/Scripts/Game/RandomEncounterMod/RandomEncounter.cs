@@ -46,6 +46,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         //If encounter caused player to die.
         protected bool playerDied;
         bool began = false;
+        bool ended = false;
         protected bool effectReputation;
 
         public bool Began
@@ -53,6 +54,15 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             get
             {
                 return began;
+            }
+        }
+
+        public bool Ended
+        {
+
+            get
+            {
+                return ended;
             }
         }
 
@@ -103,6 +113,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             //if (!began) return;
 
             began = false;
+            ended = true;
 
             //Prob their own closures for when player is dead.
             Debug.LogError("Ended encounter");

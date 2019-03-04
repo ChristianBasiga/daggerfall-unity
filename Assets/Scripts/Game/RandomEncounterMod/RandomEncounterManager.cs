@@ -131,8 +131,9 @@ namespace DaggerfallRandomEncountersMod
         void Start()
         {
 
-            GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Murder;
-            Debug.LogError("Crime committed "  + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
+
+            //Set here.
+            Debug.LogError("crime " + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
             objectPool = PoolManager.Instance;
 
@@ -140,10 +141,11 @@ namespace DaggerfallRandomEncountersMod
 
             activeEncounters = new LinkedList<RandomEncounters.RandomEncounter>();
 
+
+
             Debug.LogError("encounter type count " + concreteRandomEncounters.Count);
 
-            initStates();
-            setUpObservers();
+            randomWildernessTriggerCoroutine = randomEncounterWildernessTrigger();
 
 
             //randomEncounterWildernessTrigger();
@@ -154,6 +156,21 @@ namespace DaggerfallRandomEncountersMod
                 Debug.LogError("I happen");
                 killActive();
             };
+
+            StateManager.OnStartNewGame += (object sender, System.EventArgs e) => {
+
+
+                //Maybe gets loaded in to be different.
+                GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Murder;
+
+                this.initStates();
+                this.setUpObservers();
+
+                StartCoroutine(randomWildernessTriggerCoroutine);
+
+            };
+
+
 
         }
 
@@ -180,15 +197,10 @@ namespace DaggerfallRandomEncountersMod
 
             //Prob better key than time, but this is fine.
             worldFilter.setFilter("time", currentTime.IsDay ? "day" : "night");
-            randomWildernessTriggerCoroutine = randomEncounterWildernessTrigger();
 
-            worldFilter.setFilter("crime", PlayerEntity.Crimes.Murder.ToString());
+            worldFilter.setFilter("crime", GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
 
-            StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
-            {
-                StartCoroutine(randomWildernessTriggerCoroutine);
-            };
         }
 
         //Chance to for random encounter to occur in wilderness
@@ -196,11 +208,12 @@ namespace DaggerfallRandomEncountersMod
         {
 
 
-            while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
+            while (true)
             {
-                //Random Chance 
+                yield return new WaitUntil(() => { return GameManager.Instance.StateManager.GameInProgress; });
+
                 int rand = Random.Range(0, 100);
-                if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true) || (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0))
+                if ((!GameManager.Instance.PlayerEnterExit.IsPlayerInside &&  !GameManager.Instance.PlayerGPS.IsPlayerInTown() ) || (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0))
                 {
                     //I believe this is the wilderness? Was looking at pixel first... If not will change later
 
@@ -265,7 +278,6 @@ namespace DaggerfallRandomEncountersMod
                 //G means the word reprsentation.
                 worldFilter.setFilter("climate", currentClimate.ToString());
 
-              //  trySpawningEncounter(World);
 
             };
 
@@ -275,14 +287,12 @@ namespace DaggerfallRandomEncountersMod
                 string newRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionName(regionIndex);
                 Debug.LogError(newRegion);
                 worldFilter.setFilter("region", newRegion);
-                //trySpawningEncounter(World);
             };
 
             PlayerEnterExit.OnTransitionDungeonExterior += (PlayerEnterExit.TransitionEventArgs args) =>
             {
 
                 worldFilter.setFilter("lastInside", "dungeon");
-                //trySpawningEncounter(World);
             };
 
             //If go inside, prob will make a method for OnLeaveWorld then clear encounters.
@@ -296,7 +306,6 @@ namespace DaggerfallRandomEncountersMod
             WeatherManager.OnWeatherChange += (WeatherType newWeather) =>
             {
                 worldFilter.setFilter("weather", newWeather.ToString());
-                //trySpawningEncounter(World);
             };
 
 
@@ -307,7 +316,6 @@ namespace DaggerfallRandomEncountersMod
                 if (GameManager.Instance.PlayerEntity.IsResting)
                 {
                     Debug.LogError(GameManager.Instance.StateManager.CurrentState.ToString());
-                  //  trySpawningEncounter(World);
                 }
             };
 
@@ -357,7 +365,6 @@ namespace DaggerfallRandomEncountersMod
         {
             worldFilter.setFilter("time", state);
             //Try spawning.
-         //   trySpawningEncounter(World);
 
         }
 
@@ -379,6 +386,7 @@ namespace DaggerfallRandomEncountersMod
 
 
             PlayerEntity.Crimes crime = GameManager.Instance.PlayerEntity.CrimeCommitted;
+            Debug.LogError("Crime committed from try spawning encounter" + crime.ToString());
 
 
 
@@ -413,10 +421,12 @@ namespace DaggerfallRandomEncountersMod
             if (evt != null)
             {
 
+                //To give it a turn to run.
+                activeEncounters.AddFirst(evt);
 
                 evt.OnBegin += (RandomEncounters.RandomEncounter a) =>
                 {
-                    activeEncounters.AddLast(evt);
+                  //  Debug.LogError("beginning encounter " + a.ToString());
                 };
 
                 
@@ -433,7 +443,7 @@ namespace DaggerfallRandomEncountersMod
                     }
 
                     //Once encounter over, remove from active encounters.
-                    // activeEncounters.Remove(a);
+                    //activeEncounters.Remove(a);
                     //Remove the encounter from the scene.
 
                     //Not only put back in pool, but remove the encounter script on it.
@@ -447,12 +457,10 @@ namespace DaggerfallRandomEncountersMod
                     Destroy(a.GetComponent<RandomEncounter>());
                     a.GetComponent<Reusable>().OnDone();
 
-                    //Destroy(a.gameObject);
                 };
 
                 //Begin the encounter
 
-                evt.begin();
             }
         }
 
@@ -474,16 +482,19 @@ namespace DaggerfallRandomEncountersMod
                 {
                     Debug.LogError("encounter " +  encounter.ToString());
 
-                    if (encounter.Began)
+                    if (!encounter.Began)
                     {
-                        encounter.tick();
+                        Debug.LogError("1. Crime committed " + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
+                        encounter.begin();
                     }
-
-                    else if (!encounter.Began)
+                    else if (encounter.Ended)
                     {
                         toRemove.Add(encounter);
                     }
-
+                    else {
+                        encounter.tick();
+                    }
+                    
                 }
 
 

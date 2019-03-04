@@ -32,7 +32,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             closure = "The orcs have been slain!";
 
             MobileTypes orcType = MobileTypes.Orc;
-            Debug.LogError("1. Crime committed " + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
+            Debug.LogError("2. Crime committed " + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
             switch (GameManager.Instance.PlayerEntity.CrimeCommitted)
             {
@@ -63,6 +63,9 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     break;
  
             }
+
+            Debug.LogError("Spawning orc type " + orcType.ToString());
+
 
             orcs = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position, orcType, orcCount, MobileReactions.Hostile);
             foeSpawner = GameObjectHelper.CreateFoeSpawner(false, orcType, orcCount, 4, 10).GetComponent<FoeSpawner>();
