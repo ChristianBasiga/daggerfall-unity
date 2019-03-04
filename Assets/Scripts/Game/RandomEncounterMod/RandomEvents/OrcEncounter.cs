@@ -31,11 +31,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             closure = "The orcs have been slain!";
 
-
-            base.begin();
-
             MobileTypes orcType = MobileTypes.Orc;
-
+            Debug.LogError("1. Crime committed " + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
             switch (GameManager.Instance.PlayerEntity.CrimeCommitted)
             {
@@ -43,36 +40,35 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                 //Knight chased you from city.
                 case PlayerEntity.Crimes.Trespassing:
 
-                    orcCount = 2;
+                    orcCount = 1;
                     orcType = MobileTypes.Orc;
                     break;
 
                 case PlayerEntity.Crimes.Theft:
 
-                    orcCount = 3;
+                    orcCount = 2;
 
                     orcType = MobileTypes.OrcSergeant;
                     break;
                 case PlayerEntity.Crimes.Assault:
-                    orcCount = 4;
+                    orcCount = 3;
                     orcType = MobileTypes.OrcShaman;
                     break;
                 case PlayerEntity.Crimes.Murder:
 
-                    orcCount = 6;
+                    orcCount = 4;
                     orcType = MobileTypes.OrcWarlord;
                     break;
                 default:
-                    orcCount = 3;
-                    orcType = MobileTypes.Orc;
                     break;
+ 
             }
 
-            orcs = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position, orcType, 1, MobileReactions.Hostile);
-            foeSpawner = GameObjectHelper.CreateFoeSpawner(false, orcType, 1, 4, 10).GetComponent<FoeSpawner>();
+            orcs = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position, orcType, orcCount, MobileReactions.Hostile);
+            foeSpawner = GameObjectHelper.CreateFoeSpawner(false, orcType, orcCount, 4, 10).GetComponent<FoeSpawner>();
 
             foeSpawner.SetFoeGameObjects(orcs);
-
+            base.begin();
         }
 
         public override void tick()
@@ -89,6 +85,17 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             }
 
+        }
+        public override void end()
+        {
+
+            effectReputation = true;
+
+
+
+            base.end();
+
+            //Effect their reputation, for how many they killed, if killed all.
         }
     }
 }

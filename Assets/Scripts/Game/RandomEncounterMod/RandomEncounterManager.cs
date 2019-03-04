@@ -131,7 +131,7 @@ namespace DaggerfallRandomEncountersMod
         void Start()
         {
 
-            GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Trespassing;
+            GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Murder;
             Debug.LogError("Crime committed "  + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
             objectPool = PoolManager.Instance;
@@ -146,7 +146,7 @@ namespace DaggerfallRandomEncountersMod
             setUpObservers();
 
 
-            randomEncounterWildernessTrigger();
+            //randomEncounterWildernessTrigger();
 
             //If player dies, clears encounters, so then garbage collected.
             GameManager.Instance.PlayerEntity.OnDeath += (DaggerfallEntity entity) =>
@@ -182,7 +182,7 @@ namespace DaggerfallRandomEncountersMod
             worldFilter.setFilter("time", currentTime.IsDay ? "day" : "night");
             randomWildernessTriggerCoroutine = randomEncounterWildernessTrigger();
 
-            worldFilter.setFilter("crime", PlayerEntity.Crimes.Trespassing.ToString());
+            worldFilter.setFilter("crime", PlayerEntity.Crimes.Murder.ToString());
 
 
             StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>

@@ -1,1 +1,1 @@
-{"encounterId":"WerewolfEncounter","context":"World","type":"Negative","filter":[{"context":"weather","value":"Sunny"},{"context":"time","value":"night"}]}
+/*{"encounterId":"WerewolfEncounter","context":"World","type":"Negative","filter":[{"context":"weather","value":"Sunny"},{"context":"time","value":"night"}]}
