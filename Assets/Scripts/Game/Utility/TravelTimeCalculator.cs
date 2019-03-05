@@ -131,9 +131,13 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 //Debug.log(positionX);
 
-                tryInterrupt(position.X, position.Y);
-                break;
+              //  bool interrupted = tryInterrupt(position.X, position.Y);
+              /*  if (interrupted)
+                {
+                    break;
 
+                }
+                */
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
                 if (terrain == (int)MapsFile.Climates.Ocean)
@@ -163,22 +167,53 @@ namespace DaggerfallWorkshop.Game.Utility
             return minutesTakenTotal;
         }
 
-        private void tryInterrupt(int pixelX, int pixelY)
+        private bool tryInterrupt(int pixelX, int pixelY)
         {
             DaggerfallTerrain terrain = GameManager.Instance.StreamingWorld.GetTerrainTransform(pixelX, pixelY).GetComponent<DaggerfallTerrain>();
             Debug.LogError(terrain.MapData.mapRegionIndex);
-
+            
             DFRegion region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegion(terrain.MapData.mapRegionIndex);
 
             Debug.LogError(region.Name);
 
+            DFLocation location = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetLocation(terrain.MapData.mapRegionIndex, terrain.MapData.mapLocationIndex);
+
+            if (!location.Loaded)
+            {
+
+
+                Debug.LogError("From DF Location using terrain data location name " + location.Name);
+                Debug.LogError("From DF Location using terrain data region name" + location.RegionName);
+
+            }
+
             DFRegion.RegionMapTable[] mapTable = region.MapTable;
             string[] mapNames = region.MapNames;
-            Debug.LogError(mapNames[0]);
-            Int32 interruptX = mapTable[0].Longitude;
-            Int32 interruptY = mapTable[0].Latitude;
+            foreach(string mapName in mapNames)
+            {
 
-            GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(interruptX, interruptY);
+            //    Debug.LogError("Map name in this region " + mapName);
+            }
+
+
+
+            DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(mapTable[20].Longitude, mapTable[20].Latitude);
+
+
+            Debug.LogError("Map pixel before world coords " + mapPixel.ToString());
+
+            DFPosition worldCoords = MapsFile.MapPixelToWorldCoord(mapPixel.X, mapPixel.Y);
+
+            Debug.LogError("world coords teleporting to " + worldCoords.ToString());
+
+
+            Debug.LogError(GetPlayerTravelPosition().ToString());
+
+            GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(worldCoords.X, worldCoords.Y);
+
+            Debug.LogError(GetPlayerTravelPosition().ToString());
+
+            return true;
         }
 
         public void CalculateTripCost(int travelTimeInMinutes, bool sleepModeInn, bool hasShip, bool travelShip)
