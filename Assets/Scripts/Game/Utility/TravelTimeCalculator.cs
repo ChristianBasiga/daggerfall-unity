@@ -131,13 +131,13 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 //Debug.log(positionX);
 
-              //  bool interrupted = tryInterrupt(position.X, position.Y);
-              /*  if (interrupted)
+                bool interrupted = tryInterrupt(position.X, position.Y);
+                if (interrupted)
                 {
                     break;
 
-                }
-                */
+                } 
+                
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
                 if (terrain == (int)MapsFile.Climates.Ocean)
@@ -178,7 +178,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
             DFLocation location = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetLocation(terrain.MapData.mapRegionIndex, terrain.MapData.mapLocationIndex);
 
-            if (!location.Loaded)
+            if (location.Loaded)
             {
 
 
@@ -197,12 +197,40 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
-            DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(mapTable[20].Longitude, mapTable[20].Latitude);
+            DFLocation newLocation = new DFLocation();
+            DaggerfallUnity.Instance.ContentReader.GetLocation(region.Name,  mapNames[20], out newLocation);
 
 
+            if (newLocation.Loaded)
+            {
+
+                Debug.LogError("After");
+                Debug.LogError("From DF Location using terrain data location name " + newLocation.Name);
+                Debug.LogError("From DF Location using terrain data region name" + newLocation.RegionName);
+
+                DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(newLocation.MapTableData.Longitude, newLocation.MapTableData.Latitude);
+
+                Debug.LogError("New map pixel " + mapPixel.ToString());
+
+                DFPosition worldCoords = MapsFile.MapPixelToWorldCoord(mapPixel.X, mapPixel.Y);
+
+
+                Debug.LogError("new world coords " + worldCoords.ToString());
+                GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+
+
+                //So streaming world is the map, but not actual world?
+                DaggerfallLocation loc = GameManager.Instance.StreamingWorld.CurrentPlayerLocationObject;
+                //loc.SetLocation(newLocation);
+            }
+            else
+            {
+
+                Debug.LogError("Invalid location");
+            }
+            /*
             Debug.LogError("Map pixel before world coords " + mapPixel.ToString());
 
-            GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y);
 
             DFPosition worldCoords = MapsFile.MapPixelToWorldCoord(mapPixel.X, mapPixel.Y);
 
@@ -211,9 +239,9 @@ namespace DaggerfallWorkshop.Game.Utility
 
             Debug.LogError(GetPlayerTravelPosition().ToString());
 
-        //    GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(worldCoords.X, worldCoords.Y);
+            GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(worldCoords.X, worldCoords.Y);
 
-            Debug.LogError(GetPlayerTravelPosition().ToString());
+            Debug.LogError(GetPlayerTravelPosition().ToString());*/
 
             return true;
         }
