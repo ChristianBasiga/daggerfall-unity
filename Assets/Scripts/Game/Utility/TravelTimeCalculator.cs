@@ -202,6 +202,8 @@ namespace DaggerfallWorkshop.Game.Utility
 
             Debug.LogError("Map pixel before world coords " + mapPixel.ToString());
 
+            GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y);
+
             DFPosition worldCoords = MapsFile.MapPixelToWorldCoord(mapPixel.X, mapPixel.Y);
 
             Debug.LogError("world coords teleporting to " + worldCoords.ToString());
@@ -209,7 +211,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
             Debug.LogError(GetPlayerTravelPosition().ToString());
 
-            GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(worldCoords.X, worldCoords.Y);
+        //    GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(worldCoords.X, worldCoords.Y);
 
             Debug.LogError(GetPlayerTravelPosition().ToString());
 
