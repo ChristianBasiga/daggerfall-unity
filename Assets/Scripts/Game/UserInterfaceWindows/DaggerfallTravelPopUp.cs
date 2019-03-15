@@ -19,6 +19,8 @@ using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.Serialization;
 
+using DaggerfallWorkshop.Game.UserInterfaceWindows;
+
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
 
@@ -26,6 +28,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
     {
         #region fields
         DaggerfallTravelMapWindow travelWindow = null;
+        bool interrupted = false;
 
         const string nativeImgName = "TRAV0I04.IMG";
 
@@ -199,6 +202,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 }
 
             }
+            if (interrupted)
+            {
+                onInterrupt();
+            }
         }
 
         #endregion
@@ -234,7 +241,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         void UpdateLabels()
         {
             availableGoldLabel.Text = GameManager.Instance.PlayerEntity.GoldPieces.ToString();
+
             travelTimeMinutes = travelTimeCalculator.CalculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+     
 
             // Players can have fast travel benefit from guild memberships
             travelTimeMinutes = GameManager.Instance.GuildManager.FastTravel(travelTimeMinutes);
@@ -276,13 +285,45 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             return finished;
         }
 
+        private void onInterrupt()
+        {
+
+            DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+            travelWindow.CloseTravelWindows(true);
+            DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
+            DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
+            interrupted = false;
+        }
         // perform fast travel actions
         private void performFastTravel()
         {
             // Cache scene first, if fast travelling while on ship.
             if (GameManager.Instance.TransportManager.IsOnShip())
                 SaveLoadManager.CacheScene(GameManager.Instance.StreamingWorld.SceneName);
-            GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+
+
+            if (travelTimeCalculator.InterruptPosition != null)
+            {
+
+                Debug.LogError("Travel interrupted");
+                GameManager.Instance.StreamingWorld.TeleportToCoordinates( travelTimeCalculator.InterruptPosition.X,
+                    travelTimeCalculator.InterruptPosition.Y,
+
+                    StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+                interrupted = true;
+               
+
+                //DaggerfallUI.Instance.UserInterfaceManager.PushWindow(interruptMsg);
+
+                return;
+            }
+            else
+            {
+                Debug.LogError("Here");
+                GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+
+            }
+            //So it's here that needs to be changed.
 
             if (speedCautious)
             {

@@ -245,7 +245,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
                 //Instead of teleporting here, does teleport after they click travel.
-                GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+                //GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
 
 
            
