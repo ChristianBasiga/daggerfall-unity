@@ -11,6 +11,7 @@
 
 using UnityEngine;
 using System;
+using System.Collections;
 using DaggerfallConnect;
 using DaggerfallConnect.Utility;
 using DaggerfallConnect.Arena2;
@@ -45,6 +46,18 @@ namespace DaggerfallWorkshop.Game.Utility
 
         #region Public Methods
 
+        DFPosition interruptPosition;
+
+        public DFPosition InterruptPosition
+        {
+
+            get
+            {
+                return interruptPosition;
+            }
+        }
+
+
         /// <summary>Gets current player position in map pixels for purposes of travel</summary>
         public static DFPosition GetPlayerTravelPosition()
         {
@@ -70,6 +83,9 @@ namespace DaggerfallWorkshop.Game.Utility
             bool hasHorse = false,
             bool hasCart = false)
         {
+
+            this.interruptPosition = null;
+
             int transportModifier = 0;
             if (hasHorse)
                 transportModifier = 128;
@@ -131,13 +147,8 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 //Debug.log(positionX);
 
-                bool interrupted = tryInterrupt(position.X, position.Y);
-                if (interrupted)
-                {
-                    break;
 
-                } 
-                
+                tryInterrupt(playerXMapPixel, playerYMapPixel);
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
                 if (terrain == (int)MapsFile.Climates.Ocean)
@@ -150,6 +161,37 @@ namespace DaggerfallWorkshop.Game.Utility
                 }
                 else
                 {
+
+                    //If not on ocean try interrupt at this point.
+                    //Either from starting region, ending region, or current offset.
+                    //Test each individually.
+                    
+                    int r = UnityEngine.Random.Range(1, 7);
+                    if (r > 4)
+                    {
+                        //Starting works.
+                        tryInterrupt(position.X, position.Y);
+
+                    }
+                    else if (r > 2)
+                    {
+                        //Same logic, ending should work.
+                        //Works.
+                        tryInterrupt(endPos.X, endPos.Y);
+
+                    }
+                    else
+                    {
+                        //Moment of truth, then it's fucking raw mah boy.
+                        //ITS RAW.
+                        tryInterrupt(playerXMapPixel, playerYMapPixel);
+                    }
+
+                    
+
+
+
+
                     terrainMovementIndex = climateIndices[terrain - (int)MapsFile.Climates.Ocean];
                     minutesTakenThisMove = (((102 * transportModifier) >> 8)
                         * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
@@ -167,38 +209,20 @@ namespace DaggerfallWorkshop.Game.Utility
             return minutesTakenTotal;
         }
 
-        private bool tryInterrupt(int pixelX, int pixelY)
+        private void tryInterrupt(int pixelX, int pixelY)
         {
-            DaggerfallTerrain terrain = GameManager.Instance.StreamingWorld.GetTerrainTransform(pixelX, pixelY).GetComponent<DaggerfallTerrain>();
-            Debug.LogError(terrain.MapData.mapRegionIndex);
-            
-            DFRegion region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegion(terrain.MapData.mapRegionIndex);
+            DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();
+            bool hasLocation = DaggerfallUnity.Instance.ContentReader.HasLocation(pixelX, pixelY, out mapSumm);
 
-            Debug.LogError(region.Name);
+            Debug.LogError(String.Format("There is location at end pos {0}, {1}", hasLocation, mapSumm.ToString()));
 
-            DFLocation location = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetLocation(terrain.MapData.mapRegionIndex, terrain.MapData.mapLocationIndex);
+            if (!hasLocation) return;
+            DFRegion region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegion(mapSumm.RegionIndex);
+        
 
-            if (location.Loaded)
-            {
-
-
-                Debug.LogError("From DF Location using terrain data location name " + location.Name);
-                Debug.LogError("From DF Location using terrain data region name" + location.RegionName);
-
-            }
-
-            DFRegion.RegionMapTable[] mapTable = region.MapTable;
-            string[] mapNames = region.MapNames;
-            foreach(string mapName in mapNames)
-            {
-
-            //    Debug.LogError("Map name in this region " + mapName);
-            }
-
-
-
+            int randomLocationIndex = UnityEngine.Random.Range(0, region.MapNames.Length);
             DFLocation newLocation = new DFLocation();
-            DaggerfallUnity.Instance.ContentReader.GetLocation(region.Name,  mapNames[20], out newLocation);
+            DaggerfallUnity.Instance.ContentReader.GetLocation(mapSumm.RegionIndex,  randomLocationIndex, out newLocation);
 
 
             if (newLocation.Loaded)
@@ -215,13 +239,16 @@ namespace DaggerfallWorkshop.Game.Utility
                 DFPosition worldCoords = MapsFile.MapPixelToWorldCoord(mapPixel.X, mapPixel.Y);
 
 
+                this.interruptPosition = mapPixel;
+
                 Debug.LogError("new world coords " + worldCoords.ToString());
+
+
+                //Instead of teleporting here, does teleport after they click travel.
                 GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
 
 
-                //So streaming world is the map, but not actual world?
-                DaggerfallLocation loc = GameManager.Instance.StreamingWorld.CurrentPlayerLocationObject;
-                //loc.SetLocation(newLocation);
+           
             }
             else
             {
@@ -243,7 +270,6 @@ namespace DaggerfallWorkshop.Game.Utility
 
             Debug.LogError(GetPlayerTravelPosition().ToString());*/
 
-            return true;
         }
 
         public void CalculateTripCost(int travelTimeInMinutes, bool sleepModeInn, bool hasShip, bool travelShip)
