@@ -311,6 +311,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
                     StreamingWorld.RepositionMethods.DirectionFromStartMarker);
                 interrupted = true;
+
+                travelTimeCalculator.useInterrupt();
                
 
                 //DaggerfallUI.Instance.UserInterfaceManager.PushWindow(interruptMsg);

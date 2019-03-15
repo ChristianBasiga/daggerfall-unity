@@ -57,6 +57,12 @@ namespace DaggerfallWorkshop.Game.Utility
             }
         }
 
+        public void useInterrupt()
+        {
+
+            interruptPosition = null;
+        }
+
 
         /// <summary>Gets current player position in map pixels for purposes of travel</summary>
         public static DFPosition GetPlayerTravelPosition()
@@ -165,32 +171,33 @@ namespace DaggerfallWorkshop.Game.Utility
                     //If not on ocean try interrupt at this point.
                     //Either from starting region, ending region, or current offset.
                     //Test each individually.
-                    
-                    int r = UnityEngine.Random.Range(1, 7);
-                    if (r > 4)
+                    //Should it only try interrupt until it hits one? Or attempt to overwrite that too?
+
+                    if (interruptPosition == null)
                     {
-                        //Starting works.
-                        tryInterrupt(position.X, position.Y);
 
+
+                        int r = UnityEngine.Random.Range(1, 7);
+                        if (r > 4)
+                        {
+                            //Starting works.
+                            tryInterrupt(position.X, position.Y);
+
+                        }
+                        else if (r > 2)
+                        {
+                            //Same logic, ending should work.
+                            //Works.
+                            tryInterrupt(endPos.X, endPos.Y);
+
+                        }
+                        else
+                        {
+                            //Moment of truth, then it's fucking raw mah boy.
+                            //ITS RAW.
+                            tryInterrupt(playerXMapPixel, playerYMapPixel);
+                        }
                     }
-                    else if (r > 2)
-                    {
-                        //Same logic, ending should work.
-                        //Works.
-                        tryInterrupt(endPos.X, endPos.Y);
-
-                    }
-                    else
-                    {
-                        //Moment of truth, then it's fucking raw mah boy.
-                        //ITS RAW.
-                        tryInterrupt(playerXMapPixel, playerYMapPixel);
-                    }
-
-                    
-
-
-
 
                     terrainMovementIndex = climateIndices[terrain - (int)MapsFile.Climates.Ocean];
                     minutesTakenThisMove = (((102 * transportModifier) >> 8)
@@ -255,20 +262,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 Debug.LogError("Invalid location");
             }
-            /*
-            Debug.LogError("Map pixel before world coords " + mapPixel.ToString());
-
-
-            DFPosition worldCoords = MapsFile.MapPixelToWorldCoord(mapPixel.X, mapPixel.Y);
-
-            Debug.LogError("world coords teleporting to " + worldCoords.ToString());
-
-
-            Debug.LogError(GetPlayerTravelPosition().ToString());
-
-            GameManager.Instance.StreamingWorld.TeleportToWorldCoordinates(worldCoords.X, worldCoords.Y);
-
-            Debug.LogError(GetPlayerTravelPosition().ToString());*/
+           
 
         }
 
