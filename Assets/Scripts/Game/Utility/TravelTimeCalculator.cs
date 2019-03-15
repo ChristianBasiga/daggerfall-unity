@@ -57,6 +57,7 @@ namespace DaggerfallWorkshop.Game.Utility
             }
         }
 
+
         public void useInterrupt()
         {
 
@@ -154,7 +155,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 //Debug.log(positionX);
 
 
-                tryInterrupt(playerXMapPixel, playerYMapPixel);
+                tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel);
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
                 if (terrain == (int)MapsFile.Climates.Ocean)
@@ -177,27 +178,9 @@ namespace DaggerfallWorkshop.Game.Utility
                     {
 
 
-                        int r = UnityEngine.Random.Range(1, 7);
-                        if (r > 4)
-                        {
-                            //Starting works.
-                            tryInterrupt(position.X, position.Y);
-
-                        }
-                        else if (r > 2)
-                        {
-                            //Same logic, ending should work.
-                            //Works.
-                            tryInterrupt(endPos.X, endPos.Y);
-
-                        }
-                        else
-                        {
-                            //Moment of truth, then it's fucking raw mah boy.
-                            //ITS RAW.
-                            tryInterrupt(playerXMapPixel, playerYMapPixel);
-                        }
+                      
                     }
+                    //tryInterrupt(playerXMapPixel, playerYMapPixel);
 
                     terrainMovementIndex = climateIndices[terrain - (int)MapsFile.Climates.Ocean];
                     minutesTakenThisMove = (((102 * transportModifier) >> 8)
@@ -216,8 +199,16 @@ namespace DaggerfallWorkshop.Game.Utility
             return minutesTakenTotal;
         }
 
-        private void tryInterrupt(int pixelX, int pixelY)
+        private void tryInterrupt(DFPosition start, DFPosition end, int pixelX, int pixelY)
         {
+
+            //Honestly, at this point it maybe better to not have this get region thing
+            //but literally just choose location AT THAT PIXEL OFFSET. Talk with Jake about this later.
+            //Pixel offset makes it so it is along line of travel at the very least.
+            bool interrupt = (UnityEngine.Random.Range(1, 101) & 1) == 0;
+            if (!interrupt) return;
+
+           
             DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();
             bool hasLocation = DaggerfallUnity.Instance.ContentReader.HasLocation(pixelX, pixelY, out mapSumm);
 
@@ -227,35 +218,44 @@ namespace DaggerfallWorkshop.Game.Utility
             DFRegion region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegion(mapSumm.RegionIndex);
         
 
-            int randomLocationIndex = UnityEngine.Random.Range(0, region.MapNames.Length);
-            DFLocation newLocation = new DFLocation();
-            DaggerfallUnity.Instance.ContentReader.GetLocation(mapSumm.RegionIndex,  randomLocationIndex, out newLocation);
 
+            int randomLocationIndex = UnityEngine.Random.Range(0, region.MapNames.Length);
+
+
+            //Need to get locations in current region, then filter only those whose pixels are within
+            //start and ending positions.
+            DFLocation newLocation = new DFLocation();
+
+            DFPosition[] alongPathOfTravel = new DFPosition[region.LocationCount];
+            int found = 0;
+            for (int i = 0; i < region.LocationCount; ++i)
+            {
+                DaggerfallUnity.Instance.ContentReader.GetLocation(mapSumm.RegionIndex, i, out newLocation);
+
+                DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(newLocation.MapTableData.Longitude, newLocation.MapTableData.Latitude);
+.
+                //Check if within x.
+
+
+                //check if within y.
+
+            }
+            
 
             if (newLocation.Loaded)
             {
 
-                Debug.LogError("After");
                 Debug.LogError("From DF Location using terrain data location name " + newLocation.Name);
                 Debug.LogError("From DF Location using terrain data region name" + newLocation.RegionName);
 
                 DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(newLocation.MapTableData.Longitude, newLocation.MapTableData.Latitude);
 
                 Debug.LogError("New map pixel " + mapPixel.ToString());
-
-                DFPosition worldCoords = MapsFile.MapPixelToWorldCoord(mapPixel.X, mapPixel.Y);
-
-
                 this.interruptPosition = mapPixel;
-
-                Debug.LogError("new world coords " + worldCoords.ToString());
 
 
                 //Instead of teleporting here, does teleport after they click travel.
                 //GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
-
-
-           
             }
             else
             {
