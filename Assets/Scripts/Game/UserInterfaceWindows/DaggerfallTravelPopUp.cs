@@ -19,6 +19,8 @@ using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.Serialization;
 
+using DaggerfallWorkshop.Game.UserInterfaceWindows;
+
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
 
@@ -26,6 +28,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
     {
         #region fields
         DaggerfallTravelMapWindow travelWindow = null;
+        bool interrupted = false;
 
         const string nativeImgName = "TRAV0I04.IMG";
 
@@ -199,6 +202,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 }
 
             }
+            if (interrupted)
+            {
+                onInterrupt();
+            }
         }
 
         #endregion
@@ -234,7 +241,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         void UpdateLabels()
         {
             availableGoldLabel.Text = GameManager.Instance.PlayerEntity.GoldPieces.ToString();
+
             travelTimeMinutes = travelTimeCalculator.CalculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+     
 
             // Players can have fast travel benefit from guild memberships
             travelTimeMinutes = GameManager.Instance.GuildManager.FastTravel(travelTimeMinutes);
@@ -260,14 +269,23 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         bool TickCountdown()
         {
+            //Interrupt during the tick down.
             bool finished = false;
 
             if (Time.realtimeSinceStartup > waitTimer + secondsCountdownTickFastTravel)
             {
                 waitTimer = Time.realtimeSinceStartup;
 
+                //At what day should it interrupt?
+                //I'm already given time, change nothing here, just change what this value is assigned.
                 countdownValueTravelTimeDays--;
-                travelTimeLabel.Text = string.Format("{0}", countdownValueTravelTimeDays);
+                int toDisplay = countdownValueTravelTimeDays;
+                if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays == travelTimeCalculator.Interrupt.daysTaken)
+                {
+                    countdownValueTravelTimeDays = 0;
+                }
+                
+                travelTimeLabel.Text = string.Format("{0}", toDisplay);
                 travelTimeLabel.Update();
 
                 finished = true;
@@ -276,13 +294,46 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             return finished;
         }
 
+        private void onInterrupt()
+        {
+
+            DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+            travelWindow.CloseTravelWindows(true);
+            DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
+            DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
+            interrupted = false;
+
+        }
         // perform fast travel actions
         private void performFastTravel()
         {
             // Cache scene first, if fast travelling while on ship.
             if (GameManager.Instance.TransportManager.IsOnShip())
                 SaveLoadManager.CacheScene(GameManager.Instance.StreamingWorld.SceneName);
-            GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+
+
+            if (travelTimeCalculator.Interrupt != null)
+            {
+
+                DFPosition interruptPosition = travelTimeCalculator.Interrupt.interruptPosition;
+                GameManager.Instance.StreamingWorld.TeleportToCoordinates(interruptPosition.X,
+                    interruptPosition.Y,
+
+                    StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+
+
+
+                //DaggerfallUI.Instance.UserInterfaceManager.PushWindow(interruptMsg);
+                interrupted = true;
+               // return;
+            }
+            else
+            {
+                Debug.LogError("Here");
+                GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+
+            }
+            //So it's here that needs to be changed.
 
             if (speedCautious)
             {
@@ -299,8 +350,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             // Raise arrival time to just after 7am if cautious travel would otherwise arrive at night
             // Increasing this from 6am to 7am as game is quite dark on at 6am (in Daggerfall Unity, Daggerfall is lighter)
             // Will consider retuning lighting so this can be like classic, although +1 hours to travel time isn't likely to be a problem for now
-            if (speedCautious)
+            if (speedCautious) /*Include checking cautious during interrupt choosing.*/
             {
+
+               
+
                 if ((DaggerfallUnity.WorldTime.DaggerfallDateTime.Hour < 7)
                     || ((DaggerfallUnity.WorldTime.DaggerfallDateTime.Hour == 7) && (DaggerfallUnity.WorldTime.DaggerfallDateTime.Minute < 10)))
                 {
@@ -320,6 +374,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
             travelWindow.CloseTravelWindows(true);
+
+            //Maybe not raise skills if interrupted.
             GameManager.Instance.PlayerEntity.RaiseSkills();
             DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
         }
@@ -412,6 +468,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public void ExitButtonOnClickHandler(BaseScreenComponent sender, Vector2 position)
         {
             doFastTravel = false;
+            travelTimeCalculator.useInterrupt();
+            interrupted = false;
             DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
         }
 

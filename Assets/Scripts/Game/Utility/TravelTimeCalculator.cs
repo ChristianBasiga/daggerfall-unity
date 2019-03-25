@@ -10,6 +10,9 @@
 //
 
 using UnityEngine;
+using System;
+using System.Collections;
+using DaggerfallConnect;
 using DaggerfallConnect.Utility;
 using DaggerfallConnect.Arena2;
 
@@ -43,6 +46,33 @@ namespace DaggerfallWorkshop.Game.Utility
 
         #region Public Methods
 
+
+        public class InterruptFastTravel
+        {
+
+            public DFPosition interruptPosition;
+            public int daysTaken;
+
+        }
+
+        InterruptFastTravel interrupt;
+
+        public InterruptFastTravel Interrupt
+        {
+
+            get
+            {
+                return interrupt;
+            }
+        }
+
+        public void useInterrupt()
+        {
+
+            interrupt = null;
+        }
+
+
         /// <summary>Gets current player position in map pixels for purposes of travel</summary>
         public static DFPosition GetPlayerTravelPosition()
         {
@@ -68,6 +98,8 @@ namespace DaggerfallWorkshop.Game.Utility
             bool hasHorse = false,
             bool hasCart = false)
         {
+
+
             int transportModifier = 0;
             if (hasHorse)
                 transportModifier = 128;
@@ -127,6 +159,9 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                 }
 
+                //Debug.log(positionX);
+
+
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
                 if (terrain == (int)MapsFile.Climates.Ocean)
@@ -139,6 +174,9 @@ namespace DaggerfallWorkshop.Game.Utility
                 }
                 else
                 {
+
+                    
+
                     terrainMovementIndex = climateIndices[terrain - (int)MapsFile.Climates.Ocean];
                     minutesTakenThisMove = (((102 * transportModifier) >> 8)
                         * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
@@ -148,12 +186,111 @@ namespace DaggerfallWorkshop.Game.Utility
                     minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;
                 minutesTakenTotal += minutesTakenThisMove;
                 ++numberOfMovements;
+
+                if (interrupt == null)
+                    tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
+
             }
 
             if (!speedCautious)
                 minutesTakenTotal = minutesTakenTotal >> 1;
 
             return minutesTakenTotal;
+        }
+
+        private void tryInterrupt(DFPosition start, DFPosition end, int pixelX, int pixelY, int timeTravelled)
+        {
+
+            //Honestly, at this point it maybe better to not have this get region thing
+            //but literally just choose location AT THAT PIXEL OFFSET. Talk with Jake about this later.
+            //Pixel offset makes it so it is along line of travel at the very least.
+            bool doInterrupt = (UnityEngine.Random.Range(1, 101) & 1) == 0;
+
+           
+            DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();
+            bool hasLocation = DaggerfallUnity.Instance.ContentReader.HasLocation(pixelX, pixelY, out mapSumm);
+
+            Debug.LogError(String.Format("There is location at end pos {0}, {1}", hasLocation, mapSumm.ToString()));
+
+            if (!hasLocation) return;
+
+
+            if (doInterrupt)
+            {
+                if (interrupt == null)
+                {
+                    interrupt = new InterruptFastTravel();
+
+                }
+                interrupt.interruptPosition = new DFPosition();
+                interrupt.interruptPosition.X = pixelX;
+                interrupt.interruptPosition.Y = pixelY;
+                // Players can have fast travel benefit from guild memberships
+                timeTravelled = GameManager.Instance.GuildManager.FastTravel(timeTravelled);
+
+                int travelTimeDaysTotal = (timeTravelled / 1440);
+
+                // Classic always adds 1. For DF Unity, only add 1 if there is a remainder to round up.
+                if ((timeTravelled % 1440) > 0)
+                    travelTimeDaysTotal += 1;
+
+                interrupt.daysTaken = travelTimeDaysTotal;
+                Debug.LogError("Days taken for travelling to interrupt position " + interrupt.daysTaken);
+                return;
+            }
+
+            /*
+            DFRegion region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegion(mapSumm.RegionIndex);
+        
+
+
+            int randomLocationIndex = UnityEngine.Random.Range(0, region.MapNames.Length);
+
+
+            //Need to get locations in current region, then filter only those whose pixels are within
+            //start and ending positions.
+            DFLocation newLocation = new DFLocation();
+          //  DaggerfallUnity.Instance.ContentReader.GetLocation(mapSumm.RegionIndex, 5, out newLocation);
+
+            DFPosition[] alongPathOfTravel = new DFPosition[region.LocationCount];
+            int found = 0;
+           
+            for (int i = 0; i < region.LocationCount; ++i)
+            {
+
+                DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(newLocation.MapTableData.Longitude, newLocation.MapTableData.Latitude);
+
+                //Check if within x.
+                Was really overthnking this lmao.
+
+
+                //check if within y.
+
+            }
+            
+
+            if (newLocation.Loaded)
+            {
+
+                Debug.LogError("From DF Location using terrain data location name " + newLocation.Name);
+                Debug.LogError("From DF Location using terrain data region name" + newLocation.RegionName);
+
+                DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(newLocation.MapTableData.Longitude, newLocation.MapTableData.Latitude);
+
+                Debug.LogError("New map pixel " + mapPixel.ToString());
+                this.interruptPosition = mapPixel;
+
+
+                //Instead of teleporting here, does teleport after they click travel.
+                //GameManager.Instance.StreamingWorld.TeleportToCoordinates(mapPixel.X, mapPixel.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+            }
+            else
+            {
+
+                Debug.LogError("Invalid location");
+            }
+           */
+
         }
 
         public void CalculateTripCost(int travelTimeInMinutes, bool sleepModeInn, bool hasShip, bool travelShip)
