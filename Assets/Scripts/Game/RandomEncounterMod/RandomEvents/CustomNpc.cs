@@ -24,8 +24,18 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         public override void begin()
         {
             warning = "You hear the displeased voices of the masses!?";
-            //Spawn a NPC using Person.cs located in Questing directory
+
+            //Method 1
+            //Spawn a custom NPC using Person.cs located in Questing directory
             //testNPC = DaggerfallWorkshop.Game.Questing.Person.SetupIndividualNPC();
+            //testnpc.addConversationTopics();
+            //addConversationTopics() to modify rumours
+            //Possibly use talkmanager class to modify rumor
+
+            //Method 2
+            //Use previous semesters merchantencounter for pickpocketing.
+            //Change action mode to talk -> open TalkWindow
+            //Change built in rumours/topics
             DaggerfallWorkshop.Game.Questing.Person testNpc;
             
             person = GameObjectHelper.InstantiatePrefab(DaggerfallUnity.Instance.Option_MobileNPCPrefab.gameObject, "Merchant Encounter", this.transform, GameManager.Instance.PlayerObject.transform.position);
