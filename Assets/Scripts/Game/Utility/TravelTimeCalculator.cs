@@ -46,22 +46,30 @@ namespace DaggerfallWorkshop.Game.Utility
 
         #region Public Methods
 
-        DFPosition interruptPosition;
 
-        public DFPosition InterruptPosition
+        public class InterruptFastTravel
+        {
+
+            public DFPosition interruptPosition;
+            public int daysTaken;
+
+        }
+
+        InterruptFastTravel interrupt;
+
+        public InterruptFastTravel Interrupt
         {
 
             get
             {
-                return interruptPosition;
+                return interrupt;
             }
         }
-
 
         public void useInterrupt()
         {
 
-            interruptPosition = null;
+            interrupt = null;
         }
 
 
@@ -91,7 +99,6 @@ namespace DaggerfallWorkshop.Game.Utility
             bool hasCart = false)
         {
 
-            this.interruptPosition = null;
 
             int transportModifier = 0;
             if (hasHorse)
@@ -155,7 +162,6 @@ namespace DaggerfallWorkshop.Game.Utility
                 //Debug.log(positionX);
 
 
-                tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel);
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
                 if (terrain == (int)MapsFile.Climates.Ocean)
@@ -169,18 +175,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 else
                 {
 
-                    //If not on ocean try interrupt at this point.
-                    //Either from starting region, ending region, or current offset.
-                    //Test each individually.
-                    //Should it only try interrupt until it hits one? Or attempt to overwrite that too?
-
-                    if (interruptPosition == null)
-                    {
-
-
-                      
-                    }
-                    //tryInterrupt(playerXMapPixel, playerYMapPixel);
+                    
 
                     terrainMovementIndex = climateIndices[terrain - (int)MapsFile.Climates.Ocean];
                     minutesTakenThisMove = (((102 * transportModifier) >> 8)
@@ -191,6 +186,10 @@ namespace DaggerfallWorkshop.Game.Utility
                     minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;
                 minutesTakenTotal += minutesTakenThisMove;
                 ++numberOfMovements;
+
+                if (interrupt == null)
+                    tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
+
             }
 
             if (!speedCautious)
@@ -199,14 +198,13 @@ namespace DaggerfallWorkshop.Game.Utility
             return minutesTakenTotal;
         }
 
-        private void tryInterrupt(DFPosition start, DFPosition end, int pixelX, int pixelY)
+        private void tryInterrupt(DFPosition start, DFPosition end, int pixelX, int pixelY, int timeTravelled)
         {
 
             //Honestly, at this point it maybe better to not have this get region thing
             //but literally just choose location AT THAT PIXEL OFFSET. Talk with Jake about this later.
             //Pixel offset makes it so it is along line of travel at the very least.
-            bool interrupt = (UnityEngine.Random.Range(1, 101) & 1) == 0;
-            if (!interrupt) return;
+            bool doInterrupt = (UnityEngine.Random.Range(1, 101) & 1) == 0;
 
            
             DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();
@@ -215,6 +213,33 @@ namespace DaggerfallWorkshop.Game.Utility
             Debug.LogError(String.Format("There is location at end pos {0}, {1}", hasLocation, mapSumm.ToString()));
 
             if (!hasLocation) return;
+
+
+            if (doInterrupt)
+            {
+                if (interrupt == null)
+                {
+                    interrupt = new InterruptFastTravel();
+
+                }
+                interrupt.interruptPosition = new DFPosition();
+                interrupt.interruptPosition.X = pixelX;
+                interrupt.interruptPosition.Y = pixelY;
+                // Players can have fast travel benefit from guild memberships
+                timeTravelled = GameManager.Instance.GuildManager.FastTravel(timeTravelled);
+
+                int travelTimeDaysTotal = (timeTravelled / 1440);
+
+                // Classic always adds 1. For DF Unity, only add 1 if there is a remainder to round up.
+                if ((timeTravelled % 1440) > 0)
+                    travelTimeDaysTotal += 1;
+
+                interrupt.daysTaken = travelTimeDaysTotal;
+                Debug.LogError("Days taken for travelling to interrupt position " + interrupt.daysTaken);
+                return;
+            }
+
+            /*
             DFRegion region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegion(mapSumm.RegionIndex);
         
 
@@ -225,16 +250,18 @@ namespace DaggerfallWorkshop.Game.Utility
             //Need to get locations in current region, then filter only those whose pixels are within
             //start and ending positions.
             DFLocation newLocation = new DFLocation();
+          //  DaggerfallUnity.Instance.ContentReader.GetLocation(mapSumm.RegionIndex, 5, out newLocation);
 
             DFPosition[] alongPathOfTravel = new DFPosition[region.LocationCount];
             int found = 0;
+           
             for (int i = 0; i < region.LocationCount; ++i)
             {
-                DaggerfallUnity.Instance.ContentReader.GetLocation(mapSumm.RegionIndex, i, out newLocation);
 
                 DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(newLocation.MapTableData.Longitude, newLocation.MapTableData.Latitude);
-.
+
                 //Check if within x.
+                Was really overthnking this lmao.
 
 
                 //check if within y.
@@ -262,7 +289,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 Debug.LogError("Invalid location");
             }
-           
+           */
 
         }
 
