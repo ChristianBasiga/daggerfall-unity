@@ -12,6 +12,7 @@
 using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using DaggerfallConnect;
 using DaggerfallConnect.Utility;
 using DaggerfallConnect.Arena2;
@@ -73,6 +74,174 @@ namespace DaggerfallWorkshop.Game.Utility
         }
 
 
+
+        //get path of Travel.
+        //Overflow doesn't happen so base case is hit, but just takes too long
+        //Will wait till completes to see.
+        public int calculateTravelTime(DFPosition destination, bool speedCautious = false,
+            bool sleepModeInn = false,
+            bool travelShip = false,
+            bool hasHorse = false,
+            bool hasCart = false)
+        {
+
+            DFPosition playerPosition = GetPlayerTravelPosition();
+            Stack<DFPosition> pathOfTravel = new Stack<DFPosition>();
+
+            bool[,] invalid = new bool[MapsFile.MaxMapPixelX, MapsFile.MaxMapPixelY];
+
+
+            List<DFPosition> simplePath = new List<DFPosition>();
+
+            CalculateTravelTime(destination, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, simplePath);
+
+
+            //Okay, then use simple path to hone in on path.
+
+
+            GetPathOfTravelUtil(simplePath[0], destination, pathOfTravel, invalid);
+
+
+            //Once get it here, can re use this calculateTravelTime, passing in each position here.
+
+            int totalTravelTime = 0;
+
+            foreach (DFPosition pos in pathOfTravel)
+            {
+
+                //Since the positons will be adjacent to each other loop in travel time calculation should only iterate once.
+                totalTravelTime += CalculateTravelTime(pos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, null);
+
+
+                DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();
+
+                bool hasLocation = DaggerfallUnity.Instance.ContentReader.HasLocation(pos.X, pos.Y, out mapSumm);
+
+                if (hasLocation)
+                {
+
+                    //To Confirm we actually get to destination.
+                    Debug.LogError("Location currently looking at " + mapSumm.ToString());
+                }
+
+
+            }
+
+            Debug.LogError("Total Travel time " + totalTravelTime);
+
+            return totalTravelTime;
+
+
+
+
+        }
+
+        
+        //Nothing should need to change here, just what starting at,
+        //May need to divide and conquer this still.
+        /*
+         * Algorithm to divide and conquer with threads.
+         * Create ThreadPool that will be used to invoke attempts in different directions.
+         * A thread disposes of itself as soon as made invalid move.
+         *
+         * Each parent thread will sleep after spawning respective thread, then when a thread
+         * either hits a base case, interrupt method will be called and parent notified.
+         *
+         *
+         */
+        public static bool GetPathOfTravelUtil(DFPosition current, DFPosition destination, Stack<DFPosition> pathOfTravel, bool [,] invalid)
+        {
+
+            //Recursively finds path of travel, when hit ocean return and try different path of travel.
+
+
+            //If way over it gotta cnvery system first.
+            Debug.LogError("Looking at position " + current.ToString());
+
+
+            //Should check if offset is even a thing.
+
+            pathOfTravel.Push(current);
+
+            int terrain = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetClimateIndex(current.X, current.Y);
+
+            //If on ocean, then not traversable path, pop and return.
+            if (terrain == (int)MapsFile.Climates.Ocean || invalid[current.X,current.Y] || 
+                (current.X < MapsFile.MinMapPixelX || current.X > MapsFile.MaxMapPixelX ||  current.Y < MapsFile.MinMapPixelY  || current.Y > MapsFile.MaxMapPixelY))
+            {
+
+                //Maybe get into world coords first then make the check.
+
+                //The bounds checking should fix stack overflow, fuck.
+
+              
+                invalid[current.X,current.Y] = true;
+
+                pathOfTravel.Pop();
+                return false;
+
+            }
+            else if (current == destination)
+            {
+
+                return true;
+            }
+            else
+            {
+
+                pathOfTravel.Push(current);
+
+                //Otherwise this is good spot, return from here.
+
+                //try all directions, this probably needs to be modified, since pretty fucking brute force.
+                //Should find a path based on naive path of travel, or do dijkstras instead of just brute force.
+
+
+
+                    
+                //Conver all these to threads.
+                DFPosition toRight = new DFPosition(current.X + 1, current.Y);
+                DFPosition toLeft = new DFPosition(current.X - 1, current.Y);
+                DFPosition forward = new DFPosition(current.X, current.Y + 1);
+                DFPosition backward = new DFPosition(current.X, current.Y - 1);
+
+                DFPosition FR = new DFPosition(toRight.X, forward.Y);
+                DFPosition FL = new DFPosition(toLeft.X, forward.Y);
+
+                DFPosition BR = new DFPosition(toRight.X, backward.Y);
+                DFPosition BL = new DFPosition(toLeft.X, backward.Y);
+
+
+
+                //Okay, so create tasks invoking for each possible move.
+
+                //Then call a wait any, so as soon as a child thread finishes, let's say if was a path
+                //that made it. Then using the result method in task we check if true. If true, then cancel
+                //the other threads, cause no reason.
+
+                //But if was invalid path, then let rest of threads continue by invoking wait any again
+                //So essentially waitany until all child threads dead.
+
+                //Also for shortest path down line, need to figure out adding weight to the different nodes.
+                //perhaps they already have weight established I could use that to consider smaller subset.
+              
+                return GetPathOfTravelUtil(toRight, destination, pathOfTravel, invalid) ||
+                GetPathOfTravelUtil(toLeft, destination, pathOfTravel, invalid) ||
+                GetPathOfTravelUtil(forward, destination, pathOfTravel, invalid) ||
+                GetPathOfTravelUtil(backward, destination, pathOfTravel, invalid) ||
+                GetPathOfTravelUtil(BR, destination, pathOfTravel, invalid) ||
+                GetPathOfTravelUtil(BL, destination, pathOfTravel, invalid) ||
+                GetPathOfTravelUtil(FR, destination, pathOfTravel, invalid) ||
+                GetPathOfTravelUtil(FL, destination, pathOfTravel, invalid);
+
+
+            }
+
+        }
+
+
+
+
         /// <summary>Gets current player position in map pixels for purposes of travel</summary>
         public static DFPosition GetPlayerTravelPosition()
         {
@@ -96,9 +265,18 @@ namespace DaggerfallWorkshop.Game.Utility
             bool sleepModeInn = false,
             bool travelShip = false,
             bool hasHorse = false,
-            bool hasCart = false)
+            bool hasCart = false,
+            
+            List<DFPosition> simplePath = null)
         {
 
+            //Calling our version of calculation.
+
+            //Quick & Dirty
+            if (simplePath == null)
+            {
+                return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasCart, hasCart);
+            }
 
             int transportModifier = 0;
             if (hasHorse)
@@ -107,6 +285,8 @@ namespace DaggerfallWorkshop.Game.Utility
                 transportModifier = 192;
             else
                 transportModifier = 256;
+
+
 
             DFPosition position = GetPlayerTravelPosition();
             int playerXMapPixel = position.X;
@@ -134,6 +314,8 @@ namespace DaggerfallWorkshop.Game.Utility
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
             pixelsTraveledOnOcean = 0;
 
+
+            //Basically only if we've moved less than the furthest distance.
             while (numberOfMovements < furthestOfXandYDistance)
             {
                 if (furthestOfXandYDistance == distanceXMapPixelsAbs)
@@ -159,13 +341,26 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                 }
 
+
+                DFPosition offsetPos = new DFPosition();
+
+                offsetPos.X = playerXMapPixel;
+                offsetPos.Y = playerYMapPixel;
+
+                simplePath.Add(offsetPos);
+
                 //Debug.log(positionX);
 
 
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
+
+                //Need to update this so doesn't just do direct distance from point A to point B, but considers travelling around the coast.
+                //not through the ocean.
                 if (terrain == (int)MapsFile.Climates.Ocean)
                 {
+
+                    //So instead of just increasing time if ocean tile, should redirect to a new path.
                     ++pixelsTraveledOnOcean;
                     if (travelShip)
                         minutesTakenThisMove = 51;
@@ -187,8 +382,10 @@ namespace DaggerfallWorkshop.Game.Utility
                 minutesTakenTotal += minutesTakenThisMove;
                 ++numberOfMovements;
 
-                if (interrupt == null)
-                    tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
+                //Only if interrupt not set yet by random chance, try again.
+                //Or should I try infinitely?
+                //if (interrupt == null)
+                 //  tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
 
             }
 
@@ -201,8 +398,6 @@ namespace DaggerfallWorkshop.Game.Utility
         private void tryInterrupt(DFPosition start, DFPosition end, int pixelX, int pixelY, int timeTravelled)
         {
 
-            //Honestly, at this point it maybe better to not have this get region thing
-            //but literally just choose location AT THAT PIXEL OFFSET. Talk with Jake about this later.
             //Pixel offset makes it so it is along line of travel at the very least.
             bool doInterrupt = (UnityEngine.Random.Range(1, 101) & 1) == 0;
 
@@ -212,7 +407,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
             Debug.LogError(String.Format("There is location at end pos {0}, {1}", hasLocation, mapSumm.ToString()));
 
-            if (!hasLocation) return;
+            //if (hasLocation) return;
 
 
             if (doInterrupt)
@@ -220,9 +415,9 @@ namespace DaggerfallWorkshop.Game.Utility
                 if (interrupt == null)
                 {
                     interrupt = new InterruptFastTravel();
-
+                    interrupt.interruptPosition = new DFPosition();
                 }
-                interrupt.interruptPosition = new DFPosition();
+
                 interrupt.interruptPosition.X = pixelX;
                 interrupt.interruptPosition.Y = pixelY;
                 // Players can have fast travel benefit from guild memberships
@@ -235,7 +430,6 @@ namespace DaggerfallWorkshop.Game.Utility
                     travelTimeDaysTotal += 1;
 
                 interrupt.daysTaken = travelTimeDaysTotal;
-                Debug.LogError("Days taken for travelling to interrupt position " + interrupt.daysTaken);
                 return;
             }
 
