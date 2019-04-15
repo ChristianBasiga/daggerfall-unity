@@ -105,13 +105,13 @@ namespace DaggerfallWorkshop.Game.Utility
                  */
                 int angleSign = 0;
                 const double angleIncrement = 0.174533; // 10 degrees in radians
-                if (currPos.Y < destination.Y)
+                if (currPos.Y < destination.Y) // Counter-clockwise
                 {
                     angleSign = 1;
-                } else if(currPos.Y == destination.Y)
+                } else if(currPos.Y == destination.Y) // Depends on map zone
                 {
                     // ToDo: if in upper half, ccw; otherwise, cw
-                } else
+                } else // Clockwise
                 {
                     angleSign = -1;
                 }
@@ -174,9 +174,10 @@ namespace DaggerfallWorkshop.Game.Utility
                 }
                 // Convert back to cartesian to obtain our new endpoint
                 cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
-                cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
+                cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
 
-                //
+                // Check if our adjusted vector will reach the original destination
+                // If it does, we have our solution and can stop
                 int currX = currPos.X;
                 int currY = currPos.Y;
                 int xDistance = cartesianVectorToDest[0];
@@ -211,9 +212,17 @@ namespace DaggerfallWorkshop.Game.Utility
                     // Check if we're out of bounds
                     if (currX >= MapsFile.MaxMapPixelX || currY >= MapsFile.MaxMapPixelY)
                     {
+                        // Backtrack a step to avoid being off the map
+                        currX -= xDirection;
+                        currY -= yDirection;
+                        break;
+                    }
+                    if(currX == destination.X && currY == destination.Y)
+                    {
                         break;
                     }
                 }
+                // Now, we have a vector that's either 
 
 
             /*
