@@ -84,14 +84,144 @@ namespace DaggerfallWorkshop.Game.Utility
             bool hasHorse = false,
             bool hasCart = false)
         {
+            MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
+            DFPosition nodeEndpoint; // The final position of a leg of travel
+            DFPosition currPos = GetPlayerTravelPosition(); // This changes node per node
+            List<DFPosition> path = new List<DFPosition>();
+            
+            bool isAtDestination = false;
 
-            DFPosition playerPosition = GetPlayerTravelPosition();
+            // Continually modifies vectors based on currPlayerPosition until an acceptable path is reached
+            while(!isAtDestination)
+            {
+                // Obtain vector created between destination point and current position
+                int[] cartesianVectorToDest = { destination.X - currPos.X, destination.Y - currPos.Y };
+
+                /*
+                 * We will increment the angle of the vector until we find a path
+                 * that doesn't go through the ocean. The direction we increment
+                 * the angle changes depending on what would most logically create
+                 * a path that diverts a minimum amount while still avoiding the ocean.
+                 */
+                int angleSign = 0;
+                const double angleIncrement = 0.174533; // 10 degrees in radians
+                if (currPos.Y < destination.Y)
+                {
+                    angleSign = 1;
+                } else if(currPos.Y == destination.Y)
+                {
+                    // ToDo: if in upper half, ccw; otherwise, cw
+                } else
+                {
+                    angleSign = -1;
+                }
+
+                double[] polarVectorToDest = { Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)),
+                    Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
+
+                // Modifies angle of travel vector until a vector that doesn't go through the ocean is found
+                bool crossesOcean = true;
+                while (crossesOcean)
+                {
+                    // Verify if ocean is crossed
+                    int currX = currPos.X;
+                    int currY = currPos.Y;
+                    int xDistance = cartesianVectorToDest[0];
+                    int yDistance = cartesianVectorToDest[1];
+                    int furthestOfXAndY = Math.Max(xDistance, yDistance);
+                    // Determine whether to increment or decrement x and y
+                    int xDirection = cartesianVectorToDest[0] / cartesianVectorToDest[0];
+                    int yDirection = cartesianVectorToDest[1] / cartesianVectorToDest[1];
+                    int numMovements = 0;
+
+                    // Once we've attained the furthest point, we know we've reached our goal
+                    while (numMovements < furthestOfXAndY)
+                    {
+                        numMovements++;
+                        // Increment distance
+                        if(xDistance == furthestOfXAndY)
+                        {
+                            currX += xDirection;
+                            if(currY != currY + yDistance)
+                            {
+                                currY += yDirection;
+                            }
+                        }
+                        else
+                        {
+                            currY += yDirection;
+                            if (currX != currX + xDistance)
+                            {
+                                currX += xDirection;
+                            }
+                        }
+                        // Check if we're in the ocean
+                        if(mapsFile.GetClimateIndex(currX, currY) == (int)MapsFile.Climates.Ocean)
+                        {
+                            crossesOcean = true;
+                            break;
+                        }
+                        // If we've made it this far, we have yet to cross the ocean
+                        crossesOcean = false;
+                        // Check if we're out of bounds
+                        if(currX >= MapsFile.MaxMapPixelX || currY >= MapsFile.MaxMapPixelY)
+                        {
+                            break;
+                        }
+                    }
+                    // If we're still crossing ocean, we need to increment the angle
+                    polarVectorToDest[1] += angleSign * angleIncrement;
+                }
+                // Convert back to cartesian to obtain our new endpoint
+                cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
+                cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
+
+                //
+                int currX = currPos.X;
+                int currY = currPos.Y;
+                int xDistance = cartesianVectorToDest[0];
+                int yDistance = cartesianVectorToDest[1];
+                int furthestOfXAndY = Math.Max(xDistance, yDistance);
+                // Determine whether to increment or decrement x and y
+                int xDirection = cartesianVectorToDest[0] / cartesianVectorToDest[0];
+                int yDirection = cartesianVectorToDest[1] / cartesianVectorToDest[1];
+                int numMovements = 0;
+
+                // Once we've attained the furthest point, we know we've reached our goal
+                while (numMovements < furthestOfXAndY)
+                {
+                    numMovements++;
+                    // Increment distance
+                    if (xDistance == furthestOfXAndY)
+                    {
+                        currX += xDirection;
+                        if (currY != currY + yDistance)
+                        {
+                            currY += yDirection;
+                        }
+                    }
+                    else
+                    {
+                        currY += yDirection;
+                        if (currX != currX + xDistance)
+                        {
+                            currX += xDirection;
+                        }
+                    }
+                    // Check if we're out of bounds
+                    if (currX >= MapsFile.MaxMapPixelX || currY >= MapsFile.MaxMapPixelY)
+                    {
+                        break;
+                    }
+                }
+
+
+            /*
             Stack<DFPosition> pathOfTravel = new Stack<DFPosition>();
 
             bool[,] invalid = new bool[MapsFile.MaxMapPixelX, MapsFile.MaxMapPixelY];
 
 
-            List<DFPosition> simplePath = new List<DFPosition>();
 
             CalculateTravelTime(destination, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, simplePath);
 
@@ -99,7 +229,6 @@ namespace DaggerfallWorkshop.Game.Utility
             //Okay, then use simple path to hone in on path.
 
 
-            GetPathOfTravelUtil(simplePath[0], destination, pathOfTravel, invalid);
 
 
             //Once get it here, can re use this calculateTravelTime, passing in each position here.
@@ -128,119 +257,10 @@ namespace DaggerfallWorkshop.Game.Utility
             }
 
             Debug.LogError("Total Travel time " + totalTravelTime);
-
+            */
+            int totalTravelTime = 1;
             return totalTravelTime;
-
-
-
-
         }
-
-        
-        //Nothing should need to change here, just what starting at,
-        //May need to divide and conquer this still.
-        /*
-         * Algorithm to divide and conquer with threads.
-         * Create ThreadPool that will be used to invoke attempts in different directions.
-         * A thread disposes of itself as soon as made invalid move.
-         *
-         * Each parent thread will sleep after spawning respective thread, then when a thread
-         * either hits a base case, interrupt method will be called and parent notified.
-         *
-         *
-         */
-        public static bool GetPathOfTravelUtil(DFPosition current, DFPosition destination, Stack<DFPosition> pathOfTravel, bool [,] invalid)
-        {
-
-            //Recursively finds path of travel, when hit ocean return and try different path of travel.
-
-
-            //If way over it gotta cnvery system first.
-            Debug.LogError("Looking at position " + current.ToString());
-
-
-            //Should check if offset is even a thing.
-
-            pathOfTravel.Push(current);
-
-            int terrain = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetClimateIndex(current.X, current.Y);
-
-            //If on ocean, then not traversable path, pop and return.
-            if (terrain == (int)MapsFile.Climates.Ocean || invalid[current.X,current.Y] || 
-                (current.X < MapsFile.MinMapPixelX || current.X > MapsFile.MaxMapPixelX ||  current.Y < MapsFile.MinMapPixelY  || current.Y > MapsFile.MaxMapPixelY))
-            {
-
-                //Maybe get into world coords first then make the check.
-
-                //The bounds checking should fix stack overflow, fuck.
-
-              
-                invalid[current.X,current.Y] = true;
-
-                pathOfTravel.Pop();
-                return false;
-
-            }
-            else if (current == destination)
-            {
-
-                return true;
-            }
-            else
-            {
-
-                pathOfTravel.Push(current);
-
-                //Otherwise this is good spot, return from here.
-
-                //try all directions, this probably needs to be modified, since pretty fucking brute force.
-                //Should find a path based on naive path of travel, or do dijkstras instead of just brute force.
-
-
-
-                    
-                //Conver all these to threads.
-                DFPosition toRight = new DFPosition(current.X + 1, current.Y);
-                DFPosition toLeft = new DFPosition(current.X - 1, current.Y);
-                DFPosition forward = new DFPosition(current.X, current.Y + 1);
-                DFPosition backward = new DFPosition(current.X, current.Y - 1);
-
-                DFPosition FR = new DFPosition(toRight.X, forward.Y);
-                DFPosition FL = new DFPosition(toLeft.X, forward.Y);
-
-                DFPosition BR = new DFPosition(toRight.X, backward.Y);
-                DFPosition BL = new DFPosition(toLeft.X, backward.Y);
-
-
-
-                //Okay, so create tasks invoking for each possible move.
-
-                //Then call a wait any, so as soon as a child thread finishes, let's say if was a path
-                //that made it. Then using the result method in task we check if true. If true, then cancel
-                //the other threads, cause no reason.
-
-                //But if was invalid path, then let rest of threads continue by invoking wait any again
-                //So essentially waitany until all child threads dead.
-
-                //Also for shortest path down line, need to figure out adding weight to the different nodes.
-                //perhaps they already have weight established I could use that to consider smaller subset.
-              
-                return GetPathOfTravelUtil(toRight, destination, pathOfTravel, invalid) ||
-                GetPathOfTravelUtil(toLeft, destination, pathOfTravel, invalid) ||
-                GetPathOfTravelUtil(forward, destination, pathOfTravel, invalid) ||
-                GetPathOfTravelUtil(backward, destination, pathOfTravel, invalid) ||
-                GetPathOfTravelUtil(BR, destination, pathOfTravel, invalid) ||
-                GetPathOfTravelUtil(BL, destination, pathOfTravel, invalid) ||
-                GetPathOfTravelUtil(FR, destination, pathOfTravel, invalid) ||
-                GetPathOfTravelUtil(FL, destination, pathOfTravel, invalid);
-
-
-            }
-
-        }
-
-
-
 
         /// <summary>Gets current player position in map pixels for purposes of travel</summary>
         public static DFPosition GetPlayerTravelPosition()
