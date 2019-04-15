@@ -1,0 +1,55 @@
+Quest: TESTING1
+DisplayName: JayH Is Helping Me
+QRC:
+
+QuestorOffer:  [1000]
+<ce>          Go find _kid_.
+
+RefuseQuest:  [1001]
+<ce>          Don't be like that, %pcn.
+
+AcceptQuest:  [1002]
+<ce>          _kid_'s in _somewhere_.
+
+QuestFail:  [1003]
+<ce>               Just ridiculous.
+
+QuestComplete:  [1004]
+<ce>                Good job.
+
+RumorsDuringQuest:  [1005]
+Hello class of Software Engineering Methods 2! 
+
+RumorsPostfailure: [1006]
+Failure of a hero?
+
+RumorsPostsuccess: [1007]
+The hero is born!?
+
+QuestorPostsuccess: [1008]
+Truly heroic spirit!
+
+QuestorPostfailure: [1009]
+Vanish from my eyes!
+
+QBN:
+Item _reward_ gold range 10 to 15
+
+Person _questgiver_ group Questor male
+Person _kid_ faction Children
+
+Clock _timer_ 21:20
+
+Place _somewhere_ local random
+
+--	Quest start-up:
+	start timer _timer_
+	Place foe _enemy_ at _guild_
+	
+_mondead_ task:
+	killed 1 _enemy_
+	give pc _reward_
+	end quest
+	
+_timer_ task:
+	end quest

@@ -11,3 +11,6 @@ schema: *name, group, membership, minRep, notes
 
 -Interkarma
 CUSTOM01, FightersGuild, M, 40, New quest exclusive to Daggerfall Unity
+
+-John
+TESTING1, FightersGuild, M, 0, Test quest

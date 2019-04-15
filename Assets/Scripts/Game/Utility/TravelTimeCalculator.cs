@@ -187,8 +187,8 @@ namespace DaggerfallWorkshop.Game.Utility
                 minutesTakenTotal += minutesTakenThisMove;
                 ++numberOfMovements;
 
-                if (interrupt == null)
-                    tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
+                //if (interrupt == null)
+                    //tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
 
             }
 
