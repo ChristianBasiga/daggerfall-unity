@@ -75,9 +75,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
-        //get path of Travel.
-        //Overflow doesn't happen so base case is hit, but just takes too long
-        //Will wait till completes to see.
+        
         public int calculateTravelTime(DFPosition destination, bool speedCautious = false,
             bool sleepModeInn = false,
             bool travelShip = false,
@@ -92,7 +90,7 @@ namespace DaggerfallWorkshop.Game.Utility
             bool isAtDestination = false;
 
             // Continually modifies vectors based on currPlayerPosition until an acceptable path is reached
-            while(!isAtDestination)
+            while (!isAtDestination)
             {
                 // Obtain vector created between destination point and current position
                 int[] cartesianVectorToDest = { destination.X - currPos.X, destination.Y - currPos.Y };
@@ -108,10 +106,12 @@ namespace DaggerfallWorkshop.Game.Utility
                 if (currPos.Y < destination.Y) // Counter-clockwise
                 {
                     angleSign = 1;
-                } else if(currPos.Y == destination.Y) // Depends on map zone
+                }
+                else if (currPos.Y == destination.Y) // Depends on map zone
                 {
-                    // ToDo: if in upper half, ccw; otherwise, cw
-                } else // Clockwise
+                }
+
+                else
                 {
                     angleSign = -1;
                 }
@@ -119,30 +119,47 @@ namespace DaggerfallWorkshop.Game.Utility
                 double[] polarVectorToDest = { Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)),
                     Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
 
+
+                int currX;
+                int currY;
+                int xDistance;
+                int yDistance;
+                int furthestOfXAndY;
+                int xDirection;
+                int yDirection;
+                int numMovements;
                 // Modifies angle of travel vector until a vector that doesn't go through the ocean is found
                 bool crossesOcean = true;
-                while (crossesOcean)
+
+                //But because doing it at top, adding offset at start, so decrementing before so correct.
+
+                while (true)
                 {
+
+
                     // Verify if ocean is crossed
-                    int currX = currPos.X;
-                    int currY = currPos.Y;
-                    int xDistance = cartesianVectorToDest[0];
-                    int yDistance = cartesianVectorToDest[1];
-                    int furthestOfXAndY = Math.Max(xDistance, yDistance);
+                    currX = currPos.X;
+                    currY = currPos.Y;
+                    xDistance = cartesianVectorToDest[0];
+                    yDistance = cartesianVectorToDest[1];
+                    furthestOfXAndY = Math.Max(xDistance, yDistance);
                     // Determine whether to increment or decrement x and y
-                    int xDirection = cartesianVectorToDest[0] / cartesianVectorToDest[0];
-                    int yDirection = cartesianVectorToDest[1] / cartesianVectorToDest[1];
-                    int numMovements = 0;
+
+                    //As is now if negative, results in positive, if positive results in positive.
+                    //adding in negative
+                    xDirection = cartesianVectorToDest[0] / cartesianVectorToDest[0];
+                    yDirection = cartesianVectorToDest[1] / cartesianVectorToDest[1];
+                    numMovements = 0;
 
                     // Once we've attained the furthest point, we know we've reached our goal
                     while (numMovements < furthestOfXAndY)
                     {
                         numMovements++;
                         // Increment distance
-                        if(xDistance == furthestOfXAndY)
+                        if (xDistance == furthestOfXAndY)
                         {
                             currX += xDirection;
-                            if(currY != currY + yDistance)
+                            if (currY != currPos.Y + yDistance)
                             {
                                 currY += yDirection;
                             }
@@ -150,13 +167,13 @@ namespace DaggerfallWorkshop.Game.Utility
                         else
                         {
                             currY += yDirection;
-                            if (currX != currX + xDistance)
+                            if (currX != currPos.X + xDistance)
                             {
                                 currX += xDirection;
                             }
                         }
                         // Check if we're in the ocean
-                        if(mapsFile.GetClimateIndex(currX, currY) == (int)MapsFile.Climates.Ocean)
+                        if (mapsFile.GetClimateIndex(currX, currY) == (int)MapsFile.Climates.Ocean)
                         {
                             crossesOcean = true;
                             break;
@@ -164,29 +181,41 @@ namespace DaggerfallWorkshop.Game.Utility
                         // If we've made it this far, we have yet to cross the ocean
                         crossesOcean = false;
                         // Check if we're out of bounds
-                        if(currX >= MapsFile.MaxMapPixelX || currY >= MapsFile.MaxMapPixelY)
+                        if (currX >= MapsFile.MaxMapPixelX || currY >= MapsFile.MaxMapPixelY)
                         {
                             break;
                         }
                     }
+
                     // If we're still crossing ocean, we need to increment the angle
-                    polarVectorToDest[1] += angleSign * angleIncrement;
+                    //Only do this if still crossing ocean which isn't checked until later.
+                    //so should be at top.
+                    //     polarVectorToDest[1] += angleSign * angleIncrement;
+                    if (crossesOcean)
+                    {
+                        polarVectorToDest[1] += angleSign * angleIncrement;
+                    }
+                    else
+                    {
+                        break;
+                    }
+
                 }
                 // Convert back to cartesian to obtain our new endpoint
                 cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
                 cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
 
-                // Check if our adjusted vector will reach the original destination
-                // If it does, we have our solution and can stop
-                int currX = currPos.X;
-                int currY = currPos.Y;
-                int xDistance = cartesianVectorToDest[0];
-                int yDistance = cartesianVectorToDest[1];
-                int furthestOfXAndY = Math.Max(xDistance, yDistance);
+
+
+                currX = currPos.X;
+                currY = currPos.Y;
+                xDistance = cartesianVectorToDest[0];
+                yDistance = cartesianVectorToDest[1];
+                furthestOfXAndY = Math.Max(xDistance, yDistance);
                 // Determine whether to increment or decrement x and y
-                int xDirection = cartesianVectorToDest[0] / cartesianVectorToDest[0];
-                int yDirection = cartesianVectorToDest[1] / cartesianVectorToDest[1];
-                int numMovements = 0;
+                xDirection = cartesianVectorToDest[0] / cartesianVectorToDest[0];
+                yDirection = cartesianVectorToDest[1] / cartesianVectorToDest[1];
+                numMovements = 0;
 
                 // Once we've attained the furthest point, we know we've reached our goal
                 while (numMovements < furthestOfXAndY)
@@ -196,7 +225,9 @@ namespace DaggerfallWorkshop.Game.Utility
                     if (xDistance == furthestOfXAndY)
                     {
                         currX += xDirection;
-                        if (currY != currY + yDistance)
+                        //Umm, we're updating the curr here, so this check not gonna work.
+                        //compare to original offset by ydistance.
+                        if (currY != currPos.Y + yDistance)
                         {
                             currY += yDirection;
                         }
@@ -204,7 +235,7 @@ namespace DaggerfallWorkshop.Game.Utility
                     else
                     {
                         currY += yDirection;
-                        if (currX != currX + xDistance)
+                        if (currX != currPos.X + xDistance)
                         {
                             currX += xDirection;
                         }
@@ -217,56 +248,14 @@ namespace DaggerfallWorkshop.Game.Utility
                         currY -= yDirection;
                         break;
                     }
-                    if(currX == destination.X && currY == destination.Y)
+                    if (currX == destination.X && currY == destination.Y)
                     {
                         break;
                     }
                 }
-                // Now, we have a vector that's either 
-
-
-            /*
-            Stack<DFPosition> pathOfTravel = new Stack<DFPosition>();
-
-            bool[,] invalid = new bool[MapsFile.MaxMapPixelX, MapsFile.MaxMapPixelY];
-
-
-
-            CalculateTravelTime(destination, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, simplePath);
-
-
-            //Okay, then use simple path to hone in on path.
-
-
-
-
-            //Once get it here, can re use this calculateTravelTime, passing in each position here.
-
-            int totalTravelTime = 0;
-
-            foreach (DFPosition pos in pathOfTravel)
-            {
-
-                //Since the positons will be adjacent to each other loop in travel time calculation should only iterate once.
-                totalTravelTime += CalculateTravelTime(pos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, null);
-
-
-                DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();
-
-                bool hasLocation = DaggerfallUnity.Instance.ContentReader.HasLocation(pos.X, pos.Y, out mapSumm);
-
-                if (hasLocation)
-                {
-
-                    //To Confirm we actually get to destination.
-                    Debug.LogError("Location currently looking at " + mapSumm.ToString());
-                }
-
-
             }
 
-            Debug.LogError("Total Travel time " + totalTravelTime);
-            */
+
             int totalTravelTime = 1;
             return totalTravelTime;
         }
@@ -294,18 +283,15 @@ namespace DaggerfallWorkshop.Game.Utility
             bool sleepModeInn = false,
             bool travelShip = false,
             bool hasHorse = false,
-            bool hasCart = false,
+            bool hasCart = false
             
-            List<DFPosition> simplePath = null)
+           )
         {
 
             //Calling our version of calculation.
 
-            //Quick & Dirty
-            if (simplePath == null)
-            {
-                return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasCart, hasCart);
-            }
+
+
 
             int transportModifier = 0;
             if (hasHorse)
@@ -318,6 +304,11 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
             DFPosition position = GetPlayerTravelPosition();
+
+            
+
+
+
             int playerXMapPixel = position.X;
             int playerYMapPixel = position.Y;
             int distanceXMapPixels = endPos.X - playerXMapPixel;
@@ -325,6 +316,7 @@ namespace DaggerfallWorkshop.Game.Utility
             int distanceXMapPixelsAbs = Mathf.Abs(distanceXMapPixels);
             int distanceYMapPixelsAbs = Mathf.Abs(distanceYMapPixels);
             int furthestOfXandYDistance = 0;
+
 
             if (distanceXMapPixelsAbs <= distanceYMapPixelsAbs)
                 furthestOfXandYDistance = distanceYMapPixelsAbs;
@@ -343,6 +335,15 @@ namespace DaggerfallWorkshop.Game.Utility
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
             pixelsTraveledOnOcean = 0;
 
+
+
+
+            ExteriorAutomap instance = ExteriorAutomap.instance;
+
+
+
+            Vector3 current = new Vector3(position.X, position.Y, 0);
+            
 
             //Basically only if we've moved less than the furthest distance.
             while (numberOfMovements < furthestOfXandYDistance)
@@ -371,12 +372,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 }
 
 
-                DFPosition offsetPos = new DFPosition();
 
-                offsetPos.X = playerXMapPixel;
-                offsetPos.Y = playerYMapPixel;
-
-                simplePath.Add(offsetPos);
 
                 //Debug.log(positionX);
 
@@ -411,13 +407,20 @@ namespace DaggerfallWorkshop.Game.Utility
                 minutesTakenTotal += minutesTakenThisMove;
                 ++numberOfMovements;
 
+                Vector3 nextPos = new Vector3(playerXMapPixel, playerYMapPixel);
+
+                instance.DrawLine(current, nextPos, Color.red);
+
+                current = nextPos;
+
+
                 //Only if interrupt not set yet by random chance, try again.
                 //Or should I try infinitely?
                 //if (interrupt == null)
                  //  tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
 
             }
-
+         //   GameObject.Instantiate(drawer);
             if (!speedCautious)
                 minutesTakenTotal = minutesTakenTotal >> 1;
 
