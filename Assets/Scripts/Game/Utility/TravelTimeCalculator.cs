@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using DaggerfallConnect;
 using DaggerfallConnect.Utility;
 using DaggerfallConnect.Arena2;
+using DaggerfallWorkshop.Game.UserInterfaceWindows;
 
 namespace DaggerfallWorkshop.Game.Utility
 {
@@ -293,6 +294,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
+
             int transportModifier = 0;
             if (hasHorse)
                 transportModifier = 128;
@@ -336,15 +338,11 @@ namespace DaggerfallWorkshop.Game.Utility
             pixelsTraveledOnOcean = 0;
 
 
+            List<DFPosition> pathOfTravel = new List<DFPosition>();
 
 
-            ExteriorAutomap instance = ExteriorAutomap.instance;
-
-
-
-            Vector3 current = new Vector3(position.X, position.Y, 0);
-            
-
+            pathOfTravel.Add(position);
+         
             //Basically only if we've moved less than the furthest distance.
             while (numberOfMovements < furthestOfXandYDistance)
             {
@@ -373,9 +371,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
-
-                //Debug.log(positionX);
-
+                pathOfTravel.Add(new DFPosition(playerXMapPixel, playerYMapPixel));
 
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
@@ -407,13 +403,6 @@ namespace DaggerfallWorkshop.Game.Utility
                 minutesTakenTotal += minutesTakenThisMove;
                 ++numberOfMovements;
 
-                Vector3 nextPos = new Vector3(playerXMapPixel, playerYMapPixel);
-
-                instance.DrawLine(current, nextPos, Color.red);
-
-                current = nextPos;
-
-
                 //Only if interrupt not set yet by random chance, try again.
                 //Or should I try infinitely?
                 //if (interrupt == null)
@@ -423,6 +412,11 @@ namespace DaggerfallWorkshop.Game.Utility
          //   GameObject.Instantiate(drawer);
             if (!speedCautious)
                 minutesTakenTotal = minutesTakenTotal >> 1;
+
+
+            //Where should I do the call then?
+            DaggerfallTravelMapWindow window = DaggerfallUI.Instance.DfTravelMapWindow;
+            window.drawLineOfTravel(pathOfTravel);
 
             return minutesTakenTotal;
         }
