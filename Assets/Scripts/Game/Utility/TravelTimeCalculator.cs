@@ -111,9 +111,15 @@ namespace DaggerfallWorkshop.Game.Utility
                     angleSign = -1;
                 }
 
+                double[] polarVectorToDest;
                 // Convert to polar to easily modify direction of vector
-                double[] polarVectorToDest = { Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)),
-                    Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
+                if (cartesianVectorToDest[0] == 0)
+                {
+                    polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), (Math.PI / 2) };
+                } else
+                {
+                    polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
+                }
 
                 // Variables used to follow along path of vector
                 int currX; // We are we along the vector now?
@@ -239,7 +245,7 @@ namespace DaggerfallWorkshop.Game.Utility
                         polarVectorToDest[1] += angleSign * angleIncrement;
 
                        
-                        //Issue is getting back distance that's too big in magnitude that it doesn;t make sense.
+                        //Issue is getting back distance that's too big in magnitude that it doesn't make sense.
                         //Negative distance makes sense, but should not be more in magnitude than current position when origin is 0,0
                         cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
                         cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
@@ -274,23 +280,18 @@ namespace DaggerfallWorkshop.Game.Utility
             }
 
             int totalTravelTime = 0;
-
+            DFPosition prev = GetPlayerTravelPosition();
             if (path.Count != 0)
             {
                 String pathToString = "Path is: ";
                 for (int i = 0; i < path.Count; i++)
                 {
                     pathToString += "(" + path[i].X + ", " + path[i].Y + ") ";
-
-
-
-                    Debug.LogError("(" + path[i].X + ", " + path[i].Y + ") ");
+                    totalTravelTime += CalculateTravelTime(path[i], speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, prev);
+                    prev = path[i];
                 }
                 Debug.LogError(pathToString);
             }
-
-            
-
 
             return totalTravelTime;
         }
@@ -318,13 +319,16 @@ namespace DaggerfallWorkshop.Game.Utility
             bool sleepModeInn = false,
             bool travelShip = false,
             bool hasHorse = false,
-            bool hasCart = false
-            
+            bool hasCart = false,
+            DFPosition startPosition = null
            )
         {
 
             //Calling our version of calculation.
-            return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+            if(startPosition == null)
+            {
+                return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+            }
 
             int transportModifier = 0;
             if (hasHorse)
