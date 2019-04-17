@@ -88,6 +88,10 @@ namespace DaggerfallWorkshop.Game.Utility
             List<DFPosition> path = new List<DFPosition>();
             bool isAtDestination = false;
 
+
+
+
+
             // Continually modifies vectors based on currPlayerPosition until an acceptable path is reached
             while (!isAtDestination)
             {
@@ -111,9 +115,15 @@ namespace DaggerfallWorkshop.Game.Utility
                     angleSign = -1;
                 }
 
+                double[] polarVectorToDest;
                 // Convert to polar to easily modify direction of vector
-                double[] polarVectorToDest = { Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)),
-                    Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
+                if (cartesianVectorToDest[0] == 0)
+                {
+                    polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), (Math.PI / 2) };
+                } else
+                {
+                    polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
+                }
 
                 // Variables used to follow along path of vector
                 int currX; // We are we along the vector now?
@@ -239,7 +249,7 @@ namespace DaggerfallWorkshop.Game.Utility
                         polarVectorToDest[1] += angleSign * angleIncrement;
 
                        
-                        //Issue is getting back distance that's too big in magnitude that it doesn;t make sense.
+                        //Issue is getting back distance that's too big in magnitude that it doesn't make sense.
                         //Negative distance makes sense, but should not be more in magnitude than current position when origin is 0,0
                         cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
                         cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
@@ -274,7 +284,9 @@ namespace DaggerfallWorkshop.Game.Utility
             }
 
             int totalTravelTime = 0;
+            DFPosition prev = GetPlayerTravelPosition();
 
+            List<DFPosition> fullPath = new List<DFPosition>();
             if (path.Count != 0)
             {
                 String pathToString = "Path is: ";
@@ -282,17 +294,15 @@ namespace DaggerfallWorkshop.Game.Utility
                 {
                     pathToString += "(" + path[i].X + ", " + path[i].Y + ") ";
 
+                    //To get both time, and pixels in between end points, won't match cause not considering slope in our original.
 
-
-                    Debug.LogError("(" + path[i].X + ", " + path[i].Y + ") ");
+                    totalTravelTime += CalculateTravelTime(path[i], speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, prev, fullPath);
+                    prev = path[i];
                 }
                 Debug.LogError(pathToString);
             }
 
-
-            //
-            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(path);
-
+            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(fullPath);
 
 
             return totalTravelTime;
@@ -321,13 +331,17 @@ namespace DaggerfallWorkshop.Game.Utility
             bool sleepModeInn = false,
             bool travelShip = false,
             bool hasHorse = false,
-            bool hasCart = false
-            
+            bool hasCart = false,
+            DFPosition startPosition = null,
+            List<DFPosition> truePath = null
            )
         {
 
             //Calling our version of calculation.
-            return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+            if(startPosition == null)
+            {
+                return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+            }
 
             int transportModifier = 0;
             if (hasHorse)
@@ -342,7 +356,7 @@ namespace DaggerfallWorkshop.Game.Utility
             DFPosition position = GetPlayerTravelPosition();
 
             
-
+            position = startPosition;
 
 
             int playerXMapPixel = position.X;
@@ -373,7 +387,13 @@ namespace DaggerfallWorkshop.Game.Utility
 
             List<DFPosition> path = new List<DFPosition>();
 
-            path.Add(new DFPosition(position.X, position.Y));
+
+
+
+            
+            truePath.Add(new DFPosition(position.X, position.Y));
+
+
             //Basically only if we've moved less than the furthest distance.
             while (numberOfMovements < furthestOfXandYDistance)
             {
@@ -403,7 +423,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
-                path.Add(new DFPosition(playerXMapPixel, playerYMapPixel));
+                truePath.Add(new DFPosition(playerXMapPixel, playerYMapPixel));
                 //Debug.log(positionX);
 
 
@@ -414,7 +434,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 //not through the ocean.
                 if (terrain == (int)MapsFile.Climates.Ocean)
                 {
-
+                    Debug.LogError("ocean");
                     //So instead of just increasing time if ocean tile, should redirect to a new path.
                     ++pixelsTraveledOnOcean;
                     if (travelShip)
@@ -432,7 +452,7 @@ namespace DaggerfallWorkshop.Game.Utility
                         * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
                 }
 
-                DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(path);
+              
 
                 if (!sleepModeInn)
                     minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;

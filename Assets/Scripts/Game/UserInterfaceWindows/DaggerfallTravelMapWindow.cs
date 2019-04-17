@@ -436,15 +436,21 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             string mapName = selectedRegionMapNames[mapIndex];
             Vector2 origin = offsetLookup[mapName];
 
+            Debug.LogError(string.Format("Width : {0} Height: {1}", width, height));
+            Debug.LogError(string.Format("Origin: {0}, {1}", origin.x, origin.y));
+
             foreach (DFPosition pos in pathToDraw)
             {
 
+                Debug.LogError(string.Format("Position: {0}, {1}", pos.X, pos.Y));
                 int offSetX = (int)(pos.X - origin.x);
                 int offSetY = (int)(pos.Y - origin.y);
 
 
                 int pixelIndex = (height - offSetY - 1) * width + offSetX;
-                pixelBuffer[pixelIndex] = identifyFlashColor;
+
+                if (pixelIndex < height * width)
+                    pixelBuffer[pixelIndex] = identifyFlashColor;
 
             }
         }
