@@ -86,7 +86,6 @@ namespace DaggerfallWorkshop.Game.Utility
             DFPosition nodeEndpoint; // The final position of a leg of travel
             DFPosition currPos = GetPlayerTravelPosition(); // This changes node per node
             List<DFPosition> path = new List<DFPosition>();
-            
             bool isAtDestination = false;
 
             // Continually modifies vectors based on currPlayerPosition until an acceptable path is reached
@@ -143,23 +142,28 @@ namespace DaggerfallWorkshop.Game.Utility
                 while (true)
                 {
                     // Verify if ocean is crossed
+
+                    //Cartesian updated, but not current pos
                     currX = currPos.X;
                     currY = currPos.Y;
                     xDistance = cartesianVectorToDest[0];
                     yDistance = cartesianVectorToDest[1];
-                    furthestOfXAndY = Math.Max(xDistance, yDistance);
+                    furthestOfXAndY = Math.Max(Math.Abs(xDistance), Math.Abs(yDistance));
+
+                    xDirection = 0;
+                    yDirection = 0;
                     // Determine whether to increment or decrement x and y
 
                     // Should we increase or decrease x to get to destination's x?
-                    if(cartesianVectorToDest[0] >= 0)
+                    if(cartesianVectorToDest[0] > 0)
                     {
                         xDirection = 1;
-                    } else
+                    } else if (cartesianVectorToDest[0] < 0)
                     {
                         xDirection = -1;
                     }
                     // Should we increase or decrease y to get to destination's y?
-                    if (cartesianVectorToDest[1] >= 0)
+                    if (cartesianVectorToDest[1] > 0)
                     {
                         yDirection = 1;
                     }
@@ -170,6 +174,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
                     // If we've moved as many pixels as is along the furthest vector
                     // component, then we've completely followed the vector
+                    //Logically sound, but looking at same ocean pixels from each new end point.
                     numMovements = 0;
                     while (numMovements < furthestOfXAndY)
                     {
@@ -191,6 +196,12 @@ namespace DaggerfallWorkshop.Game.Utility
                             }
                         }
 
+
+                        //This was two different loops of similar stuff before.
+
+                        //That might be neccessarry.
+
+
                         // If we've reached our original destination, all necessary legs are computed
                         if (currX == destination.X && currY == destination.Y)
                         {
@@ -208,12 +219,17 @@ namespace DaggerfallWorkshop.Game.Utility
                         // If we've made it this far, we have yet to cross the ocean
                         crossesOcean = false;
                         // If out of bounds, backtrack a bit to get a point that's in bounds
+                        //Goes way too out of bounds in turning it to new end point.
                         if (currX >= MapsFile.MaxMapPixelX || currY >= MapsFile.MaxMapPixelY)
                         {
                             currX -= xDirection;
+                            //Perhaps decrementing one of these would put us out of bounds of other axis, so only reset one we care about.
+                            //Hmm, nah cause that essentally is just putting in previous state, so would've been caught earlier.
+                            //At worst makes it inaccurate for new end point, but that will be fixed in next iteration.
                             currY -= yDirection;
                             break;
                         }
+                       
                     }
 
                     // If we're still crossing ocean, we need to increment the angle and try again
@@ -221,6 +237,10 @@ namespace DaggerfallWorkshop.Game.Utility
                     if (crossesOcean)
                     {
                         polarVectorToDest[1] += angleSign * angleIncrement;
+
+                       
+                        //Issue is getting back distance that's too big in magnitude that it doesn;t make sense.
+                        //Negative distance makes sense, but should not be more in magnitude than current position when origin is 0,0
                         cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
                         cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
                     }
@@ -230,25 +250,48 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                 }
 
-                // Convert back to cartesian to obtain our new endpoint
-                cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
-                cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
+                // Convert back to cartesian to obtain our new endpoint, we already did this.
+                // cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
+                // cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
+
+                //Okay so here we update current position by distance to new end point
                 // Update new endpoint, this is now a node along our journey
-                currPos.X += cartesianVectorToDest[0];
-                currPos.Y += cartesianVectorToDest[1];
+
+                //This might be issue, if what we are subtracting by is too large, we bound it in making steps
+                //But then add on the potentialy too large magnitude anyway.
+                //Cause current x and current y is what we're travelling to and is kept in bounds.
+
+                currX = Math.Max(MapsFile.MinMapPixelX, Math.Min(MapsFile.MaxMapPixelX - 1, currX));
+                currY = Math.Max(MapsFile.MinMapPixelY, Math.Min(MapsFile.MaxMapPixelY - 1, currY));
+
+
+                currPos.X = currX;
+                currPos.Y = currY;
+
+                
+
                 path.Add(new DFPosition(currPos.X, currPos.Y));
             }
 
-            if(path.Count != 0)
+            int totalTravelTime = 0;
+
+            if (path.Count != 0)
             {
                 String pathToString = "Path is: ";
                 for (int i = 0; i < path.Count; i++)
                 {
-                    pathToString += "(" + path[0].X + ", " + path[0].Y + ") ";
+                    pathToString += "(" + path[i].X + ", " + path[i].Y + ") ";
+
+
+
+                    Debug.LogError("(" + path[i].X + ", " + path[i].Y + ") ");
                 }
                 Debug.LogError(pathToString);
             }
-            int totalTravelTime = 1;
+
+            
+
+
             return totalTravelTime;
         }
 
