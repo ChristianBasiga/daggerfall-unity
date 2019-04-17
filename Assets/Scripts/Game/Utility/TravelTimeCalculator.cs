@@ -289,7 +289,10 @@ namespace DaggerfallWorkshop.Game.Utility
                 Debug.LogError(pathToString);
             }
 
-            
+
+            //
+            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(path);
+
 
 
             return totalTravelTime;
@@ -366,8 +369,11 @@ namespace DaggerfallWorkshop.Game.Utility
             int minutesTakenTotal = 0;
 
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
-            pixelsTraveledOnOcean = 0;            
+            pixelsTraveledOnOcean = 0;
 
+            List<DFPosition> path = new List<DFPosition>();
+
+            path.Add(new DFPosition(position.X, position.Y));
             //Basically only if we've moved less than the furthest distance.
             while (numberOfMovements < furthestOfXandYDistance)
             {
@@ -397,6 +403,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
+                path.Add(new DFPosition(playerXMapPixel, playerYMapPixel));
                 //Debug.log(positionX);
 
 
@@ -425,10 +432,18 @@ namespace DaggerfallWorkshop.Game.Utility
                         * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
                 }
 
+                DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(path);
+
                 if (!sleepModeInn)
                     minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;
+
+
                 minutesTakenTotal += minutesTakenThisMove;
                 ++numberOfMovements;
+
+
+                
+
 
                 //Only if interrupt not set yet by random chance, try again.
                 //Or should I try infinitely?
@@ -436,6 +451,9 @@ namespace DaggerfallWorkshop.Game.Utility
                  //  tryInterrupt(position, endPos, playerXMapPixel, playerYMapPixel, minutesTakenTotal);
 
             }
+
+
+
          //   GameObject.Instantiate(drawer);
             if (!speedCautious)
                 minutesTakenTotal = minutesTakenTotal >> 1;

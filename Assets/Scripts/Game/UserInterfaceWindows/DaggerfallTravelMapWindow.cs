@@ -52,6 +52,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         const int identifyFlashCount                        = 4;
         const float identifyFlashInterval                   = 0.5f;
 
+
+
+        List<DFPosition> pathToDraw;
+        bool drawingPath = false;
+
         DaggerfallTravelPopUp popUp;
 
         Dictionary<string, Vector2> offsetLookup    = new Dictionary<string, Vector2>();
@@ -378,6 +383,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                         else
                             CreateCrossHair(TravelTimeCalculator.GetPlayerTravelPosition(), selectedRegion);
                     }
+                    else if (drawingPath)
+                    {
+
+                        DrawPathOfTravel();
+                    }
 
                     Draw(regionTextureOverlayPanel);
                 }
@@ -404,6 +414,40 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         }
 
         #endregion
+
+
+        public void DrawPathOfTravel(List<DFPosition> path)
+        {
+
+            drawingPath = true;
+            draw = true;
+            pathToDraw = path;
+
+        }
+
+        void DrawPathOfTravel()
+        {
+
+
+            if (!drawingPath) return;
+            Debug.LogError("Here");
+            //Have region map names, and map index from selected region.
+
+            string mapName = selectedRegionMapNames[mapIndex];
+            Vector2 origin = offsetLookup[mapName];
+
+            foreach (DFPosition pos in pathToDraw)
+            {
+
+                int offSetX = (int)(pos.X - origin.x);
+                int offSetY = (int)(pos.Y - origin.y);
+
+
+                int pixelIndex = (height - offSetY - 1) * width + offSetX;
+                pixelBuffer[pixelIndex] = identifyFlashColor;
+
+            }
+        }
 
         #region Setup
 
