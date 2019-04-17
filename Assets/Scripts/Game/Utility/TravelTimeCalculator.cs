@@ -221,6 +221,8 @@ namespace DaggerfallWorkshop.Game.Utility
                     if (crossesOcean)
                     {
                         polarVectorToDest[1] += angleSign * angleIncrement;
+                        cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
+                        cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
                     }
                     else
                     {
@@ -239,7 +241,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
             if(path.Count != 0)
             {
-                String pathToString = "";
+                String pathToString = "Path is: ";
                 for (int i = 0; i < path.Count; i++)
                 {
                     pathToString += "(" + path[0].X + ", " + path[0].Y + ") ";
