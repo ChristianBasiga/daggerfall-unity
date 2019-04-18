@@ -425,33 +425,55 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         }
 
+
+        //And it shouldn't redraw
         void DrawPathOfTravel()
         {
 
 
             if (!drawingPath) return;
-            Debug.LogError("Here");
             //Have region map names, and map index from selected region.
 
-            string mapName = selectedRegionMapNames[mapIndex];
-            Vector2 origin = offsetLookup[mapName];
 
-            Debug.LogError(string.Format("Width : {0} Height: {1}", width, height));
-            Debug.LogError(string.Format("Origin: {0}, {1}", origin.x, origin.y));
+
+            Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
+          
 
             foreach (DFPosition pos in pathToDraw)
             {
 
-                Debug.LogError(string.Format("Position: {0}, {1}", pos.X, pos.Y));
-                int offSetX = (int)(pos.X - origin.x);
-                int offSetY = (int)(pos.Y - origin.y);
+             //   Debug.LogError(string.Format("Position: {0}, {1}", pos.X, pos.Y));
+                int region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetPoliticIndex(pos.X, pos.Y) - 128;
+                if (region != selectedRegion) continue;
+                //Then unless region goes through multiple images, there should only be one.
+                //string[] regionNames = GetRegionMapNames(region);
+                //Get different origins per pixel
+                //loadedImg = new ImgFile(Path.Combine(DaggerfallUnity.Instance.Arena2Path, regionNames[0]), FileUsage.UseMemory, true);
+                //loadedImg.LoadPalette(Path.Combine(DaggerfallUnity.Instance.Arena2Path, loadedImg.PaletteName));
+
+                //Height and with shoudl also be appropriate.
+         //       int width = loadedImg.GetDFBitmap().Width;
+           //     int height = loadedImg.GetDFBitmap().Height;
 
 
-                int pixelIndex = (height - offSetY - 1) * width + offSetX;
 
-                if (pixelIndex < height * width)
-                    pixelBuffer[pixelIndex] = identifyFlashColor;
+                //Debug.LogError(string.Format("Width : {0} Height: {1}", width, height));
 
+                //Only draw stuff not in ocean, so in a region.
+                    Debug.LogError(string.Format("Origin: {0}, {1}", origin.x, origin.y));
+
+                    int offSetX = (int)(pos.X - origin.x);
+                    int offSetY = (int)(pos.Y - origin.y);
+
+                    //Width and height would be different as well, so make sure accurate.
+                    //Actually since width and height difference per zoomed in. Hmm maybe only draw stuff that are in that region? That
+                    //makes more sense.
+                    
+
+                    int pixelIndex = (height - offSetY - 1) * width + offSetX;
+
+                    if (pixelIndex < height * width)
+                        pixelBuffer[pixelIndex] = identifyFlashColor;
             }
         }
 
@@ -761,7 +783,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 zoomOffset = new Vector2(startX, startY);
 
                 Color[] temp = texture.GetPixels(startX, startY, width / zoomfactor, height / zoomfactor);
-                texture = new Texture2D(width / zoomfactor, height / zoomfactor, TextureFormat.ARGB32, false);
+                texture = new Texture2D(width / zoomfactor, height / zoomfactor, TextureFormat.ARGB32, false)   ;
                 texture.SetPixels(temp);
             }
 
@@ -775,6 +797,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         void PopulateRegionOffsetDict()
         {
             offsetLookup = new Dictionary<string, Vector2>();
+
+            //To add: image of whole thing and offset from there.
             offsetLookup.Add("FMAPAI00.IMG", new Vector2(212, 340));
             offsetLookup.Add("FMAPBI00.IMG", new Vector2(322, 340));
             offsetLookup.Add("FMAPAI01.IMG", new Vector2(583, 279));
