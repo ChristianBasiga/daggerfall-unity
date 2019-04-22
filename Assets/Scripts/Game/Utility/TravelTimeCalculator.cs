@@ -101,7 +101,10 @@ namespace DaggerfallWorkshop.Game.Utility
                 // Optimize angle modification to make deviations hug the coastline
                 // as much as possible
                 int angleSign = 0;
-                const double angleIncrement = 0.174533; // 10 degrees in radians
+                // const double angleIncrement = 0.174533; // 10 degrees in radians
+
+                //  const double angleIncrement = 0.0872665; // 5 degrees in radians
+                const double angleIncrement = 0.0174533; //1 degree in radians, makes it so doesn't actually cross ocean, so angle is off.
                 if (currPos.Y < destination.Y) // Counter-clockwise (ocean is below)
                 {
                     angleSign = 1;
@@ -158,22 +161,29 @@ namespace DaggerfallWorkshop.Game.Utility
                     currY = currPos.Y;
                     xDistance = cartesianVectorToDest[0];
                     yDistance = cartesianVectorToDest[1];
-                    furthestOfXAndY = Math.Max(Math.Abs(xDistance), Math.Abs(yDistance));
+                    int xDistanceAbs = Math.Abs(xDistance);
+                    int yDistanceAbs = Math.Abs(yDistance);
+                    furthestOfXAndY = Math.Max(xDistanceAbs, yDistanceAbs);
+
+                    //Well I have the slope through getting their distaance right?
+
+
+                    //Then move along slope.
 
                     xDirection = 0;
                     yDirection = 0;
                     // Determine whether to increment or decrement x and y
 
                     // Should we increase or decrease x to get to destination's x?
-                    if(cartesianVectorToDest[0] > 0)
+                    if(cartesianVectorToDest[0] >= 0)
                     {
                         xDirection = 1;
-                    } else if (cartesianVectorToDest[0] < 0)
+                    } else 
                     {
                         xDirection = -1;
                     }
                     // Should we increase or decrease y to get to destination's y?
-                    if (cartesianVectorToDest[1] > 0)
+                    if (cartesianVectorToDest[1] >= 0)
                     {
                         yDirection = 1;
                     }
@@ -184,32 +194,41 @@ namespace DaggerfallWorkshop.Game.Utility
 
                     // If we've moved as many pixels as is along the furthest vector
                     // component, then we've completely followed the vector
-                    //Logically sound, but looking at same ocean pixels from each new end point.
                     numMovements = 0;
+                    int shorterOfXAndYDistanceIncrementer = 0;
                     while (numMovements < furthestOfXAndY)
                     {
                         numMovements++;
+
+
+                        //Put back to ours / rethink it.
+                        //So instead of incrementing like this, increment along slope
+                        //cause right now is diagonal then straight. Atm, put in their implementation to see difference.
+                        //changing angle increment made it no longer cross ocean, but the big shoot up still happens without the bounding.
                         if (xDistance == furthestOfXAndY)
                         {
                             currX += xDirection;
-                            if (currY != currPos.Y + yDistance)
+                            shorterOfXAndYDistanceIncrementer += yDistanceAbs;
+
+                            if (shorterOfXAndYDistanceIncrementer >= xDistanceAbs)
                             {
+                                shorterOfXAndYDistanceIncrementer -= xDistanceAbs;
                                 currY += yDirection;
                             }
+
                         }
                         else
                         {
                             currY += yDirection;
-                            if (currX != currPos.X + xDistance)
+                            shorterOfXAndYDistanceIncrementer += xDistanceAbs;
+
+                            if (shorterOfXAndYDistanceIncrementer >= yDistanceAbs)
                             {
+                                shorterOfXAndYDistanceIncrementer -= yDistanceAbs;
                                 currX += xDirection;
                             }
+
                         }
-
-
-                        //This was two different loops of similar stuff before.
-
-                        //That might be neccessarry.
 
 
                         // If we've reached our original destination, all necessary legs are computed
@@ -253,6 +272,8 @@ namespace DaggerfallWorkshop.Game.Utility
                         //Negative distance makes sense, but should not be more in magnitude than current position when origin is 0,0
                         cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
                         cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
+
+                        
                     }
                     else
                     {
@@ -271,12 +292,11 @@ namespace DaggerfallWorkshop.Game.Utility
                 //But then add on the potentialy too large magnitude anyway.
                 //Cause current x and current y is what we're travelling to and is kept in bounds.
 
-                currX = Math.Max(MapsFile.MinMapPixelX, Math.Min(MapsFile.MaxMapPixelX - 1, currX));
-                currY = Math.Max(MapsFile.MinMapPixelY, Math.Min(MapsFile.MaxMapPixelY - 1, currY));
-
+                currX = Math.Min(MapsFile.MaxMapPixelX - 1, currX);
+                currY = Math.Min(MapsFile.MaxMapPixelY - 1, currY);
 
                 currPos.X = currX;
-                currPos.Y = currY;
+                currPos.Y = currY;  
 
                 
 
@@ -429,11 +449,10 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 int terrainMovementIndex = 0;
                 int terrain = mapsFile.GetClimateIndex(playerXMapPixel, playerYMapPixel);
-
-                //Need to update this so doesn't just do direct distance from point A to point B, but considers travelling around the coast.
-                //not through the ocean.
+                
                 if (terrain == (int)MapsFile.Climates.Ocean)
                 {
+                    //After going through our algo it shouldn't do this anymore.
                     Debug.LogError("ocean");
                     //So instead of just increasing time if ocean tile, should redirect to a new path.
                     ++pixelsTraveledOnOcean;
