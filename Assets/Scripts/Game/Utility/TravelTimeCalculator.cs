@@ -142,7 +142,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 //  const double angleIncrement = 0.0872665; // 5 degrees in radians
                // const double angleIncrement = 0.0174533; //1 degree in radians, makes it so doesn't actually cross ocean, so angle is off.
-                if (currPos.Y < destination.Y) // Counter-clockwise (ocean is below)
+                if (currPos.Y > destination.Y) // Counter-clockwise (ocean is below)
                 {
                     angleSign = 1;
                 }
@@ -270,16 +270,10 @@ namespace DaggerfallWorkshop.Game.Utility
                             break;
                         }
 
-                        //Should be adding both offsets each time, maybe this is issue.
-                        //I mean, fuck man it still hit destination.
-                        if (currPos.X != pixelDestination.X)
-                        {
-                            currX += reducedSlope[1];
-                        }
-                        else if (currPos.Y != pixelDestination.Y)
-                        {
-                            currY += reducedSlope[0];
-                        }
+                       
+                        currX += reducedSlope[1];
+
+                        currY += reducedSlope[0];
 
                     }
 
@@ -314,9 +308,11 @@ namespace DaggerfallWorkshop.Game.Utility
                 //But then add on the potentialy too large magnitude anyway.
                 //Cause current x and current y is what we're travelling to and is kept in bounds.
 
-               // currX = Math.Max(MapsFile.MinMapPixelX, Math.Min(MapsFile.MaxMapPixelX - 1, currX));
-               // currY = Math.Max(MapsFile.MinMapPixelY,Math.Min(MapsFile.MaxMapPixelY - 1, currY));
+                // currX = Math.Max(MapsFile.MinMapPixelX, Math.Min(MapsFile.MaxMapPixelX - 1, currX));
+                // currY = Math.Max(MapsFile.MinMapPixelY,Math.Min(MapsFile.MaxMapPixelY - 1, currY));
 
+                currX = Math.Min(currX, currPos.X + xDistance);
+                currY = Math.Min(currY, currPos.Y + yDistance);
                 currPos.X = currX;
                 currPos.Y = currY;  
 
