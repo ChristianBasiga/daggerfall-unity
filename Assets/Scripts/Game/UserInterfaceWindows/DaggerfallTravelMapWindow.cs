@@ -865,6 +865,16 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             if (position.x < 0 || position.x > regionTextureOverlayPanelRect.width || position.y < 0 || position.y > regionTextureOverlayPanelRect.height) //make sure clicks are inside region texture
                 return;
 
+
+            Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
+
+            DFPosition mapPixel = new DFPosition((int)(position.x - origin.x), (int)(position.y - origin.y));
+            Debug.LogError("pixel " + mapPixel);
+            MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
+
+            Debug.LogError("is ocean " + (mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean));
+
+
             if (RegionSelected == false)
             {
                 if(MouseOverRegion)
@@ -872,6 +882,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
             else if(locationSelected)
             {
+
+
+
+
                 if (FindingLocation)
                     StopIdentify(true);
                 else
