@@ -425,6 +425,24 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         }
 
+        public bool isOnOcean(int pixelX, int pixelY)
+        {
+
+            Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
+
+            DFPosition offset = new DFPosition((int)(pixelX - origin.x), (int)(pixelY - origin.y));
+
+
+            MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
+            
+
+            //Problem is if it's in diff region, offset is wrong, main thing is if and only if in selected region do I check like this?
+            //like the fuck man.
+            return (mapsFile.GetClimateIndex(offset.X, offset.Y) == (int)MapsFile.Climates.Ocean);
+
+
+        }
+
 
         //And it shouldn't redraw
         void DrawPathOfTravel()

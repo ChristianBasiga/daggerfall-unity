@@ -1,9 +1,30 @@
 [
     {
+        "FileName": "encountersyncing",
+        "Title": "EncounterSyncing",
+        "Enabled": true,
+        "LoadPriority": 0,
+        "HasSettings": false
+    },
+    {
         "FileName": "randomencountermod",
         "Title": "RandomEncounterMod",
         "Enabled": true,
         "LoadPriority": 0,
+        "HasSettings": false
+    },
+    {
+        "FileName": "randomencountermod_trigger",
+        "Title": "RandomEncounterMod_Trigger",
+        "Enabled": true,
+        "LoadPriority": 2,
+        "HasSettings": false
+    },
+    {
+        "FileName": "travelinterrupt",
+        "Title": "TravelInterrupt",
+        "Enabled": true,
+        "LoadPriority": 3,
         "HasSettings": false
     }
 ]
