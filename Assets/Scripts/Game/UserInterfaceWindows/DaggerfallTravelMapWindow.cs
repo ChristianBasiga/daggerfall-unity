@@ -460,7 +460,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 //Debug.LogError(string.Format("Width : {0} Height: {1}", width, height));
 
                 //Only draw stuff not in ocean, so in a region.
-                    Debug.LogError(string.Format("Origin: {0}, {1}", origin.x, origin.y));
 
                     int offSetX = (int)(pos.X - origin.x);
                     int offSetY = (int)(pos.Y - origin.y);

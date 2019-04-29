@@ -78,10 +78,10 @@ namespace DaggerfallWorkshop.Game.Utility
         public int getGCD(int a, int b)
         {
 
-            if (b == 0)
-                return a;
+            if (a == 0)
+                return b;
 
-            return getGCD(b, a % b);
+            return getGCD(b % a, a);
         }
 
         public int[] getReducedFraction(int numer, int denom)
@@ -234,40 +234,44 @@ namespace DaggerfallWorkshop.Game.Utility
                     //This is probably the problem, it's going for too long maybe? I mean it gets to destination so maybe not
                     //and prob does go too much but that is fixed by the bounding.
 
-                    
-                    while (true)
+                    /*
+                     * We want to verify if we've followed the path of travel all the way
+                     * to its magnitude. However, if the distance in x or y is negative,
+                     * we can't do a currX < currPos.X + xDistance check; we'd have to inverse
+                     * it. Therefore, we add these ifs so that in the case that x or y distance
+                     * is negative, we flip the sign of currX and / or currY so that it properly
+                     * checks if curr is *less* than currPos + distance if distance is negative.
+                     */
+                    int xModifier = 1;
+                    int yModifier = 1;
+                    if(xDistance < 0)
                     {
-
-                      
-                        
+                        xModifier = -1;
+                    }
+                    if(yDistance < 0)
+                    {
+                        yModifier = -1;
+                    }
+                    while ((currX * xModifier) < currPos.X + xDistance && (currY * yModifier) < currPos.Y + yDistance)
+                    {
                         //Convert from world back to pixel to check if ocean.
                         //Still not accurate, it should be going past ocean, yet it does not process that it is?
                         //When offset pixels directly it does it correctly,
                         DFPosition mapPixel = MapsFile.WorldCoordToMapPixel(currX, currY);
-                        if (prevPixel.X != mapPixel.X || prevPixel.Y != mapPixel.Y)
-                        {
-                            Debug.LogErrorFormat("prev: {0} current: {1}", prevPixel.ToString(), mapPixel.ToString());
-
-                        }
                         if (Math.Abs(mapPixel.X - prevPixel.X) > maxDifference || Math.Abs(mapPixel.Y - prevPixel.Y) > maxDifference)
                         {
-
                             Debug.LogError("Moved more than one pixel at time");
                             //This is problem.
-
                         }
                         prevPixel = mapPixel;
                         // If we've reached our original destination, all necessary legs are computed
                         if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
                         {
-
-
                            //True test is if it moves more than one pixel at a time.
                             
-                            //rise = currY - prevY;
+                           //rise = currY - prevY;
 
-                            if (!crossesOcean) 
-                               isAtDestination = true;
+                           isAtDestination = true;
 
                             break;
                         }
@@ -283,9 +287,11 @@ namespace DaggerfallWorkshop.Game.Utility
 
                         // If we've made it this far, we have yet to cross the ocean
                         crossesOcean = false;
-                        // If out of bounds, backtrack a bit to get a point that's in bounds
+                        // If out of bounds, backtrack one slope increment to get a point that's in bounds
                         if (currX >= MapsFile.MaxWorldCoordX || currY >= MapsFile.MaxWorldCoordZ || currX < MapsFile.MinWorldCoordX || currY < MapsFile.MinWorldCoordZ)
                         {
+                            currX -= reducedSlope[1];
+                            currY -= reducedSlope[0];
                             break;
                         }
 
@@ -301,14 +307,11 @@ namespace DaggerfallWorkshop.Game.Utility
                     if (crossesOcean)
                     {
                         polarVectorToDest[1] += angleSign * angleIncrement;
-
                        
                         //Issue is getting back distance that's too big in magnitude that it doesn't make sense.
                         //Negative distance makes sense, but should not be more in magnitude than current position when origin is 0,0
                         cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
                         cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
-
-                        
                     }
                     else
                     {
@@ -330,7 +333,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 // currX = Math.Max(MapsFile.MinMapPixelX, Math.Min(MapsFile.MaxMapPixelX - 1, currX));
                 // currY = Math.Max(MapsFile.MinMapPixelY,Math.Min(MapsFile.MaxMapPixelY - 1, currY));
 
-                if (xDistance > 0)
+                /*if (xDistance > 0)
                     currX = Math.Min(currX, currPos.X + xDistance);
                 else
                     currX = Math.Max(currX, currPos.X + xDistance);
@@ -338,7 +341,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 if (yDistance > 0)
                     currY = Math.Min(currY, currPos.Y + yDistance);
                 else
-                    currY = Math.Max(currY, currPos.Y + yDistance);
+                    currY = Math.Max(currY, currPos.Y + yDistance);*/
 
                 currPos.X = currX;
                 currPos.Y = currY;  
