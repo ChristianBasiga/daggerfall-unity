@@ -289,10 +289,12 @@ namespace DaggerfallWorkshop.Game.Utility
 
                     while (currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y +  yDistance)
                     {
-                        //Convert from world back to pixel to check if ocean.
-                        //Still not accurate, it should be going past ocean, yet it does not process that it is?
-                        //When offset pixels directly it does it correctly,
+                        currX += reducedSlope[1];
+                        currY += reducedSlope[0];
                         DFPosition mapPixel = MapsFile.WorldCoordToMapPixel(currX, currY);
+
+                        //Debug.LogErrorFormat("We are at map pixel {0}, {1} and we're going for map pixel {2}, {3}",
+                            //mapPixel.X, mapPixel.Y, pixelDestination.X, pixelDestination.Y);
 
                         if (Math.Abs(mapPixel.X - prevPixel.X) > maxDifference || Math.Abs(mapPixel.Y - prevPixel.Y) > maxDifference)
                         {
@@ -300,16 +302,7 @@ namespace DaggerfallWorkshop.Game.Utility
                             //This is problem.
                         }
                         prevPixel = mapPixel;
-                        // If we've reached our original destination, all necessary legs are computed
-                        if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
-                        {
-                           //True test is if it moves more than one pixel at a time.
-                            
-                           //rise = currY - prevY;
-                           isAtDestination = true;
-
-                            break;
-                        }
+                        
                         // If ocean, invalid vector, time to modify
                         //It's still not seeing ocean towards the end.
                         //    if (DaggerfallUI.Instance.DfTravelMapWindow.isOnOcean(mapPixel.X, mapPixel.Y))
@@ -331,11 +324,19 @@ namespace DaggerfallWorkshop.Game.Utility
                             break;
                         }
 
-                        currX += reducedSlope[1];
-                        currY += reducedSlope[0];
+                        // If we've reached our original destination, all necessary legs are computed
+                        if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
+                        {
+                            //True test is if it moves more than one pixel at a time.
+
+                            //rise = currY - prevY;
+                            isAtDestination = true;
+
+                            break;
+                        }
                         //path.Add(mapPixel);
-                      //  if (!path.Contains(mapPixel)) {
-                          //  path.Add(mapPixel);
+                        //  if (!path.Contains(mapPixel)) {
+                        //  path.Add(mapPixel);
                         // }
 
                     }
