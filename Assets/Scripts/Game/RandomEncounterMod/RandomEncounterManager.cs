@@ -461,7 +461,6 @@ namespace DaggerfallRandomEncountersMod
         // Update is called once per frame
         void Update()
         {
-            Debug.LogError(DaggerfallUI.Instance.UserInterfaceManager.TopWindow.ToString());
             
             if ((GameManager.Instance.StateManager.GameInProgress && GameManager.Instance.StateManager.CurrentState != StateManager.StateTypes.UI) ||
                 DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
