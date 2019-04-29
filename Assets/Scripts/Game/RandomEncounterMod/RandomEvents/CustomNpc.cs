@@ -68,7 +68,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         {
            
             warning = "You hear the displeased voices of the masses!?";
-            createQuestNPC(SiteTypes.None,);
+            //createQuestNPC(SiteTypes.None,);
             //GameObjectHelper.AddQuestNPC();
 
             

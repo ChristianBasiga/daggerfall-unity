@@ -199,6 +199,11 @@ namespace DaggerfallWorkshop.Game.Questing
                         }
                         socialQuests.Add(questData);
                     }
+                    //If group does not exist proceed
+                    else if(questData.group == null)
+                    {
+                        init.Add(questData);
+                    }
                     // Is this a quest initialised when a new game is started?
                     else if (questData.group == InitAtGameStart)
                     {

@@ -491,6 +491,7 @@ namespace DaggerfallWorkshop.Game.Questing
         {
             string[] source = new string[0];
 
+            Debug.LogError(string.Format("Quest name : {0}", questName));
             // Append extension if not present
             if (!questName.EndsWith(".txt"))
                 questName += ".txt";

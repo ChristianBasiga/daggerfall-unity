@@ -3,34 +3,47 @@ DisplayName: JayH Is Helping Me
 QRC:
 
 QuestorOffer:  [1000]
-<ce>          Go find _kid_.
+<ce>          You must find the evil _kid_.
 
 RefuseQuest:  [1001]
-<ce>          Don't be like that, %pcn.
+<ce>          Rationale waits for none, %pcn.
 
 AcceptQuest:  [1002]
 <ce>          _kid_'s in _somewhere_.
 
 QuestFail:  [1003]
-<ce>               Just ridiculous.
+<ce>               Foolish disposition!
 
 QuestComplete:  [1004]
-<ce>                Good job.
+<ce>                Welcome to our cult of software!
 
 RumorsDuringQuest:  [1005]
 Hello class of Software Engineering Methods 2! 
 
 RumorsPostfailure: [1006]
-Failure of a hero?
+Failure of a programmer?
 
 RumorsPostsuccess: [1007]
-The hero is born!?
+The programmer is born!?
 
 QuestorPostsuccess: [1008]
-Truly heroic spirit!
+Truly a great programming spirit!
 
 QuestorPostfailure: [1009]
-Vanish from my eyes!
+Go back to debugging!
+
+Message:  1020
+<ce>             Sprint 3 predestined for greatness!
+<ce>             
+<ce>             Will you take _kid_ with you?
+
+Message:  1021
+<ce>             This sprint is progressing well you rotten
+<ce>               %ra. Escort us now!
+
+Message:  1022
+<ce>             What amazing technical prowess you have.
+<ce>              This script is in progress?
 
 QBN:
 Item _reward_ gold range 10 to 15
@@ -44,12 +57,34 @@ Place _somewhere_ local random
 
 --	Quest start-up:
 	start timer _timer_
-	Place foe _enemy_ at _guild_
+	place npc _kid_ at _somewhere_
 	
-_mondead_ task:
-	killed 1 _enemy_
+_take_ task:
+          clicked npc _kid_
+          prompt 1020 yes _accompany_ no _stay_
+          clear task _take_
+		  
+_accompany_ task:
+	say 1021
+           hide npc _kid_
+           add _kid_ face
+		   
+_stay_ task:
+          say 1022
+          clear task _stay_
+	
+_qgclicked_ task:
+	clicked npc _questgiver_
+
+_pcgetsgold_ task:
+	when _qgclicked_ and _accompany_
+   drop _kid_ face
 	give pc _reward_
-	end quest
-	
+	end quest 
+
+_clearclick_ task:
+	when _qgclicked_ and not _accompany_ 
+	clear _qgclicked_ _clearclick_ 
+
 _timer_ task:
 	end quest
