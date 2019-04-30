@@ -125,10 +125,12 @@ namespace DaggerfallWorkshop.Game.Utility
             DFPosition pixelDestination = destination;
             destination = MapsFile.MapPixelToWorldCoord(destination.X, destination.Y);
 
+            List<DFPosition> subPath = new List<DFPosition>();
 
 
 
             // Continually modifies vectors based on currPlayerPosition until an acceptable path is reached
+            //If reduce is literally just halving it, it's not enough, that's why finished so fast, sometimes just 3 too, etc.
             while (!isAtDestination)
             {
 
@@ -139,14 +141,12 @@ namespace DaggerfallWorkshop.Game.Utility
                 // Optimize angle modification to make deviations hug the coastline
                 // as much as possible
                 int angleSign = 0;
-             //    const double angleIncrement = 0.610865; // 20 degrees in radians, 35
-                //const double angleIncrement = 0.523599;//30
-                // const double angleIncrement = 0.00174533;
+            
                  const double angleIncrement = 0.0872665; // 5 degrees in radians
                ///  const double angleIncrement = 1.745329e-5; //1 degree in radians, makes it so doesn't actually cross ocean, so angle is off.
-                if (currPos.Y < destination.Y) // Counter-clockwise (ocean is below)
+                if (currPos.Y > destination.Y) // Counter-clockwise (ocean is below)
                 {
-                    angleSign = 1;
+                    angleSign = -1;
                 }
                 else if (currPos.Y == destination.Y) // Depends on map zone
                 {
@@ -154,7 +154,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 }
                 else // Clockwise (ocean is above)
                 {
-                    angleSign = -1;
+                    angleSign = 1;
                 }
 
                 double[] polarVectorToDest;
@@ -167,6 +167,9 @@ namespace DaggerfallWorkshop.Game.Utility
                     polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
                 }
 
+
+
+                int magnitudePrev = (int)polarVectorToDest[0];
 
 
                 // Variables used to follow along path of vector
@@ -191,15 +194,12 @@ namespace DaggerfallWorkshop.Game.Utility
               
                 bool crossesOcean = true;
 
-            
-
-                
-
                 while (true)
                 {
                     // Verify if ocean is crossed
 
                     //Cartesian updated, but not current pos
+                  
                     currX = currPos.X;
                     currY = currPos.Y;
                     Debug.LogErrorFormat("curr x {0}, curr y {1}", currX, currY);
@@ -210,60 +210,60 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
+                    magnitudePrev = (int)polarVectorToDest[0];
+
+
+
                     xDistance = cartesianVectorToDest[0];
                     yDistance = cartesianVectorToDest[1];
-
-                    if (xDistance == 0 && yDistance == 0)
-                    {
-                        isAtDestination = true;
-                        break;
-                    }
-                    //Well I have the slope through getting their distaance right?
-
-                   
-                    // If we've moved as many pixels as is along the furthest vector
-                    // component, then we've completely followed the vector
-
-                    //SO at this point instead of further and short stuff, get slope and reduce it via gcd.
 
 
 
                     //Get slope.
                     int rise = yDistance;
                     int run = xDistance;
-                    int[] reducedSlope = new int[2];
+                    int[] reducedSlope = getReducedFraction(rise, run);
 
-                    //0:rise, 1: run
+                    if (rise == reducedSlope[0])
+                    {
+                        //If couldn't reduce
+                        if (rise < 0)
+                            reducedSlope[0] = 1;
+                        else
+                            reducedSlope[0] = -1;
 
-                    /*
-                    if (run == 0) {
-
-                        reducedSlope[1] = 0;
-                        reducedSlope[0] = 1;
                     }
-
                     if (rise == 0)
                     {
-
                         reducedSlope[0] = 0;
-                        reducedSlope[1] = 1;
                     }
-                    */
+                    if (run == reducedSlope[1])
+                    {
 
-                //    if (run != 0 && rise != 0)
-                    reducedSlope = getReducedFraction(rise, run);
+                        if (run < 0)
+                            reducedSlope[1] = 1;
+                        else
+                            reducedSlope[1] = -1;
+
+                    }
+                    if (run == 0)
+                    {
+                        reducedSlope[1] = 0;
+                    }
 
 
-                    //What should I do if reduced was same as rise and run? What should the increment then be?
 
+                    //If couldn't reduce
+                    if (rise < 0)
+                        reducedSlope[0] = 1;
+                    else
+                        reducedSlope[0] = -1;
 
+                    if (run < 0)
+                        reducedSlope[1] = 1;
+                    else
+                        reducedSlope[1] = -1;
 
-                    //I essentially want to see amount of multiples of reduced needed to get to non reduced form.
-
-                    //Need to determine the end condition of this now, since not furthest, well will increments of reduction to get to original?
-                    //What should it be? If this is while true, it ends and eventually hits destination, meaning it doesn't ever go through water?
-                    //It going more than it should may be causing it, but the simple fact that it goes through ocean is a problem.
-                    int maxDifference = 1;
                     DFPosition prevPixel =  MapsFile.WorldCoordToMapPixel(currX, currY);
 
 
@@ -287,29 +287,67 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                 
 
-                    while (currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y +  yDistance)
+
+                    while (true)
                     {
+
+                        
+                        if (xDistance < 0 && currX <= currPos.X + xDistance)
+                        {
+                            break;
+                        }
+                        else if (xDistance > 0 && currX >= currPos.X + xDistance)
+                        {
+
+                            //Here it breaks early.
+                            break;
+                        }
+                        else if (yDistance < 0 && currY <= currPos.Y + yDistance)
+                        {
+                            break;
+                        }
+                        else if (yDistance > 0 && currY >= currPos.Y + yDistance)
+                        {
+
+                            break;
+                        }
+                        
+                        //This won't woork because position should never be negative.
+                        //currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y +  yDistance
                         currX += reducedSlope[1];
                         currY += reducedSlope[0];
                         DFPosition mapPixel = MapsFile.WorldCoordToMapPixel(currX, currY);
 
-                        //Debug.LogErrorFormat("We are at map pixel {0}, {1} and we're going for map pixel {2}, {3}",
-                            //mapPixel.X, mapPixel.Y, pixelDestination.X, pixelDestination.Y);
-
-                        if (Math.Abs(mapPixel.X - prevPixel.X) > maxDifference || Math.Abs(mapPixel.Y - prevPixel.Y) > maxDifference)
+                        if (prevPixel.X != mapPixel.X || prevPixel.Y != mapPixel.Y)
                         {
-                            Debug.LogError("Moved more than one pixel at time");
-                            //This is problem.
+                            Debug.LogError("r");
                         }
+                     
                         prevPixel = mapPixel;
-                        
+
+                        bool inSubPath = false;
+
+                        foreach (DFPosition pos in subPath)
+                        {
+                            //if same pixel don't include in subpath.
+                            if (pos.X == mapPixel.X && pos.Y == mapPixel.Y)
+                            {
+                                inSubPath = true;
+                                break;
+                            }
+                        }
+
+                        if (!inSubPath)
+                        {
+                            subPath.Add(new DFPosition(mapPixel.X, mapPixel.Y));
+                        }
+
                         // If ocean, invalid vector, time to modify
                         //It's still not seeing ocean towards the end.
-                        //    if (DaggerfallUI.Instance.DfTravelMapWindow.isOnOcean(mapPixel.X, mapPixel.Y))
+                      //      if (DaggerfallUI.Instance.DfTravelMapWindow.isOnOcean(mapPixel.X, mapPixel.Y))
                         if ((mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean))
                         {
                             //There process catches each ocean pixel, ours doesn't.
-                            Debug.LogError("Hit ocean here");
                             crossesOcean = true;
                             break;
                         }
@@ -321,23 +359,20 @@ namespace DaggerfallWorkshop.Game.Utility
                         {
                             currX -= reducedSlope[1];
                             currY -= reducedSlope[0];
+                            //Does this happen? It shouldn't with current destination.
                             break;
                         }
+
+                       
+
+                       
 
                         // If we've reached our original destination, all necessary legs are computed
                         if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
                         {
-                            //True test is if it moves more than one pixel at a time.
-
-                            //rise = currY - prevY;
                             isAtDestination = true;
-
                             break;
                         }
-                        //path.Add(mapPixel);
-                        //  if (!path.Contains(mapPixel)) {
-                        //  path.Add(mapPixel);
-                        // }
 
                     }
 
@@ -345,6 +380,9 @@ namespace DaggerfallWorkshop.Game.Utility
                     // If not, we can stop looping because we've found a viable solution
                     if (crossesOcean)
                     {
+
+                       
+                        subPath.Clear();
                         polarVectorToDest[1] += angleSign * angleIncrement;
                        
                         //Issue is getting back distance that's too big in magnitude that it doesn't make sense.
@@ -358,42 +396,31 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                 }
 
-                // Convert back to cartesian to obtain our new endpoint, we already did this.
-                // cartesianVectorToDest[0] = (int)(polarVectorToDest[0] * Math.Cos(polarVectorToDest[1]));
-                // cartesianVectorToDest[1] = (int)(polarVectorToDest[0] * Math.Sin(polarVectorToDest[1]));
-
-                //Okay so here we update current position by distance to new end point
-                // Update new endpoint, this is now a node along our journey
-
-                //This might be issue, if what we are subtracting by is too large, we bound it in making steps
-                //But then add on the potentialy too large magnitude anyway.
-                //Cause current x and current y is what we're travelling to and is kept in bounds.
-
-                // currX = Math.Max(MapsFile.MinMapPixelX, Math.Min(MapsFile.MaxMapPixelX - 1, currX));
-                // currY = Math.Max(MapsFile.MinMapPixelY,Math.Min(MapsFile.MaxMapPixelY - 1, currY));
-
-
-         /*       if (xDistance > 0)
-                    currX = Math.Min(currX, currPos.X + xDistance);
-                else
-                    currX = Math.Max(currX, currPos.X + xDistance);
-
-                if (yDistance > 0)
-                    currY = Math.Min(currY, currPos.Y + yDistance);
-                else
-                    currY = Math.Max(currY, currPos.Y + yDistance);*/
+             
                 currPos.X = currX;
                 currPos.Y = currY;
 
 
-                //Only if pixel not already there if for some reason we stop at it again.
-                if (!path.Contains(currPos))
-                path.Add(MapsFile.WorldCoordToMapPixel(currX, currY));
+                //Otherwise add onto the path the sub path.
+                //If no edges needed it does this.
+                foreach (DFPosition pos in subPath)
+                {
+                    path.Add(new DFPosition(pos.X, pos.Y));
+                }
+
+                subPath.Clear();
             }
 
+            //Path count is fucking 2? So like only stores end points for that.
             int totalTravelTime = 0;
             DFPosition prev = GetPlayerTravelPosition();
-
+            //Otherwise add onto the path the sub path.
+            //If no edges needed it does this.
+            foreach (DFPosition pos in subPath)
+            {
+                path.Add(new DFPosition(pos.X, pos.Y));
+            }
+            //Istead of using theirs, use ours to draw the path.
             List<DFPosition> fullPath = new List<DFPosition>();
             if (path.Count != 0)
             {
@@ -404,13 +431,15 @@ namespace DaggerfallWorkshop.Game.Utility
 
                     //To get both time, and pixels in between end points, won't match cause not considering slope in our original.
 
-                    totalTravelTime += CalculateTravelTime(path[i], speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, prev, fullPath);
+                   // totalTravelTime += CalculateTravelTime(path[i], speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, prev, fullPath);
                     prev = path[i];
                 }
-                Debug.LogError(pathToString);
+                //Debug.LogError(pathToString);
             }
 
-            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(fullPath);
+
+
+            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(path);
 
 
             return totalTravelTime;
