@@ -121,9 +121,9 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
             //Converting current position to world coords.
-            currPos = MapsFile.MapPixelToWorldCoord(currPos.X, currPos.Y);
-            DFPosition pixelDestination = destination;
-            destination = MapsFile.MapPixelToWorldCoord(destination.X, destination.Y);
+        //    currPos = MapsFile.MapPixelToWorldCoord(currPos.X, currPos.Y);
+          //  DFPosition pixelDestination = destination;
+          //  destination = MapsFile.MapPixelToWorldCoord(destination.X, destination.Y);
 
             List<DFPosition> subPath = new List<DFPosition>();
 
@@ -164,7 +164,7 @@ namespace DaggerfallWorkshop.Game.Utility
                     polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), (Math.PI / 2) };
                 } else
                 {
-                    polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), Math.Atan(cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
+                    polarVectorToDest = new double[]{Math.Sqrt(Math.Pow(cartesianVectorToDest[0], 2) + Math.Pow(cartesianVectorToDest[1], 2)), Math.Atan((double)cartesianVectorToDest[1] / cartesianVectorToDest[0]) };
                 }
 
 
@@ -218,10 +218,52 @@ namespace DaggerfallWorkshop.Game.Utility
                     yDistance = cartesianVectorToDest[1];
 
 
+                    int run;
+                    double rise = 0;
+                    double originalRise = rise;
+                    if (xDistance == 0)
+                    {
+                        run = 0;
+                    }
+                    else
+                    {
+                        rise = Math.Abs((double)yDistance / xDistance);
 
-                    //Get slope.
-                    int rise = yDistance;
-                    int run = xDistance;
+                        if (yDistance < 0)
+                        {
+
+                            if (rise > 0)
+                            {
+                                rise = -rise;
+                            }
+                        }
+                        else if (yDistance > 0)
+                        {
+
+                            if (rise < 0)
+                            {
+                                rise = -rise;
+                            }
+                        }
+                        
+
+                      //  rise = (yDistance > 0) ? rise : -rise;
+                        originalRise = rise;
+                        run = (xDistance > 0) ? 1 : -1;
+
+                    }
+
+
+                    if (yDistance == 0)
+                    {
+                        rise = 0;
+                    }
+
+                  
+
+
+                    /*
+
                     int[] reducedSlope = getReducedFraction(rise, run);
 
                     if (rise == reducedSlope[0])
@@ -266,7 +308,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
                     DFPosition prevPixel =  MapsFile.WorldCoordToMapPixel(currX, currY);
 
-
+                    */
                     /*
                      * We want to verify if we've followed the path of travel all the way
                      * to its magnitude. However, if the distance in x or y is negative,
@@ -291,6 +333,29 @@ namespace DaggerfallWorkshop.Game.Utility
                     while (true)
                     {
 
+                        if (yDistance < 0) {
+
+                            if (currY < currPos.Y + yDistance)
+                            {
+                                break;
+                            }
+                        }
+                        else if (yDistance > 0)
+                        {
+
+                            if (currY > currPos.Y + yDistance)
+                            {
+                                break;
+                            }
+                        }
+
+
+                        if (xDistance < 0 && currX < currPos.X + xDistance) break;
+
+                        if (xDistance > 0 && currX > currPos.X + xDistance) break;
+
+                        
+                        /*
                         
                         if (xDistance < 0 && currX <= currPos.X + xDistance)
                         {
@@ -310,12 +375,15 @@ namespace DaggerfallWorkshop.Game.Utility
                         {
 
                             break;
-                        }
-                        
+                        }*/
+
                         //This won't woork because position should never be negative.
                         //currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y +  yDistance
-                        currX += reducedSlope[1];
-                        currY += reducedSlope[0];
+                        currX += run;
+                        currY += (int)Math.Round(rise);
+                        rise += originalRise;
+                       // run += run;
+                        /*
                         DFPosition mapPixel = MapsFile.WorldCoordToMapPixel(currX, currY);
 
                         if (prevPixel.X != mapPixel.X || prevPixel.Y != mapPixel.Y)
@@ -324,13 +392,13 @@ namespace DaggerfallWorkshop.Game.Utility
                         }
                      
                         prevPixel = mapPixel;
-
+                        */
                         bool inSubPath = false;
 
                         foreach (DFPosition pos in subPath)
                         {
                             //if same pixel don't include in subpath.
-                            if (pos.X == mapPixel.X && pos.Y == mapPixel.Y)
+                            if (pos.X == currX && pos.Y == currY)
                             {
                                 inSubPath = true;
                                 break;
@@ -339,13 +407,13 @@ namespace DaggerfallWorkshop.Game.Utility
 
                         if (!inSubPath)
                         {
-                            subPath.Add(new DFPosition(mapPixel.X, mapPixel.Y));
+                            subPath.Add(new DFPosition(currX, currY));
                         }
 
                         // If ocean, invalid vector, time to modify
                         //It's still not seeing ocean towards the end.
                       //      if (DaggerfallUI.Instance.DfTravelMapWindow.isOnOcean(mapPixel.X, mapPixel.Y))
-                        if ((mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean))
+                        if ((mapsFile.GetClimateIndex(currX, currY) == (int)MapsFile.Climates.Ocean))
                         {
                             //There process catches each ocean pixel, ours doesn't.
                             crossesOcean = true;
@@ -355,10 +423,10 @@ namespace DaggerfallWorkshop.Game.Utility
                         // If we've made it this far, we have yet to cross the ocean
                         crossesOcean = false;
                         // If out of bounds, backtrack one slope increment to get a point that's in bounds
-                        if (currX >= MapsFile.MaxWorldCoordX || currY >= MapsFile.MaxWorldCoordZ || currX < MapsFile.MinWorldCoordX || currY < MapsFile.MinWorldCoordZ)
+                        if (currX >= MapsFile.MaxMapPixelX || currY >= MapsFile.MaxMapPixelY || currX < MapsFile.MinMapPixelX || currY < MapsFile.MinMapPixelY)
                         {
-                            currX -= reducedSlope[1];
-                            currY -= reducedSlope[0];
+                            currX -= run;
+                            currY -= (int)Math.Round(rise - rise);
                             //Does this happen? It shouldn't with current destination.
                             break;
                         }
@@ -368,7 +436,7 @@ namespace DaggerfallWorkshop.Game.Utility
                        
 
                         // If we've reached our original destination, all necessary legs are computed
-                        if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
+                        if (currX == destination.X && currY == destination.Y)
                         {
                             isAtDestination = true;
                             break;
