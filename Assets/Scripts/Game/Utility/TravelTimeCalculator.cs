@@ -119,6 +119,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
+            bool rerouted = false;
 
             //Converting current position to world coords.
             currPos = MapsFile.MapPixelToWorldCoord(currPos.X, currPos.Y);
@@ -222,47 +223,48 @@ namespace DaggerfallWorkshop.Game.Utility
                     //Get slope.
                     int rise = yDistance;
                     int run = xDistance;
-                    int[] reducedSlope = getReducedFraction(rise, run);
 
-                    if (rise == reducedSlope[0])
-                    {
-                        //If couldn't reduce
-                        if (rise < 0)
-                            reducedSlope[0] = 1;
-                        else
-                            reducedSlope[0] = -1;
+                    //What if gcd is 2...meaning only half, so incrementing by that much skips many pixels
+                    //hmm, idk how to proceed with this.
+                    int[] reducedSlope = new int[2];
 
-                    }
+
+                  
                     if (rise == 0)
                     {
                         reducedSlope[0] = 0;
                     }
-                    if (run == reducedSlope[1])
-                    {
 
-                        if (run < 0)
-                            reducedSlope[1] = 1;
-                        else
-                            reducedSlope[1] = -1;
-
-                    }
                     if (run == 0)
                     {
                         reducedSlope[1] = 0;
                     }
-
-
-
-                    //If couldn't reduce
-                    if (rise < 0)
-                        reducedSlope[0] = 1;
                     else
-                        reducedSlope[0] = -1;
+                    {
 
-                    if (run < 0)
-                        reducedSlope[1] = 1;
-                    else
-                        reducedSlope[1] = -1;
+                        reducedSlope = getReducedFraction(rise, run);
+
+                        if (run == reducedSlope[1])
+                        {
+
+                            if (run < 0)
+                                reducedSlope[1] = 1;
+                            else
+                                reducedSlope[1] = -1;
+
+                        }
+
+                        if (rise == reducedSlope[0])
+                        {
+                            if (rise < 0)
+                                reducedSlope[0] = 1;
+                            else
+                                reducedSlope[0] = -1;
+
+                        }
+                    }
+
+                    
 
                     DFPosition prevPixel =  MapsFile.WorldCoordToMapPixel(currX, currY);
 
@@ -299,7 +301,6 @@ namespace DaggerfallWorkshop.Game.Utility
                         else if (xDistance > 0 && currX >= currPos.X + xDistance)
                         {
 
-                            //Here it breaks early.
                             break;
                         }
                         else if (yDistance < 0 && currY <= currPos.Y + yDistance)
@@ -314,6 +315,8 @@ namespace DaggerfallWorkshop.Game.Utility
                         
                         //This won't woork because position should never be negative.
                         //currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y +  yDistance
+
+                        //What if somehow reduce the slope 1 or -1, depending on if range goes past a map pixel
                         currX += reducedSlope[1];
                         currY += reducedSlope[0];
                         DFPosition mapPixel = MapsFile.WorldCoordToMapPixel(currX, currY);
@@ -322,6 +325,13 @@ namespace DaggerfallWorkshop.Game.Utility
                         {
                             Debug.LogError("r");
                         }
+
+                        if (Math.Abs(prevPixel.X - mapPixel.X) > 1 || Math.Abs(prevPixel.Y - mapPixel.Y) > 1)
+                        {
+
+                            Debug.LogError("Moved more than one pixel at time");
+                        }
+                        
                      
                         prevPixel = mapPixel;
 
@@ -345,12 +355,19 @@ namespace DaggerfallWorkshop.Game.Utility
                         // If ocean, invalid vector, time to modify
                         //It's still not seeing ocean towards the end.
                       //      if (DaggerfallUI.Instance.DfTravelMapWindow.isOnOcean(mapPixel.X, mapPixel.Y))
-                        if ((mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean))
+
+                        //Well my question answered on why ocean not matched is because of huge jump in curr x and curr y if reduced slope not small enough.
+                        if ((mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean) || (mapsFile.GetClimateIndex(mapPixel.X - reducedSlope[1], mapPixel.Y) == (int)MapsFile.Climates.Ocean) ||
+                             (mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y - reducedSlope[0]) == (int)MapsFile.Climates.Ocean))
+                          
                         {
-                            //There process catches each ocean pixel, ours doesn't.
-                            crossesOcean = true;
+
+
+                                //There process catches each ocean pixel, ours doesn't.
+                                crossesOcean = true;
                             break;
                         }
+                        
 
                         // If we've made it this far, we have yet to cross the ocean
                         crossesOcean = false;
@@ -380,8 +397,10 @@ namespace DaggerfallWorkshop.Game.Utility
                     // If not, we can stop looping because we've found a viable solution
                     if (crossesOcean)
                     {
+                        rerouted = true;
 
-                       
+
+
                         subPath.Clear();
                         polarVectorToDest[1] += angleSign * angleIncrement;
                        
@@ -410,10 +429,93 @@ namespace DaggerfallWorkshop.Game.Utility
 
                 subPath.Clear();
             }
-
-            //Path count is fucking 2? So like only stores end points for that.
-            int totalTravelTime = 0;
             DFPosition prev = GetPlayerTravelPosition();
+            List<DFPosition> fullPath = new List<DFPosition>();
+
+
+            //Then with path if ocean was ever hit, need to create paths with slope from point A to Ai
+            if (rerouted)
+            {
+
+
+                //Cause moving along slope in main loop makes it travel correct direction but reduced slope may still be too big, so doing same proces form point to point
+                foreach (DFPosition pos in path)
+                {
+                    fullPath.Add(prev);
+
+                    DFPosition currentWorldCoords = MapsFile.MapPixelToWorldCoord(pos.X, pos.Y);
+
+                    DFPosition prevWorldCoords = MapsFile.MapPixelToWorldCoord(prev.X, prev.Y);
+
+                    int rise = currentWorldCoords.Y - prevWorldCoords.Y;
+
+                    int run = currentWorldCoords.X - prevWorldCoords.X;
+
+                    int[] slope;
+                    if (run != 0)
+                    {
+
+                        slope = getReducedFraction(rise, run);
+
+                        
+                    }
+                    else
+                    {
+                        slope = new int[2];
+                        slope[1] = 0;
+                        slope[0] = (rise < 0) ? -1 : (rise == 0) ? 0 : 1;
+
+                    }
+
+
+                    bool hitEndPoint = false;
+
+
+                    int currX = prevWorldCoords.X;
+                    int currY = prevWorldCoords.Y;
+
+                    while (!hitEndPoint)
+                    {
+
+                        currX += slope[1];
+                        currY += slope[0];
+
+                        DFPosition offsetPixel = MapsFile.WorldCoordToMapPixel(currX, currY);
+
+                        fullPath.Add(offsetPixel);
+
+                        if ((mapsFile.GetClimateIndex(offsetPixel.X, offsetPixel.Y) == (int)MapsFile.Climates.Ocean))
+                        {
+                            //Then... fuck lol repeat same process aka end points aren't real, same problem.
+
+                        }
+                        else if (offsetPixel.X == pos.X && offsetPixel.Y == pos.Y)
+                        {
+                            hitEndPoint = true;
+                        }
+
+                      
+
+                    }
+
+
+                    //Sets new prev for connecting next endpoints.
+                    prev = pos;
+                }
+
+            }
+            else
+            {
+
+                fullPath = path;
+                fullPath.Add(prev);
+
+                
+            }
+
+            
+            int totalTravelTime = 0;
+            /*
             //Otherwise add onto the path the sub path.
             //If no edges needed it does this.
             foreach (DFPosition pos in subPath)
@@ -436,10 +538,11 @@ namespace DaggerfallWorkshop.Game.Utility
                 }
                 //Debug.LogError(pathToString);
             }
+            */
 
 
 
-            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(path);
+            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(fullPath);
 
 
             return totalTravelTime;
