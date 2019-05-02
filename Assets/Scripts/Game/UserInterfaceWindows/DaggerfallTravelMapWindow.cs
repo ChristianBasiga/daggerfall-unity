@@ -54,7 +54,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
 
 
-        List<DFPosition> pathToDraw;
+        LinkedList<DFPosition> pathToDraw;
         bool drawingPath = false;
 
         DaggerfallTravelPopUp popUp;
@@ -416,7 +416,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         #endregion
 
 
-        public void DrawPathOfTravel(List<DFPosition> path)
+        public void DrawPathOfTravel(LinkedList<DFPosition> path)
         {
 
             drawingPath = true;
@@ -886,10 +886,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
 
             DFPosition mapPixel = new DFPosition((int)(position.x - origin.x), (int)(position.y - origin.y));
-            Debug.LogError("pixel " + mapPixel);
+         //   Debug.LogError("pixel " + mapPixel);
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
 
-            Debug.LogError("is ocean " + (mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean));
+       //     Debug.LogError("is ocean " + (mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean));
 
 
             if (RegionSelected == false)
