@@ -282,8 +282,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 //I'm already given time, change nothing here, just change what this value is assigned.
                 countdownValueTravelTimeDays--;
                 int toDisplay = countdownValueTravelTimeDays;
-                Debug.LogError("interrupt days taken " + travelTimeCalculator.Interrupt.daysTaken);
-                Debug.LogError("days taken so far " + countdownValueTravelTimeDays);
+
                 if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays ==  totalTravelTimeDays - travelTimeCalculator.Interrupt.daysTaken)
                 {
                     countdownValueTravelTimeDays = 0;
@@ -334,7 +333,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
             else
             {
-                Debug.LogError("Here");
+
                 GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
 
             }

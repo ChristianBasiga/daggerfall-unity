@@ -297,6 +297,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public override void OnPop()
         {
             base.OnPop();
+        //    drawingPath = false;
+         //   pathToDraw = null;
             teleportationTravel = false;
             findingLocation = false;
             gotoLocation = null;
@@ -492,7 +494,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
                     //Hmm I actually don't have that ocean check anymore.
                     //Prob not inside pixel buffer?
-              //      if (pixelIndex < height * width)
+                    if (pixelIndex < height * width)
                         pixelBuffer[pixelIndex] = identifyFlashColor;
             }
         }
@@ -889,10 +891,13 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
 
             DFPosition mapPixel = new DFPosition((int)(position.x - origin.x), (int)(position.y - origin.y));
-         //   Debug.LogError("pixel " + mapPixel);
+
+            //Uncommenting so can know threshhold.
+            Debug.LogError("pixel " + mapPixel);
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
 
-       //     Debug.LogError("is ocean " + (mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean));
+            Debug.LogError("is ocean " + (mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean));
+            Debug.LogError("is ocean via vector2 " + (mapsFile.GetClimateIndex((int)position.x, (int)position.y) == (int)MapsFile.Climates.Ocean));
 
 
             if (RegionSelected == false)
@@ -917,6 +922,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         void ExitButtonClickHandler(BaseScreenComponent sender, Vector2 position)
         {
+         //   pathToDraw = null;
+       //     drawingPath = false;
+
             CloseTravelWindows();
         }
 
@@ -1161,6 +1169,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             if (zoom)
             {
+                Debug.LogError("Zoomed");
                 results.x = (int)Math.Floor(pos.x / zoomfactor + zoomOffset.x + origin.x);
                 float diffy = height / zoomfactor - pos.y;
                 results.y = (int)Math.Floor(height - pos.y / zoomfactor - zoomOffset.y - diffy + origin.y);
@@ -1584,6 +1593,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         void CreatePopUpWindow()
         {
             DFPosition pos = MapsFile.GetPixelFromPixelID(locationSummary.ID);
+            
+            drawingPath = false;
+            pathToDraw = null;
+
             if (teleportationTravel)
             {
                 DaggerfallTeleportPopUp telePopup = new DaggerfallTeleportPopUp(DaggerfallUI.UIManager, DaggerfallUI.UIManager.TopWindow, this);

@@ -304,13 +304,11 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
-            int transportModifier = 0;
+            int transportModifier = 256;
             if (hasHorse)
                 transportModifier = 128;
             else if (hasCart)
                 transportModifier = 192;
-            else
-                transportModifier = 256;
 
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
             DFPosition nodeEndpoint; // The final position of a leg of travel
@@ -346,7 +344,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
             LinkedList<DFPosition> subPath = new LinkedList<DFPosition>();
 
-            const double angleIncrement = 0.0436332; // 5 degrees in radians
+            const double angleIncrement = 0.0523599;// 3 degrees 0.0436332; // 5 degrees in radians
 
 
             // Continually modifies vectors based on currPlayerPosition until an acceptable path is reached
@@ -361,21 +359,31 @@ namespace DaggerfallWorkshop.Game.Utility
                 // Optimize angle modification to make deviations hug the coastline
                 // as much as possible
                 int angleSign = 0;
-            
+
+
+
+
+                //This may change over time.
+
                ///  const double angleIncrement = 1.745329e-5; //1 degree in radians, makes it so doesn't actually cross ocean, so angle is off.
                 if (currPos.Y > destination.Y) // Counter-clockwise (ocean is below)
                 {
-                    angleSign = 1;
+                    //On way back to daggerfall region this should be happenning, which may be too much?
+                    angleSign = -1;
                 }
                 else if (currPos.Y == destination.Y) // Depends on map zone
                 {
+                    //Oh it may this case actually.
                     // ToDo
+                    Debug.LogError("This is happening");
                 }
                 else // Clockwise (ocean is above)
                 {
                     angleSign = -1;
                 }
 
+
+          //      angleSign = -1;
 
                 double[] polarVectorToDest;
                 // Convert to polar to easily modify direction of vector
@@ -429,16 +437,28 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
                     int run = 1;
-                    double rise = 0;
+                    double rise = 1;
 
 
                     if (xDistance == 0)
                     {
                         run = 0;
+
                     }
                     else
                     {
                         rise = Math.Abs(((double)yDistance / xDistance));
+
+                        Debug.LogErrorFormat("rise: {0}, yDistance: {1}, xDistance:{2}", rise, yDistance, xDistance);
+
+                        //If rise essentially same as yDistance, then make rise just 1, so draws each one.
+                        if (rise != 0 && (int)Math.Round(rise) == Math.Abs(yDistance))
+                        {
+                            Debug.LogError("Here cause x distance approaches 0, maybe threshold");
+                            rise = 1;
+
+                        }
+                        
                     }
 
                    
@@ -448,6 +468,8 @@ namespace DaggerfallWorkshop.Game.Utility
 
                     int xModifier = 1;
                     int yModifier = 1;
+
+
                     if(xDistance < 0)
                     {
                         xModifier = -1;
@@ -469,15 +491,13 @@ namespace DaggerfallWorkshop.Game.Utility
                     //Back to false between each leg building progressions.
                     bool justSetInterrupt = false;
 
-                    while (currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y + yDistance)
+                    while (currX * xModifier < currPos.X + xDistance || currY * yModifier < currPos.Y + yDistance)
                     // while(true)
                     {
 
                         currX += run * xModifier;
 
                         currY += rise * yModifier;
-
-
 
 
 
@@ -491,15 +511,9 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
                         int terrain = mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y);
-                        int terrainMovementIndex = climateIndices[terrain - (int)MapsFile.Climates.Ocean];
 
 
-                        minutesTakenThisMove = (((102 * transportModifier) >> 8)
-                            * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
 
-
-                        if (!sleepModeInn)
-                            minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;
 
 
                         //Should create method that returns approriate key.
@@ -554,98 +568,6 @@ namespace DaggerfallWorkshop.Game.Utility
                         int nextX = mapPixel.X + (run * xModifier);
                         int nextY = mapPixel.Y + (int)Math.Round((rise * xModifier));
 
-                        // If ocean, invalid vector, time to modify
-
-                        //      if (DaggerfallUI.Instance.DfTravelMapWindow.isOnOcean(mapPixel.X, mapPixel.Y))
-
-                        //If slope caused us to travel more than one pixel in either direction, then do bounds
-                        //otherwise check exact only, checking run > 2 is same thing.
-                        if (Math.Abs(mapPixel.X - prevX) > 2 || Math.Abs(mapPixel.Y - prevY) > 2)
-                        {
-
-                            //Strangely enough slope is extremely small when across island over he ocean.
-                            //So it hits ocean, but it doesn't seem to draw second line.
-                            //Prob cause from second end point the destination is within bounds of slope.
-                            //But if i travel along slope and prev + slope is not more than 1 pixel travel time, then can do normal check.
-                            if (prevX <= pixelDestination.X && pixelDestination.X <= mapPixel.X && prevY <= pixelDestination.Y && mapPixel.Y <= pixelDestination.Y)
-                            {
-                                isAtDestination = true;
-                                break;
-                            }
-                        }
-                        //But apparently never hits so maybe a bigger threshhold than just one.. What if slope?
-                        else if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
-                        {
-                            isAtDestination = true;
-                            break;
-                        }
-
-
-                        if (!travelShip)
-                        {
-
-                            //Almost there baby, just need to fucking figure out why it doesn't see ocean
-                            //there seems to be some threshold distance away from ocean for destination before it hits.
-
-                            if (terrain == (int)MapsFile.Climates.Ocean)
-                            {
-
-                                //Check within bounds of ocean pixel set to see if anything in that set is this pixel.
-
-
-                                Debug.LogError("Drowning");
-                                //Cartesian coordinates not updating?
-                                crossesOcean = true;
-                                break;
-                            }
-                            /*       else if (Math.Abs(mapPixel.X - prevX) > 1 || Math.Abs(mapPixel.Y - prevY) > 1)
-                          //  else
-                            {
-                                //  else
-                                // {
-                                //Check ocean pixel set.
-
-
-                                //So same stuff should be caught here, and it is but when caught here angle never changes?
-                                foreach (DFPosition pos in oceanPixels)
-                                {
-
-                                         // Debug.LogErrorFormat("ocean pixel checking is {0}, is for sure ocean: {1}", pos.ToString(), mapsFile.GetClimateIndex(pos.X, pos.Y) == (int)MapsFile.Climates.Ocean);
-                                    //Check for bounds of each position here.
-                                    //Exct same concept of destination check for each ocean pixel.
-
-                                    //Same concept as destination check, if in bounding box of slope size then was within ocean
-                                    //as long as destination not also in it.
-                                    //Equality check already made with climate.
-                                    if ((prevX * xModifier <= pos.X && pos.X <= mapPixel.X * xModifier && prevY * yModifier <= pos.Y && mapPixel.Y * yModifier <= pos.Y))
-
-                                   /// if ((prevX <= pos.X && pos.X <= nextX && prevY <= pos.Y && nextY <= pos.Y))
-                                    {
-                                        crossesOcean = true;
-                                        break;
-                                    }
-
-
-
-
-
-                                }
-
-                                if (crossesOcean)
-                                {
-                                    break;
-                                }
-                            }*/
-                            //}
-
-
-
-                        }
-
-
-                        // If we've made it this far, we have yet to cross the ocean
-                        crossesOcean = false;
-                        // If out of bounds, backtrack one slope increment to get a point that's in bounds
                         if (mapPixel.X >= MapsFile.MaxMapPixelX || mapPixel.Y >= MapsFile.MaxMapPixelY || mapPixel.X < MapsFile.MinMapPixelX || mapPixel.Y < MapsFile.MinMapPixelY)
                         {
                             currX -= run * xModifier;
@@ -660,6 +582,81 @@ namespace DaggerfallWorkshop.Game.Utility
                             break;
                         }
 
+
+                        if (Math.Abs(mapPixel.X - prevX) > 1 || Math.Abs(mapPixel.Y - prevY) > 1)
+                        {
+
+                            //Strangely enough slope is extremely small when across island over he ocean.
+                            //So it hits ocean, but it doesn't seem to draw second line.
+                            //Prob cause from second end point the destination is within bounds of slope.
+                            //But if i travel along slope and prev + slope is not more than 1 pixel travel time, then can do normal check.
+                            //Check prev * modifier, because maybe going opposite direction that's why back to came from doesn't work, woops.
+                            //I literally said this before.
+
+                            //I don't think that fixed it.
+                            if (pixelDestination.X >= prevX * xModifier && pixelDestination.X <= mapPixel.X * xModifier &&
+                                pixelDestination.Y >= prevY * yModifier && pixelDestination.Y <= mapPixel.Y * yModifier) 
+                            {
+                                isAtDestination = true;
+                                break;
+                            }
+                        }
+                        //But apparently never hits so maybe a bigger threshhold than just one.. What if slope?
+                        if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
+                        {
+                            isAtDestination = true;
+                            break;
+                        }
+
+                        //So the time taken needs to include destination though.
+                        if (terrain == (int)MapsFile.Climates.Ocean)
+                        {
+
+                            //Check within bounds of ocean pixel set to see if anything in that set is this pixel.
+                            if (!travelShip)
+                            {
+                                crossesOcean = true;
+                                break;
+                            }
+                            else
+                            {
+                                //Otherwise if on ocean and travelling by ship, add this for travel cost.
+                                ++pixelsTraveledOnOcean;
+
+                                //Otherwise of on ocean and travelling by ship it is this.
+                                minutesTakenThisMove = 51;
+                            }
+                        }
+                        else
+                        {
+
+                            //This way when we already hit destination we can include time travelled to there?
+                            //Or is it saying time travelled from before. Start 0, so actually is current to next
+                            //if there is no next then this doesn't need to happen, okay so this doesn't need to happen  if hit destination.
+                            int terrainMovementIndex = 0;
+
+                            int climateIndex = terrain - (int)MapsFile.Climates.Ocean;
+                            terrainMovementIndex = climateIndices[climateIndex];
+
+                            //This multiplied by slope to make this accurate time, or multiplied by difference, ladder more accurate.
+                            minutesTakenThisMove = (((102 * transportModifier) >> 8)
+                                * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
+
+                            //Cause no skips done in x, drawing no big deal, but time must be accurate.
+                            if (prevY - mapPixel.Y != 0)
+                                minutesTakenThisMove *= Math.Abs(prevY - mapPixel.Y);
+                        }
+
+                        if (!sleepModeInn)
+                            minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;
+
+                      
+
+
+                        // If we've made it this far, we have yet to cross the ocean
+                        crossesOcean = false;
+                       
+
                         minutesTakenThisLeg += minutesTakenThisMove;
 
 
@@ -670,7 +667,7 @@ namespace DaggerfallWorkshop.Game.Utility
                         {
                             //20% chance, but try multiple times so may overwrite so more random.
                             //Time taken to get to this position is total travle time so far but time taken this leg so far.
-                            tryInterrupt(currX, roundedY, totalTravelTime + minutesTakenThisLeg);
+                            //    tryInterrupt(currX, roundedY, totalTravelTime + minutesTakenThisLeg);
 
                             //If successfully interrupted, then did it during this leg.
                             if (interrupt != null)
@@ -680,7 +677,7 @@ namespace DaggerfallWorkshop.Game.Utility
                         }
                         if (!speedCautious)
                             minutesTakenThisLeg = minutesTakenThisLeg >> 1;
-                    } 
+                    }
 
                     // If we're still crossing ocean, we need to increment the angle and try again
                     // If not, we can stop looping because we've found a viable solution
@@ -706,12 +703,12 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
                         //Pop pixels added form last.
-                        for (int i = 0; i < pixelsAdded; ++i)
+                /*        for (int i = 0; i < pixelsAdded; ++i)
                         {
                             //For drawing incorrect vecotrs the stuff popped from here add to path.
                             subPath.RemoveLast();
                         }
-
+                  */      
 
                         //subPath.Clear();
 
@@ -724,8 +721,16 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                     else
                     {
+
+
+                        //Pop pixels added form last.
+                     /*   for (int i = 0; i < pixelsAdded; ++i)
+                        {
+                            //For drawing incorrect vecotrs the stuff popped from here add to path.
+                            subPath.RemoveLast();
+                        }
+                        */
                         //subPath.Clear();
-                        //If valid , remove it.
                         totalTravelTime += minutesTakenThisLeg;
                         break;
                     }
@@ -762,7 +767,7 @@ namespace DaggerfallWorkshop.Game.Utility
                     pathToString += "(" + path[i].X + ", " + path[i].Y + ") ";
 
                     //To get both time, and pixels in between end points, won't match cause not considering slope in our original.
-
+                    //It drew on ocean when did this, I swear it did, it had to have, and we are storing
                    // totalTravelTime += CalculateTravelTime(path[i], speedCautious, sleepModeInn, travelShip, hasHorse, hasCart, prev, fullPath);
                     prev = path[i];
                 }
@@ -817,9 +822,10 @@ namespace DaggerfallWorkshop.Game.Utility
             //If travel by ship just do there own, unless we want to add that check for ours as well.
             //Since theirs doesn't travel along slope.
             //but time wise travel slope or not, their algorithm gets to similiar value.
-
-
             return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+
+
+
 
 
             int transportModifier = 0;
@@ -863,13 +869,12 @@ namespace DaggerfallWorkshop.Game.Utility
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
             pixelsTraveledOnOcean = 0;
 
-            List<DFPosition> path = new List<DFPosition>();
+            LinkedList<DFPosition> path = new LinkedList<DFPosition>();
 
 
 
 
             
-          //  truePath.Add(new DFPosition(position.X, position.Y));
 
 
             //Basically only if we've moved less than the furthest distance.
@@ -897,6 +902,7 @@ namespace DaggerfallWorkshop.Game.Utility
                         playerXMapPixel += xPixelMovementDirection;
                     }
                 }
+
 
 
 
