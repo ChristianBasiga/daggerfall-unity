@@ -489,7 +489,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
                     int pixelIndex = (height - offSetY - 1) * width + offSetX;
 
-                    if (pixelIndex < height * width)
+
+                    //Hmm I actually don't have that ocean check anymore.
+                    //Prob not inside pixel buffer?
+              //      if (pixelIndex < height * width)
                         pixelBuffer[pixelIndex] = identifyFlashColor;
             }
         }

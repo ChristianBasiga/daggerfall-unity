@@ -75,6 +75,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         int travelTimeMinutes;
         int countdownValueTravelTimeDays; // used for remaining days in fast travel countdown
+        int totalTravelTimeDays; // Used for comparing if travelled enough for intterupt to happen, prob should just put in interrupt struct itself.
         bool doFastTravel = false; // flag used to indicate Update() function that fast travel should happen
         float waitTimer = 0;
 
@@ -265,6 +266,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             tripCostLabel.Text = travelTimeCalculator.TotalCost.ToString();
 
             countdownValueTravelTimeDays = travelTimeDaysTotal;
+            totalTravelTimeDays = travelTimeDaysTotal;
         }
 
         bool TickCountdown()
@@ -280,7 +282,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 //I'm already given time, change nothing here, just change what this value is assigned.
                 countdownValueTravelTimeDays--;
                 int toDisplay = countdownValueTravelTimeDays;
-                if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays == travelTimeCalculator.Interrupt.daysTaken)
+                Debug.LogError("interrupt days taken " + travelTimeCalculator.Interrupt.daysTaken);
+                Debug.LogError("days taken so far " + countdownValueTravelTimeDays);
+                if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays ==  totalTravelTimeDays - travelTimeCalculator.Interrupt.daysTaken)
                 {
                     countdownValueTravelTimeDays = 0;
                 }
@@ -302,6 +306,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
             DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
             interrupted = false;
+            travelTimeCalculator.useInterrupt();
 
         }
         // perform fast travel actions

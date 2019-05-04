@@ -465,12 +465,16 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
                     int minutesTakenThisMove = 0;
+
+                    //Back to false between each leg building progressions.
+                    bool justSetInterrupt = false;
+
                     while (currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y + yDistance)
-                   // while(true)
+                    // while(true)
                     {
 
                         currX += run * xModifier;
-                       
+
                         currY += rise * yModifier;
 
 
@@ -482,6 +486,8 @@ namespace DaggerfallWorkshop.Game.Utility
                         int roundedY = (int)Math.Round(currY);
 
                         DFPosition mapPixel = new DFPosition(currX, roundedY);
+
+
 
 
                         int terrain = mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y);
@@ -503,7 +509,8 @@ namespace DaggerfallWorkshop.Game.Utility
                         int yKey = getYKey(roundedY);
                         int xKey = getXKey(currX);
 
-                        if (bTreeOceanPixels.ContainsKey(yKey) && bTreeOceanPixels[yKey].ContainsKey(xKey)) {
+                        if (bTreeOceanPixels.ContainsKey(yKey) && bTreeOceanPixels[yKey].ContainsKey(xKey))
+                        {
                             oceanPixelsSetToCheck = bTreeOceanPixels[getYKey(roundedY)][getXKey(currX)];
                         }
                         else
@@ -530,16 +537,16 @@ namespace DaggerfallWorkshop.Game.Utility
                                 inSubPath = true;
                                 break;
                             }
-                        
+
                         }
 
                         if (!inSubPath)
                         {
                             pixelsAdded += 1;
-                          
-                           subPath.AddLast(mapPixel);
 
-                            
+                            subPath.AddLast(mapPixel);
+
+
                         }
 
                         int prevX = mapPixel.X - (run * xModifier);
@@ -631,6 +638,8 @@ namespace DaggerfallWorkshop.Game.Utility
                             }*/
                             //}
 
+
+
                         }
 
 
@@ -653,6 +662,22 @@ namespace DaggerfallWorkshop.Game.Utility
 
                         minutesTakenThisLeg += minutesTakenThisMove;
 
+
+
+                        //For seeing if just happened this leg, to reset it if did.
+
+                        if (interrupt == null)
+                        {
+                            //20% chance, but try multiple times so may overwrite so more random.
+                            //Time taken to get to this position is total travle time so far but time taken this leg so far.
+                            tryInterrupt(currX, roundedY, totalTravelTime + minutesTakenThisLeg);
+
+                            //If successfully interrupted, then did it during this leg.
+                            if (interrupt != null)
+                            {
+                                justSetInterrupt = true;
+                            }
+                        }
                         if (!speedCautious)
                             minutesTakenThisLeg = minutesTakenThisLeg >> 1;
                     } 
@@ -669,13 +694,18 @@ namespace DaggerfallWorkshop.Game.Utility
                                       }*/
 
 
-                        //Either clear or keep count and remove last that many times
-                        //more efficient though, vs going through all pixels twice, though it is added time complexity not that bad.
 
-                        //Pop pixels added form last.
-
+                        //Reset interrupt because it was set during this leg of travel.
+                        if (justSetInterrupt)
+                        {
+                            interrupt = null;
+                        }
+                       
+                        //Reset time.
                         minutesTakenThisLeg = 0;
 
+
+                        //Pop pixels added form last.
                         for (int i = 0; i < pixelsAdded; ++i)
                         {
                             //For drawing incorrect vecotrs the stuff popped from here add to path.
@@ -936,7 +966,8 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
             //Pixel offset makes it so it is along line of travel at the very least.
-            bool doInterrupt = (UnityEngine.Random.Range(1, 101) & 1) == 0;
+            //Obviously more interrupts should be possible and also should be via the engine.
+            bool doInterrupt = (UnityEngine.Random.Range(0, 101) < 20);
 
            
             DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();
@@ -954,6 +985,8 @@ namespace DaggerfallWorkshop.Game.Utility
                     interrupt = new InterruptFastTravel();
                     interrupt.interruptPosition = new DFPosition();
                 }
+
+                
 
                 interrupt.interruptPosition.X = pixelX;
                 interrupt.interruptPosition.Y = pixelY;
