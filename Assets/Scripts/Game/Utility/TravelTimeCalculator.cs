@@ -114,6 +114,7 @@ namespace DaggerfallWorkshop.Game.Utility
             oceanPixels = new List<DFPosition>();
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
 
+
             for (int i = 0; i < MapsFile.MaxMapPixelY; ++i)
             {
 
@@ -299,6 +300,18 @@ namespace DaggerfallWorkshop.Game.Utility
         {
 
 
+            int totalTravelTime = 0;
+
+
+
+            int transportModifier = 0;
+            if (hasHorse)
+                transportModifier = 128;
+            else if (hasCart)
+                transportModifier = 192;
+            else
+                transportModifier = 256;
+
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
             DFPosition nodeEndpoint; // The final position of a leg of travel
             DFPosition currPos = GetPlayerTravelPosition(); // This changes node per node
@@ -399,22 +412,16 @@ namespace DaggerfallWorkshop.Game.Utility
                  */
               
                 bool crossesOcean = false;
-
+                int minutesTakenThisLeg = 0;
                 while (true)
                 {
                     // Verify if ocean is crossed
 
+
                     //Cartesian updated, but not current pos
-                  
+
                     currX = currPos.X;
                     currY = currPos.Y;
-
-                    
-
-
-
-
-
 
                     xDistance = cartesianVectorToDest[0];
 
@@ -456,6 +463,8 @@ namespace DaggerfallWorkshop.Game.Utility
 
                     int pixelsAdded = 0;
 
+
+                    int minutesTakenThisMove = 0;
                     while (currX * xModifier < currPos.X + xDistance && currY * yModifier < currPos.Y + yDistance)
                    // while(true)
                     {
@@ -466,10 +475,25 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
+
+
                         //Finish cleaning up merge
 
                         int roundedY = (int)Math.Round(currY);
 
+                        DFPosition mapPixel = new DFPosition(currX, roundedY);
+
+
+                        int terrain = mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y);
+                        int terrainMovementIndex = climateIndices[terrain - (int)MapsFile.Climates.Ocean];
+
+
+                        minutesTakenThisMove = (((102 * transportModifier) >> 8)
+                            * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
+
+
+                        if (!sleepModeInn)
+                            minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;
 
 
                         //Should create method that returns approriate key.
@@ -490,8 +514,12 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
-                        DFPosition mapPixel = new DFPosition(currX, roundedY);
 
+
+
+
+                        //Try to interrupt at this pixel, and with current time travelled so far.
+                        //    tryInterrupt(mapPixel.X, mapPixel.Y, totalTravelTime + minutesTakenThisLeg);
 
                         bool inSubPath = false;
                         foreach (DFPosition pos in subPath)
@@ -544,57 +572,67 @@ namespace DaggerfallWorkshop.Game.Utility
                             isAtDestination = true;
                             break;
                         }
-                        //Almost there baby, just need to fucking figure out why it doesn't see ocean
-                        //there seems to be some threshold distance away from ocean for destination before it hits.
-                        if ((mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean))
+
+
+                        if (!travelShip)
                         {
 
-                            //Check within bounds of ocean pixel set to see if anything in that set is this pixel.
+                            //Almost there baby, just need to fucking figure out why it doesn't see ocean
+                            //there seems to be some threshold distance away from ocean for destination before it hits.
 
-
-                            Debug.LogError("Drowning");
-                            //Cartesian coordinates not updating?
-                            crossesOcean = true;
-                            break;
-                        }
-                        /*       else if (Math.Abs(mapPixel.X - prevX) > 1 || Math.Abs(mapPixel.Y - prevY) > 1)
-                      //  else
-                        {
-                            //  else
-                            // {
-                            //Check ocean pixel set.
-
-                            foreach (DFPosition pos in oceanPixels)
+                            if (terrain == (int)MapsFile.Climates.Ocean)
                             {
 
-                                     // Debug.LogErrorFormat("ocean pixel checking is {0}, is for sure ocean: {1}", pos.ToString(), mapsFile.GetClimateIndex(pos.X, pos.Y) == (int)MapsFile.Climates.Ocean);
-                                //Check for bounds of each position here.
-                                //Exct same concept of destination check for each ocean pixel.
-
-                                //Same concept as destination check, if in bounding box of slope size then was within ocean
-                                //as long as destination not also in it.
-                                //Equality check already made with climate.
-                                if ((prevX * xModifier <= pos.X && pos.X <= mapPixel.X * xModifier && prevY * yModifier <= pos.Y && mapPixel.Y * yModifier <= pos.Y))
-                                   
-                               /// if ((prevX <= pos.X && pos.X <= nextX && prevY <= pos.Y && nextY <= pos.Y))
-                                {
-                                    crossesOcean = true;
-                                    break;
-                                }
+                                //Check within bounds of ocean pixel set to see if anything in that set is this pixel.
 
 
-
-
-
-                            }
-
-                            if (crossesOcean)
-                            {
+                                Debug.LogError("Drowning");
+                                //Cartesian coordinates not updating?
+                                crossesOcean = true;
                                 break;
                             }
-                        }*/
-                        //}
-                      
+                            /*       else if (Math.Abs(mapPixel.X - prevX) > 1 || Math.Abs(mapPixel.Y - prevY) > 1)
+                          //  else
+                            {
+                                //  else
+                                // {
+                                //Check ocean pixel set.
+
+
+                                //So same stuff should be caught here, and it is but when caught here angle never changes?
+                                foreach (DFPosition pos in oceanPixels)
+                                {
+
+                                         // Debug.LogErrorFormat("ocean pixel checking is {0}, is for sure ocean: {1}", pos.ToString(), mapsFile.GetClimateIndex(pos.X, pos.Y) == (int)MapsFile.Climates.Ocean);
+                                    //Check for bounds of each position here.
+                                    //Exct same concept of destination check for each ocean pixel.
+
+                                    //Same concept as destination check, if in bounding box of slope size then was within ocean
+                                    //as long as destination not also in it.
+                                    //Equality check already made with climate.
+                                    if ((prevX * xModifier <= pos.X && pos.X <= mapPixel.X * xModifier && prevY * yModifier <= pos.Y && mapPixel.Y * yModifier <= pos.Y))
+
+                                   /// if ((prevX <= pos.X && pos.X <= nextX && prevY <= pos.Y && nextY <= pos.Y))
+                                    {
+                                        crossesOcean = true;
+                                        break;
+                                    }
+
+
+
+
+
+                                }
+
+                                if (crossesOcean)
+                                {
+                                    break;
+                                }
+                            }*/
+                            //}
+
+                        }
+
 
                         // If we've made it this far, we have yet to cross the ocean
                         crossesOcean = false;
@@ -613,23 +651,10 @@ namespace DaggerfallWorkshop.Game.Utility
                             break;
                         }
 
+                        minutesTakenThisLeg += minutesTakenThisMove;
 
-                        // If we've reached our original destination, all necessary legs are computed
-                        //Compare world coords maybe actually better?
-
-                        //Check if destination was within bounds of slope from previous step and current step.
-                        //Good for checking across huge spans of ocean, but doesn't work for smaller points cause caught by destination before get to here
-                        //maybe threshhold of slope size.
-
-
-                        //If slope spans more than 1 pixel at time, do bounds
-                        //otherwise check exact location, so as to not find destination too quick
-
-                        Debug.LogError("rise " + rise);
-
-
-                    
-                        
+                        if (!speedCautious)
+                            minutesTakenThisLeg = minutesTakenThisLeg >> 1;
                     } 
 
                     // If we're still crossing ocean, we need to increment the angle and try again
@@ -649,7 +674,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
                         //Pop pixels added form last.
 
-
+                        minutesTakenThisLeg = 0;
 
                         for (int i = 0; i < pixelsAdded; ++i)
                         {
@@ -671,7 +696,7 @@ namespace DaggerfallWorkshop.Game.Utility
                     {
                         //subPath.Clear();
                         //If valid , remove it.
-                       
+                        totalTravelTime += minutesTakenThisLeg;
                         break;
                     }
                 }
@@ -692,7 +717,6 @@ namespace DaggerfallWorkshop.Game.Utility
             List<DFPosition> fullPath = new List<DFPosition>();
 
 
-            int totalTravelTime = 0;
             /*
             //Otherwise add onto the path the sub path.
             //If no edges needed it does this.
@@ -748,17 +772,25 @@ namespace DaggerfallWorkshop.Game.Utility
             bool sleepModeInn = false,
             bool travelShip = false,
             bool hasHorse = false,
-            bool hasCart = false,
-            DFPosition startPosition = null,
-            List<DFPosition> truePath = null
+            bool hasCart = false
+         //   DFPosition startPosition = null,
+          //  List<DFPosition> truePath = null
            )
         {
 
             //Calling our version of calculation.
-            if(startPosition == null)
+            /*if(startPosition == null)
             {
-                return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
-            }
+            }*/
+
+
+            //If travel by ship just do there own, unless we want to add that check for ours as well.
+            //Since theirs doesn't travel along slope.
+            //but time wise travel slope or not, their algorithm gets to similiar value.
+
+
+            return calculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
+
 
             int transportModifier = 0;
             if (hasHorse)
@@ -773,7 +805,6 @@ namespace DaggerfallWorkshop.Game.Utility
             DFPosition position = GetPlayerTravelPosition();
 
             
-            position = startPosition;
 
 
             int playerXMapPixel = position.X;
@@ -808,7 +839,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
             
-            truePath.Add(new DFPosition(position.X, position.Y));
+          //  truePath.Add(new DFPosition(position.X, position.Y));
 
 
             //Basically only if we've moved less than the furthest distance.
@@ -840,7 +871,6 @@ namespace DaggerfallWorkshop.Game.Utility
 
 
 
-                truePath.Add(new DFPosition(playerXMapPixel, playerYMapPixel));
                 //Debug.log(positionX);
 
 
@@ -899,8 +929,11 @@ namespace DaggerfallWorkshop.Game.Utility
             return minutesTakenTotal;
         }
 
-        private void tryInterrupt(DFPosition start, DFPosition end, int pixelX, int pixelY, int timeTravelled)
+        private void tryInterrupt(int pixelX, int pixelY, int timeTravelled)
         {
+
+            //Maybe with this can call their algorithm strictly for time?
+
 
             //Pixel offset makes it so it is along line of travel at the very least.
             bool doInterrupt = (UnityEngine.Random.Range(1, 101) & 1) == 0;
