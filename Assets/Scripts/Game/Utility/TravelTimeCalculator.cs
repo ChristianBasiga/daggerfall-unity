@@ -348,6 +348,8 @@ namespace DaggerfallWorkshop.Game.Utility
             const double angleIncrement = 0.0523599;// 3 degrees 0.0436332; // 5 degrees in radians
 
 
+            int numberOfLegs = 0;
+
             // Continually modifies vectors based on currPlayerPosition until an acceptable path is reached
             //If reduce is literally just halving it, it's not enough, that's why finished so fast, sometimes just 3 too, etc.
             while (!isAtDestination)
@@ -384,7 +386,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 }
 
 
-          //      angleSign = -1;
+                angleSign = -1;
 
                 double[] polarVectorToDest;
                 // Convert to polar to easily modify direction of vector
@@ -572,19 +574,6 @@ namespace DaggerfallWorkshop.Game.Utility
                         int nextX = mapPixel.X + (run * xModifier);
                         int nextY = mapPixel.Y + (int)Math.Round((rise * xModifier));
 
-                        if (mapPixel.X >= MapsFile.MaxMapPixelX || mapPixel.Y >= MapsFile.MaxMapPixelY || mapPixel.X < MapsFile.MinMapPixelX || mapPixel.Y < MapsFile.MinMapPixelY)
-                        {
-                            currX -= run * xModifier;
-                            currY -= rise * yModifier;
-
-
-                            //If out of bounds should also pop off subpath.
-                            subPath.RemoveLast();
-
-                            //currY = Math.Round(currY);
-                            //Does this happen? It shouldn't with current destination.
-                            break;
-                        }
 
 
                         if (Math.Abs(mapPixel.X - prevX) > 1 || Math.Abs(mapPixel.Y - prevY) > 1)
@@ -594,6 +583,7 @@ namespace DaggerfallWorkshop.Game.Utility
                             if (pixelDestination.X >= prevX * xModifier && pixelDestination.X <= mapPixel.X * xModifier &&
                                 pixelDestination.Y >= prevY * yModifier && pixelDestination.Y <= mapPixel.Y * yModifier) 
                             {
+
                                 isAtDestination = true;
                                 break;
                             }
@@ -601,7 +591,24 @@ namespace DaggerfallWorkshop.Game.Utility
                         //But apparently never hits so maybe a bigger threshhold than just one.. What if slope?
                         if (mapPixel.X == pixelDestination.X && mapPixel.Y == pixelDestination.Y)
                         {
+
                             isAtDestination = true;
+                            break;
+                        }
+
+
+                        if (mapPixel.X >= MapsFile.MaxMapPixelX || mapPixel.Y >= MapsFile.MaxMapPixelY || mapPixel.X < MapsFile.MinMapPixelX || mapPixel.Y < MapsFile.MinMapPixelY)
+                        {
+                            currX -= run * xModifier;
+                            currY -= rise * yModifier;
+
+
+                            //If out of bounds should also pop off subpath.
+                            pixelsAdded--;
+                            subPath.RemoveLast();
+
+                            //currY = Math.Round(currY);
+                            //Does this happen? It shouldn't with current destination.
                             break;
                         }
 
@@ -678,11 +685,11 @@ namespace DaggerfallWorkshop.Game.Utility
 
                         //For seeing if just happened this leg, to reset it if did.
 
-                        if (interrupt == null)
+                        if (!travelShip/* && interrupt == null*/)
                         {
                             //20% chance, but try multiple times so may overwrite so more random.
                             //Time taken to get to this position is total travle time so far but time taken this leg so far.
-                            //    tryInterrupt(currX, roundedY, totalTravelTime + minutesTakenThisLeg);
+                            tryInterrupt(currX, roundedY, totalTravelTime + minutesTakenThisLeg);
 
                             //If successfully interrupted, then did it during this leg.
                             if (interrupt != null)
@@ -725,7 +732,7 @@ namespace DaggerfallWorkshop.Game.Utility
                         for (int i = 0; i < pixelsAdded; ++i)
                         {
                             //For drawing incorrect vecotrs the stuff popped from here add to path.
-                            subPath.RemoveLast();
+                          //  subPath.RemoveLast();
                         }
 
 
@@ -739,6 +746,7 @@ namespace DaggerfallWorkshop.Game.Utility
                     }
                     else
                     {
+                        numberOfLegs += 1;
 
 
                         //Reset time.
@@ -759,17 +767,22 @@ namespace DaggerfallWorkshop.Game.Utility
                         //It coincidently fixes it for my test because towards end of leg is when it can make direct path,
                         //logically it should break when hits but in this case shouldn't because previous tries may not detect crossing ocean.
 
-
+                        /*
 
                         if (!travelShip && !isAtDestination)
                         {
+
+
+
                             LinkedListNode<DFPosition> current = subPath.Last;
                             int i;
 
 
+                            Debug.LogErrorFormat("Leg count {0} Leg size: {1}", numberOfLegs, pixelsAdded);
+
 
                             //I want to iterate number of pixels minus 1 times cause last is also a pixel.
-                            for (i = 0; i < pixelsAdded - 1 && current.Previous != null; ++i)
+                            for (i = 0; i < pixelsAdded && current.Previous != null; ++i)
                             {
                                 current = current.Previous;
                             }
@@ -778,14 +791,10 @@ namespace DaggerfallWorkshop.Game.Utility
                             int amountToRemove = 0;
 
 
-                            while (current != null && current.Value != null && i < pixelsAdded )
+                            while ( i < pixelsAdded && current != null)
                             {
 
-
-
-
                                 //Same slope logic.
-
                                 int t_yDist = pixelDestination.Y - current.Value.Y;
                                 int t_xDist = pixelDestination.X - current.Value.X;
 
@@ -807,7 +816,7 @@ namespace DaggerfallWorkshop.Game.Utility
                                     t_rise = 1;
                                 }
 
-
+                                
                                 int t_currX = current.Value.X;
                                 double t_currY = current.Value.Y;
 
@@ -815,26 +824,11 @@ namespace DaggerfallWorkshop.Game.Utility
                                 int x_modifier = (t_xDist < 0) ? -1 : 1;
                                 int y_modifier = (t_yDist < 0) ? -1 : 1;
 
-
-
-
-
-                                //Cause if this finished, then that means we didn't hit ocean, so should be valid.
-                                //Do template pattern for this.
-                                //So if it reahes destination from this current, then this current is valid start of leg.
-                                //problem I believe is that it's just not detecting ocean at some points.
-
                                 bool validStart = true;
                                 while ((t_currX * x_modifier < t_xDist + current.Value.X || t_currY * y_modifier < t_yDist + current.Value.Y))
                                 {
-
-
-                                    //     if (t_currX * xModifier < t_xDist + current.Value.X)
                                     t_currX += t_run * x_modifier;
-
-                                    //   if (t_currY * y_modifier < t_yDist + current.Value.Y)
                                     t_currY += t_rise * y_modifier;
-
 
                                     int rounded = (int)Math.Round(t_currY);
 
@@ -844,11 +838,12 @@ namespace DaggerfallWorkshop.Game.Utility
                                     int prevX = t_currX - (t_run * x_modifier);
                                     int prevY = rounded - (int)Math.Round((t_rise * y_modifier));
 
-                                    
+
+
                                     if (Math.Abs(t_currX - prevX) > 1 || Math.Abs(rounded - prevY) > 1)
                                     {
 
-                             
+
                                         if (pixelDestination.X >= prevX * x_modifier && pixelDestination.X <= t_currX * x_modifier &&
                                             pixelDestination.Y >= prevY * y_modifier && pixelDestination.Y <= rounded * y_modifier)
                                         {
@@ -860,7 +855,20 @@ namespace DaggerfallWorkshop.Game.Utility
                                     {
                                         break;
                                     }
-                                    
+
+
+
+                                    if (t_currX >= MapsFile.MaxMapPixelX || rounded >= MapsFile.MaxMapPixelY || t_currX < MapsFile.MinMapPixelX || rounded < MapsFile.MinMapPixelY)
+                                    {
+
+                                        //currY = Math.Round(currY);
+                                        //Does this happen? It shouldn't with current destination.
+                                        validStart = false;
+                                        break;
+                                    }
+
+
+                                   
 
                                     if (mapsFile.GetClimateIndex(t_currX, rounded) == (int)MapsFile.Climates.Ocean)
                                     {
@@ -871,39 +879,19 @@ namespace DaggerfallWorkshop.Game.Utility
                                     }
 
 
+
                                 }
-                                /*      foreach (DFPosition position in oceanPixels)
-                                      {
 
 
-                                          if (position.X >= prevX * x_modifier && position.X <= t_currX * x_modifier &&
-                                             position.Y >= prevY * y_modifier && position.Y <= rounded * y_modifier)
-                                          {
-                                              validStart = false;
-                                              break;
-                                          }
+                                ++i;
 
-                                      }
-
-
-                                      //So If crosses ocean then invalid, move on to next previous.
-                                      //Unless same issue in that doesn't see tha tit crosses motherfucking ocean.
-
-
-
-
-                                  }
-                                  */
-
-
-                              
 
                                 if (validStart)
                                 {
                                     amountToRemove = pixelsAdded - i;
+                                    break;
                                 }
 
-                                ++i;
 
 
                                 //Then for each position here, draw vector to destination
@@ -919,7 +907,7 @@ namespace DaggerfallWorkshop.Game.Utility
                                 subPath.RemoveLast();
                             }
                         }
-
+                        */
                                 
 
                               //Can bound magnitude but not make it more precise in path
@@ -946,7 +934,7 @@ namespace DaggerfallWorkshop.Game.Utility
             List<DFPosition> fullPath = new List<DFPosition>();
 
 
-            
+            Debug.LogError("Amount of legs " + numberOfLegs);
             //Otherwise add onto the path the sub path.
             //If no edges needed it does this.
             /*
