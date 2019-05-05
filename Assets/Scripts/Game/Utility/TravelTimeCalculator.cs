@@ -299,6 +299,7 @@ namespace DaggerfallWorkshop.Game.Utility
             bool hasCart = false)
         {
 
+            pixelsTraveledOnOcean = 0;
 
             int totalTravelTime = 0;
 
@@ -369,7 +370,7 @@ namespace DaggerfallWorkshop.Game.Utility
                 if (currPos.Y > destination.Y) // Counter-clockwise (ocean is below)
                 {
                     //On way back to daggerfall region this should be happenning, which may be too much?
-                    angleSign = -1;
+                    angleSign = 1;
                 }
                 else if (currPos.Y == destination.Y) // Depends on map zone
                 {
@@ -445,20 +446,14 @@ namespace DaggerfallWorkshop.Game.Utility
                         run = 0;
 
                     }
+                    else if (Math.Abs(xDistance) >=1 && Math.Abs(xDistance) <= 2)
+                    {
+                        rise = 1;
+                    }
                     else
                     {
                         rise = Math.Abs(((double)yDistance / xDistance));
 
-                        Debug.LogErrorFormat("rise: {0}, yDistance: {1}, xDistance:{2}", rise, yDistance, xDistance);
-
-                        //If rise essentially same as yDistance, then make rise just 1, so draws each one.
-                        if (rise != 0 && (int)Math.Round(rise) == Math.Abs(yDistance))
-                        {
-                            Debug.LogError("Here cause x distance approaches 0, maybe threshold");
-                            rise = 1;
-
-                        }
-                        
                     }
 
                    
@@ -486,11 +481,18 @@ namespace DaggerfallWorkshop.Game.Utility
                     int pixelsAdded = 0;
 
 
+                    
                     int minutesTakenThisMove = 0;
 
                     //Back to false between each leg building progressions.
                     bool justSetInterrupt = false;
 
+
+                    //Right now we go full magnitude at most, but what we want is to stop at the very first point where we can draw a vector that doesn't cross ocean
+                    //to destination, cause right now we go past that point cause then breaks when travels magnitude.
+                    //now we said overshotting doesn't matter because then we'll draw a leg again later, but that was when we only end points, we want to make sure
+                    //time is accurate, we may be able to get time right despite over shooting destination, but former problem still a thing.
+                    bool validLeg = true;
                     while (currX * xModifier < currPos.X + xDistance || currY * yModifier < currPos.Y + yDistance)
                     // while(true)
                     {
@@ -543,25 +545,28 @@ namespace DaggerfallWorkshop.Game.Utility
                         //    tryInterrupt(mapPixel.X, mapPixel.Y, totalTravelTime + minutesTakenThisLeg);
 
                         bool inSubPath = false;
+
+                        /*
                         foreach (DFPosition pos in subPath)
                         {
                             //if same pixel don't include in subpath.
+                            //Needed during world coords travel but in this case not really needed since no duplicates will happen.
                             if ((pos.X == mapPixel.X && pos.Y == mapPixel.Y))
                             {
                                 inSubPath = true;
                                 break;
                             }
 
-                        }
+                        }*/
 
-                        if (!inSubPath)
-                        {
+                        //if (!inSubPath)
+                       // {
                             pixelsAdded += 1;
 
                             subPath.AddLast(mapPixel);
 
 
-                        }
+                        //}
 
                         int prevX = mapPixel.X - (run * xModifier);
                         int prevY = mapPixel.Y - (int)Math.Round((rise * yModifier));
@@ -615,6 +620,7 @@ namespace DaggerfallWorkshop.Game.Utility
                             //Check within bounds of ocean pixel set to see if anything in that set is this pixel.
                             if (!travelShip)
                             {
+
                                 crossesOcean = true;
                                 break;
                             }
@@ -629,6 +635,8 @@ namespace DaggerfallWorkshop.Game.Utility
                         }
                         else
                         {
+
+                          
 
                             //This way when we already hit destination we can include time travelled to there?
                             //Or is it saying time travelled from before. Start 0, so actually is current to next
@@ -675,9 +683,13 @@ namespace DaggerfallWorkshop.Game.Utility
                                 justSetInterrupt = true;
                             }
                         }
-                        if (!speedCautious)
-                            minutesTakenThisLeg = minutesTakenThisLeg >> 1;
+
+                       
                     }
+
+
+
+
 
                     // If we're still crossing ocean, we need to increment the angle and try again
                     // If not, we can stop looping because we've found a viable solution
@@ -697,18 +709,18 @@ namespace DaggerfallWorkshop.Game.Utility
                         {
                             interrupt = null;
                         }
+
                        
-                        //Reset time.
                         minutesTakenThisLeg = 0;
 
 
                         //Pop pixels added form last.
-                /*        for (int i = 0; i < pixelsAdded; ++i)
+                        for (int i = 0; i < pixelsAdded; ++i)
                         {
                             //For drawing incorrect vecotrs the stuff popped from here add to path.
                             subPath.RemoveLast();
                         }
-                  */      
+                      
 
                         //subPath.Clear();
 
@@ -723,22 +735,123 @@ namespace DaggerfallWorkshop.Game.Utility
                     {
 
 
+                        //Reset time.
                         //Pop pixels added form last.
-                     /*   for (int i = 0; i < pixelsAdded; ++i)
+                        /*   for (int i = 0; i < pixelsAdded; ++i)
+                           {
+                               //For drawing incorrect vecotrs the stuff popped from here add to path.
+                               subPath.RemoveLast();
+                           }
+                           */
+                        //subPath.Clear();
+
+
+                        //then iterate from start of subpath to end and choose first ocean
+                        //or from end to start, choosing latest one that doesn't draw vector, more likely from end too.
+
+
+                        /*
+                        LinkedListNode<DFPosition> current = subPath.Last;
+                        int i;
+
+                        for ( i = 0; i < pixelsAdded && current != null; ++i)
                         {
-                            //For drawing incorrect vecotrs the stuff popped from here add to path.
-                            subPath.RemoveLast();
+                            current = current.Previous;
+                        }
+
+                        i = 1;
+
+                        int amountToRemove = 0;
+
+                        //If my logic right?
+                        while (current != null && current.Value != null)
+                        {
+
+                           
+
+
+                            //Same slope logic.
+
+                            int t_yDist = pixelDestination.Y - current.Value.Y;
+                            int t_xDist = pixelDestination.Y - current.Value.X;
+
+                            int t_run = 1;
+                            double t_rise = 1;
+
+                            if (t_xDist == 0)
+                            {
+                                t_run = 0;
+                            }
+                            else
+                            {
+
+                                t_rise = (double)t_yDist / t_xDist;
+
+
+                                if (t_rise != 0 && (int)Math.Round(t_rise) == Math.Abs(t_yDist))
+                                {
+
+                                    t_rise = 1;
+                                }
+
+                            }
+
+                            int t_currX = current.Value.X;
+                            double t_currY = current.Value.Y;
+
+
+
+                            bool validStart = true;
+                            while (t_currX * xModifier < t_xDist + current.Value.X || t_currY * yModifier < t_yDist + current.Value.Y)
+                            {
+
+                                t_currX += t_run * xModifier;
+                                t_currY += t_rise * yModifier;
+
+
+
+                                //So If crosses ocean then invalid, move on to next previous.
+                                //Unless same issue in that doesn't see tha tit crosses motherfucking ocean.
+                                if (mapsFile.GetClimateIndex(t_currX, (int)Math.Round(t_currY)) == (int)MapsFile.Climates.Ocean)
+                                {
+
+                                    validStart = false;
+
+                                    break;
+                                }
+
+                                
+
+                            }
+
+                            if (validStart)
+                            {
+                                //Otherwise make it the starting point.
+                                //removing all up to that point.
+                                //AMount to remove is rest of it, so if 9 pixels added, and 2nd pixel created valid path, then pop last 7.
+                                amountToRemove = pixelsAdded - i;
+
+                            }
+                           
+                            //Then for each position here, draw vector to destination
+                            current = current.Next;
+
+
+                        }
+
+                        for ( i = 0; i < amountToRemove; ++i)
+                        {
+             //               subPath.RemoveLast();
                         }
                         */
-                        //subPath.Clear();
                         totalTravelTime += minutesTakenThisLeg;
                         break;
                     }
                 }
 
-             
-                currPos.X = currX;
-                currPos.Y = (int)Math.Round(currY);
+
+                currPos.X = subPath.Last.Value.X;
+                currPos.Y = subPath.Last.Value.Y;
 
                 /*
                 foreach( DFPosition pos in subPath)
@@ -752,17 +865,15 @@ namespace DaggerfallWorkshop.Game.Utility
             List<DFPosition> fullPath = new List<DFPosition>();
 
 
-            /*
+            
             //Otherwise add onto the path the sub path.
             //If no edges needed it does this.
-
+            /*
         
-            //Istead of using theirs, use ours to draw the path.
-            List<DFPosition> fullPath = new List<DFPosition>();
-            if (path.Count != 0)
+            if (subPath.Count != 0)
             {
                 String pathToString = "Path is: ";
-                for (int i = 0; i < path.Count; i++)
+                for (int i = 0; i < subPath.Count; i++)
                 {
                     pathToString += "(" + path[i].X + ", " + path[i].Y + ") ";
 
@@ -775,9 +886,13 @@ namespace DaggerfallWorkshop.Game.Utility
             }
             */
 
+            if (!speedCautious)
+            {
+                totalTravelTime = totalTravelTime >> 1;
+            }
 
+       //     subPath.AddLast(pixelDestination);
 
-            subPath.AddLast(pixelDestination);
             DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(subPath);
 
 
