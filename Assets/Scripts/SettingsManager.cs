@@ -128,6 +128,8 @@ namespace DaggerfallWorkshop
         public int CameraRecoilStrength { get; set; }
         public float MusicVolume { get; set; }
         public float SoundVolume { get; set; }
+        public bool InstantRepairs { get; set; }
+        public bool AllowMagicRepairs { get; set; }
 
         // [Map]
         public int AutomapNumberOfDungeons { get; set; }
@@ -141,6 +143,9 @@ namespace DaggerfallWorkshop
 
         // [Experimental]
         public int TerrainDistance { get; set; }
+
+        public float TerrainHeightmapPixelError { get; set; }
+        public bool SmallerDungeons { get; set; }
 
         // [Enhancements]
         public bool LypyL_GameConsole { get; set; }
@@ -232,6 +237,8 @@ namespace DaggerfallWorkshop
             CameraRecoilStrength = GetInt(sectionControls, "CameraRecoilStrength", 0, 4);
             SoundVolume = GetFloat(sectionControls, "SoundVolume", 0f, 1.0f);
             MusicVolume = GetFloat(sectionControls, "MusicVolume", 0f, 1.0f);
+            InstantRepairs = GetBool(sectionControls, "InstantRepairs");
+            AllowMagicRepairs = GetBool(sectionControls, "AllowMagicRepairs");
 
             AutomapNumberOfDungeons = GetInt(sectionMap, "AutomapNumberOfDungeons", 0, 100);
             ExteriorMapDefaultZoomLevel = GetFloat(sectionMap, "ExteriorMapDefaultZoomLevel", 4, 31);
@@ -242,6 +249,8 @@ namespace DaggerfallWorkshop
             StartInDungeon = GetBool(sectionStartup, "StartInDungeon");
 
             TerrainDistance = GetInt(sectionExperimental, "TerrainDistance", 1, 4);
+            TerrainHeightmapPixelError = GetFloat(sectionExperimental, "TerrainHeightmapPixelError", 1, 10);
+            SmallerDungeons = GetBool(sectionExperimental, "SmallerDungeons");
 
             LypyL_GameConsole = GetBool(sectionEnhancements, "LypyL_GameConsole");
             LypyL_ModSystem = GetBool(sectionEnhancements, "LypyL_ModSystem");
@@ -300,6 +309,7 @@ namespace DaggerfallWorkshop
             SetColor(sectionGUI, "ToolTipTextColor", ToolTipTextColor);
             SetBool(sectionGUI, "EnableInventoryInfoPanel", EnableInventoryInfoPanel);
             SetBool(sectionGUI, "EnableEnhancedItemLists", EnableEnhancedItemLists);
+            SetBool(sectionGUI, "EnableModernConversationStyleInTalkWindow", EnableModernConversationStyleInTalkWindow);
             SetInt(sectionGUI, "HelmAndShieldMaterialDisplay", HelmAndShieldMaterialDisplay);
             SetInt(sectionGUI, "AutomapNumberOfDungeons", AutomapNumberOfDungeons);
             SetInt(sectionGUI, "ShopQualityPresentation", ShopQualityPresentation);
@@ -326,12 +336,16 @@ namespace DaggerfallWorkshop
             SetInt(sectionControls, "CameraRecoilStrength", CameraRecoilStrength);
             SetFloat(sectionControls, "SoundVolume", SoundVolume);
             SetFloat(sectionControls, "MusicVolume", MusicVolume);
+            SetBool(sectionControls, "InstantRepairs", InstantRepairs);
+            SetBool(sectionControls, "AllowMagicRepairs", AllowMagicRepairs);
 
             SetInt(sectionStartup, "StartCellX", StartCellX);
             SetInt(sectionStartup, "StartCellY", StartCellY);
             SetBool(sectionStartup, "StartInDungeon", StartInDungeon);
 
             SetInt(sectionExperimental, "TerrainDistance", TerrainDistance);
+            SetFloat(sectionExperimental, "TerrainHeightmapPixelError", TerrainHeightmapPixelError);
+            SetBool(sectionExperimental, "SmallerDungeons", SmallerDungeons);
 
             SetBool(sectionEnhancements, "LypyL_GameConsole", LypyL_GameConsole);
             SetBool(sectionEnhancements, "LypyL_ModSystem", LypyL_ModSystem);

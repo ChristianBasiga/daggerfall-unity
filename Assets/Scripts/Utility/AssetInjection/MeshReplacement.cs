@@ -9,6 +9,12 @@
 // Notes:
 //
 
+/*
+ * TODO:
+ * - Support for first person weapons
+ * - Support for town NPCs and enemies
+ */
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,6 +36,9 @@ namespace DaggerfallWorkshop.Utility.AssetInjection
         static Func<float> getTreeScaleCallback = () => Random.Range(0.6f, 1.4f);
         static Func<Color32> getTreeColorCallback = () => Color.Lerp(Color.white, Color.grey, Random.value);
         static Action<Terrain> setTreesSettingsCallback = SetTreesSettings;
+
+        static HashSet<Vector2Int> triedBillboards = new HashSet<Vector2Int>();
+        static HashSet<uint> triedModels = new HashSet<uint>();
 
         #endregion
 
@@ -53,6 +62,12 @@ namespace DaggerfallWorkshop.Utility.AssetInjection
         #endregion
 
         #region Public Methods
+
+        public static void RetryAssetImports()
+        {
+            triedBillboards.Clear();
+            triedModels.Clear();
+        }
 
         /// <summary>
         /// Seek and import a GameObject from mods to replace a Daggerfall mesh.
@@ -196,7 +211,15 @@ namespace DaggerfallWorkshop.Utility.AssetInjection
             if (DaggerfallUnity.Settings.AssetInjection)
             {
                 if (ModManager.Instance != null)
-                    return ModManager.Instance.TryGetAsset(GetName(modelID), clone, out go);
+                {
+                    if (!triedModels.Contains(modelID))
+                    {
+                        if (ModManager.Instance.TryGetAsset(GetName(modelID), clone, out go))
+                            return true;
+                        else
+                            triedModels.Add(modelID);
+                    }
+                }
             }
 
             go = null;
@@ -211,7 +234,16 @@ namespace DaggerfallWorkshop.Utility.AssetInjection
             if (DaggerfallUnity.Settings.AssetInjection)
             {
                 if (ModManager.Instance != null)
-                    return ModManager.Instance.TryGetAsset(GetName(archive, record), clone, out go);
+                {
+                    Vector2Int billboardIdx = new Vector2Int(archive, record);
+                    if (!triedBillboards.Contains(billboardIdx))
+                    {
+                        if (ModManager.Instance.TryGetAsset(GetName(archive, record), clone, out go))
+                            return true;
+                        else
+                            triedBillboards.Add(billboardIdx);
+                    }
+                }
             }
 
             go = null;

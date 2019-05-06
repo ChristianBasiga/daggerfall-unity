@@ -20,6 +20,7 @@ using DaggerfallWorkshop.Game.Questing;
 using DaggerfallWorkshop.Game.Banking;
 using DaggerfallWorkshop.Game.Utility.ModSupport;
 using DaggerfallWorkshop.Game.Player;
+using DaggerfallWorkshop.Game.Entity;
 
 namespace DaggerfallWorkshop.Game.Serialization
 {
@@ -724,6 +725,7 @@ namespace DaggerfallWorkshop.Game.Serialization
             saveData.bankDeeds = GetBankDeedData();
             saveData.escortingFaces = DaggerfallUI.Instance.DaggerfallHUD.EscortingFaces.GetSaveData();
             saveData.sceneCache = stateManager.GetSceneCache();
+            saveData.travelMapData = DaggerfallUI.Instance.DfTravelMapWindow.GetTravelMapSaveData();
 
             return saveData;
         }
@@ -1045,6 +1047,8 @@ namespace DaggerfallWorkshop.Game.Serialization
             InputManager.Instance.ClearAllActions();
             QuestMachine.Instance.ClearState();
             stateManager.ClearSceneCache();
+            PlayerEntity playerEntity = GameManager.Instance.PlayerEntity;
+            playerEntity.Reset();
 
             // Read save data from files
             string saveDataJson = ReadSaveFile(Path.Combine(path, saveDataFilename));
@@ -1055,14 +1059,14 @@ namespace DaggerfallWorkshop.Game.Serialization
             string notebookDataJson = ReadSaveFile(Path.Combine(path, notebookDataFilename));
 
             // Load backstory text
-            GameManager.Instance.PlayerEntity.BackStory = new List<string>();
+            playerEntity.BackStory = new List<string>();
             if (File.Exists(Path.Combine(path, bioFileName)))
             {
                 StreamReader file = new StreamReader(Path.Combine(path, bioFileName).ToString());
                 string line;
                 while ((line = file.ReadLine()) != null)
                 {
-                    GameManager.Instance.PlayerEntity.BackStory.Add(line);
+                    playerEntity.BackStory.Add(line);
                 }
                 file.Close();
             }
@@ -1140,15 +1144,17 @@ namespace DaggerfallWorkshop.Game.Serialization
             }
 
             // Restore notebook data
-            GameManager.Instance.PlayerEntity.Notebook.Clear();
             if (!string.IsNullOrEmpty(notebookDataJson))
             {
                 PlayerNotebook.NotebookData_v1 notebookData = Deserialize(typeof(PlayerNotebook.NotebookData_v1), notebookDataJson) as PlayerNotebook.NotebookData_v1;
-                GameManager.Instance.PlayerEntity.Notebook.RestoreNotebookData(notebookData);
+                playerEntity.Notebook.RestoreNotebookData(notebookData);
             }
 
             // Restore player position to world
             playerEnterExit.RestorePositionHelper(saveData.playerData.playerPosition, true);
+
+            //Restore Travel Map settings
+            DaggerfallUI.Instance.DfTravelMapWindow.SetTravelMapFromSaveData(saveData.travelMapData);
 
             // Smash to black while respawning
             DaggerfallUI.Instance.FadeBehaviour.SmashHUDToBlack();

@@ -4,7 +4,7 @@
 // License:         MIT License (http://www.opensource.org/licenses/mit-license.php)
 // Source Code:     https://github.com/Interkarma/daggerfall-unity
 // Original Author: Lypyl (lypyl@dfworkshop.net), Gavin Clayton (interkarma@dfworkshop.net)
-// Contributors:    Hazelnut
+// Contributors:    Hazelnut, TheLacus
 // 
 // Notes:
 //
@@ -23,6 +23,8 @@ using System.Collections.Generic;
 using Wenzil.Console;
 using Wenzil.Console.Commands;
 using DaggerfallWorkshop.Game.Utility;
+using DaggerfallWorkshop.Game.Serialization;
+using DaggerfallWorkshop.Utility.AssetInjection;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
@@ -37,29 +39,26 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         const int betonyIndex = 19;
 
-        const string nativeImgName = "TRAV0I00.IMG";
-        const string regionPickerImgName = "TRAV0I01.IMG";
-        const string findAtButtonImgName = "TRAV0I03.IMG";
-        const string locationFilterButtonEnabledImgName = "TRAV01I0.IMG";
-        const string locationFilterButtonDisabledImgName = "TRAV01I1.IMG";
-        const string downArrowImgName = "TRAVAI05.IMG";
-        const string upArrowImgName = "TRAVBI05.IMG";
-        const string rightArrowImgName = "TRAVCI05.IMG";
-        const string leftArrowImgName = "TRAVDI05.IMG";
-        const string regionBorderImgName = "MBRD00I0.IMG";
-        const string colorPaletteColName = "FMAP_PAL.COL";
-        const int regionPanelOffset = 12;
-        const int identifyFlashCount = 4;
-        const float identifyFlashInterval = 0.5f;
 
-
-
-
+        const string nativeImgName                          = "TRAV0I00.IMG";
+        const string regionPickerImgName                    = "TRAV0I01.IMG";
+        const string findAtButtonImgName                    = "TRAV0I03.IMG";
+        const string locationFilterButtonEnabledImgName     = "TRAV01I0.IMG";
+        const string locationFilterButtonDisabledImgName    = "TRAV01I1.IMG";
+        const string downArrowImgName                       = "TRAVAI05.IMG";
+        const string upArrowImgName                         = "TRAVBI05.IMG";
+        const string rightArrowImgName                      = "TRAVCI05.IMG";
+        const string leftArrowImgName                       = "TRAVDI05.IMG";
+        const string regionBorderImgName                    = "MBRD00I0.IMG";
+        const string colorPaletteColName                    = "FMAP_PAL.COL";
+        const int regionPanelOffset                         = 12;
+        const int identifyFlashCount                        = 4;
+        const int identifyFlashCountSelected                = 2;
+        const float identifyFlashInterval                   = 0.5f;
 
         protected DaggerfallTravelPopUp popUp;
 
-        //Just get protected property for this, cause we don't need to change it.
-        Dictionary<string, Vector2> offsetLookup = new Dictionary<string, Vector2>();
+        Dictionary<string, Vector2> offsetLookup    = new Dictionary<string, Vector2>();
         string[] selectedRegionMapNames;    //different maps for selected region
 
         string gotoLocation = null;
@@ -74,6 +73,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         Panel borderPanel;
         Panel regionTextureOverlayPanel;
+        Panel playerRegionOverlayPanel;
+        Panel regionMapOverlayPanel;
 
         TextLabel regionLabel;
 
@@ -96,22 +97,25 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         Button findButton;
         Button atButton;
         Button exitButton;
-        Button horizontalArrowButton = new Button();
-        Button verticalArrowButton = new Button();
-        Button dungeonsFilterButton = new Button();
-        Button templesFilterButton = new Button();
-        Button homesFilterButton = new Button();
-        Button townsFilterButton = new Button();
 
-        Rect regionTextureOverlayPanelRect = new Rect(0, regionPanelOffset, 320, 160);
-        Rect dungeonsFilterButtonSrcRect = new Rect(0, 0, 99, 11);
-        Rect templesFilterButtonSrcRect = new Rect(0, 11, 99, 11);
-        Rect homesFilterButtonSrcRect = new Rect(99, 0, 80, 11);
-        Rect townsFilterButtonSrcRect = new Rect(99, 11, 80, 11);
-        Rect findButtonRect = new Rect(0, 0, 45, 11);
-        Rect atButtonRect = new Rect(0, 11, 45, 11);
+        Button horizontalArrowButton    = new Button();
+        Button verticalArrowButton      = new Button();
+        Button dungeonsFilterButton     = new Button();
+        Button templesFilterButton      = new Button();
+        Button homesFilterButton        = new Button();
+        Button townsFilterButton        = new Button();
+
+        Rect playerRegionOverlayPanelRect   = new Rect(0, 0, 320, 200);
+        Rect regionTextureOverlayPanelRect  = new Rect(0, regionPanelOffset, 320, 160);
+        Rect dungeonsFilterButtonSrcRect    = new Rect(0, 0, 99, 11);
+        Rect templesFilterButtonSrcRect     = new Rect(0, 11, 99, 11);
+        Rect homesFilterButtonSrcRect       = new Rect(99, 0, 80, 11);
+        Rect townsFilterButtonSrcRect       = new Rect(99, 11, 80, 11);
+        Rect findButtonRect                 = new Rect(0, 0, 45, 11);
+        Rect atButtonRect                   = new Rect(0, 11, 45, 11);
 
         Color32[] pixelBuffer;
+        Color32[] overlayPixelBuffer;
         Color32[] locationPixelColors;                      //pixel colors for different location types
         Color identifyFlashColor;
 
@@ -310,6 +314,14 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             regionTextureOverlayPanel = DaggerfallUI.AddPanel(regionTextureOverlayPanelRect, NativePanel);
             regionTextureOverlayPanel.Enabled = false;
 
+            // Current region overly panel
+            playerRegionOverlayPanel = DaggerfallUI.AddPanel(playerRegionOverlayPanelRect, NativePanel);
+            playerRegionOverlayPanel.Enabled = false;
+
+            // Overlay for the region panel
+            regionMapOverlayPanel = DaggerfallUI.AddPanel(regionTextureOverlayPanelRect, NativePanel);
+            regionMapOverlayPanel.Enabled = false;
+
             //borders around the region maps
             borderTexture = DaggerfallUI.GetTextureFromImg(regionBorderImgName);
             borderPanel = DaggerfallUI.AddPanel(new Rect(new Vector2(0, regionTextureOverlayPanelRect.position.y), regionTextureOverlayPanelRect.size), NativePanel);
@@ -331,6 +343,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 SetPlayerRegionOverlay();
                 CloseRegionPanel();
             }
+
         }
 
         public override void OnPop()
@@ -424,15 +437,16 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                         else
                             CreateCrossHair(TravelTimeCalculator.GetPlayerTravelPosition(), selectedRegion);
                     }
-                   
-                    Draw(regionTextureOverlayPanel);
+
+
+                    Draw(regionTextureOverlayPanel, regionMapOverlayPanel);
                 }
                 else
                 {
                     if (identifyState)
                         SetPlayerRegionOverlay();
 
-                    Draw(NativePanel);
+                    Draw(NativePanel, playerRegionOverlayPanel);
                 }
                 draw = false;
             }
@@ -614,6 +628,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             loadedImg.LoadPalette(Path.Combine(DaggerfallUnity.Instance.Arena2Path, loadedImg.PaletteName));
             pixelBuffer = loadedImg.GetColor32(loadedImg.GetDFBitmap(), 0);
+            overlayPixelBuffer = new Color32[pixelBuffer.Length];
         }
 
         void CreateCrossHair(DFPosition pos, int regionIndex = -1)
@@ -646,7 +661,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 int scaledX = (int)((mapPixelX - origin.x) * scale);
                 int scaledY = (int)((mapPixelY - origin.y) * scale) + regionPanelOffset + yAdjust;
 
-                if (pixelBuffer == null)
+                if (overlayPixelBuffer == null)
                 {
                     Debug.LogWarning("CreateCrosshair() found pixelBuffer null");
                     return;
@@ -658,7 +673,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     {
                         if (x == scaledX || y + regionPanelOffset == scaledY)
                         {
-                            pixelBuffer[(height - y - 1) * width + x] = identifyFlashColor;
+                            overlayPixelBuffer[(height - y - 1) * width + x] = identifyFlashColor;
                         }
                     }
                 }
@@ -685,14 +700,12 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 // Create a texture map overlay for the region area
                 int width = regionPickerBitmap.Width;
                 int height = regionPickerBitmap.Height;
-
-                if (pixelBuffer == null)
-                    pixelBuffer = new Color32[width * height];
+                overlayPixelBuffer = new Color32[width * height];
 
                 // note by Nystul: check necessary to prevent exception which could happen if pixelBuffer is 320x160 instead of 320x200 -
                 // otherwise marked line below will throw exception (e.g. after fast travel to a location in Wrothgarian Mountains and reopening map)
                 // not sure why this happens, but it happens, maybe Lypyl can take a look
-                if (pixelBuffer.GetLength(0) != width * height)
+                if (overlayPixelBuffer.GetLength(0) != width * height)
                     return;
 
                 for (int y = 0; y < height; y++)
@@ -703,7 +716,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                         int dstOffset = ((height - y - 1) * width) + x;
                         int sampleRegion = regionPickerBitmap.Data[srcOffset] - 128;
                         if (sampleRegion == playerRegion)
-                            pixelBuffer[dstOffset] = identifyFlashColor; // this is the line that might throw exception sometimes
+                            overlayPixelBuffer[dstOffset] = identifyFlashColor; // this is the line that might throw exception sometimes
                     }
                 }
             }
@@ -714,7 +727,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
-        void Draw(Panel target, Texture2D texture = null)
+        void Draw(Panel target, Panel targetOverlay, Texture2D texture = null)
         {
             if (target == null)
                 return;
@@ -728,8 +741,20 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 SetColorsFromImg();
             }
 
-            texture = new Texture2D(width, height, TextureFormat.ARGB32, false);
-            texture.SetPixels32(pixelBuffer);
+            // Make base texture     
+            if (!TextureReplacement.TryImportImage(RegionSelected ? selectedRegionMapNames[mapIndex] : nativeImgName, false, out texture))
+            {
+                texture = new Texture2D(width, height, TextureFormat.ARGB32, false);
+                texture.SetPixels32(pixelBuffer);
+            }
+
+            // Make overlay texture
+            Texture2D overlay = null;
+            if (RegionSelected || identifyState)
+            {
+                overlay = new Texture2D(width, height, TextureFormat.ARGB32, false);
+                overlay.SetPixels32(overlayPixelBuffer);
+            }
 
             if (RegionSelected && zoom)
             {
@@ -757,14 +782,25 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
                 zoomOffset = new Vector2(startX, startY);
 
-                Color[] temp = texture.GetPixels(startX, startY, width / zoomfactor, height / zoomfactor);
-                texture = new Texture2D(width / zoomfactor, height / zoomfactor, TextureFormat.ARGB32, false)   ;
-                texture.SetPixels(temp);
+
+                DFSize srcSize = new DFSize(width, height);
+                Rect subRect = new Rect(startX, height - startY - height / zoomfactor, width / zoomfactor, height / zoomfactor);
+
+                texture = ImageReader.GetSubTexture(texture, subRect, srcSize);
+                if (overlay)
+                    overlay = ImageReader.GetSubTexture(overlay, subRect, srcSize);
             }
 
             texture.filterMode = filterMode;
             texture.Apply();
             target.BackgroundTexture = texture;
+
+            if (targetOverlay.Enabled = overlay)
+            {
+                overlay.filterMode = filterMode;
+                overlay.Apply();
+                targetOverlay.BackgroundTexture = overlay;
+            }
         }
 
         // Populates offset dictionary for aligning top-left of map to map pixel coordinates.
@@ -1018,7 +1054,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             selectedRegionMapNames = mapNames;
             regionTextureOverlayPanel.Enabled = true;
             borderPanel.Enabled = true;
+            playerRegionOverlayPanel.Enabled = false;
+            regionMapOverlayPanel.Enabled = true;
             pixelBuffer = null;
+            overlayPixelBuffer = null;
             loadNewImage = true;
             draw = true;
             findButton.Enabled = true;
@@ -1036,6 +1075,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             mapIndex = 0;
             regionTextureOverlayPanel.Enabled = false;
             borderPanel.Enabled = false;
+            playerRegionOverlayPanel.Enabled = true;
+            regionMapOverlayPanel.Enabled = false;
             horizontalArrowButton.Enabled = false;
             verticalArrowButton.Enabled = false;
             findButton.Enabled = false;
@@ -1043,6 +1084,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             draw = true;
             zoom = false;
             pixelBuffer = null;
+            overlayPixelBuffer = null;
             StartIdentify();
         }
 
@@ -1058,12 +1100,27 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             return false;
         }
 
+
+        // Check if place is discovered, so it can be found on map.
+        public bool CanFindPlace(string regionName, string name)
+        {
+            DFLocation location;
+            if (DaggerfallUnity.Instance.ContentReader.GetLocation(regionName, name, out location))
+            {
+                DFPosition mapPixel = MapsFile.LongitudeLatitudeToMapPixel(location.MapTableData.Longitude, location.MapTableData.Latitude);
+                ContentReader.MapSummary summary;
+                if (DaggerfallUnity.Instance.ContentReader.HasLocation(mapPixel.X, mapPixel.Y, out summary))
+                    return checkLocationDiscovered(summary);
+            }
+            return false;
+        }
+
         // Sets pixels for selected region
         void SetLocationPixels()
         {
             try
             {
-                if(pixelBuffer == null || pixelBuffer.Length != (width * height)){
+                if(overlayPixelBuffer == null || overlayPixelBuffer.Length != (width * height)){
                     Debug.LogError("invalid pixelBuffer in SetLocationPixels()");
                     return;
                 }
@@ -1099,7 +1156,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                                 if (index == -1)
                                     continue;
                                 else
-                                    pixelBuffer[offset] = locationPixelColors[index];
+                                    overlayPixelBuffer[offset] = locationPixelColors[index];
                             }
                         }
 
@@ -1286,6 +1343,46 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 townsFilterButton.BackgroundTexture = townsFilterButtonDisabled;
         }
 
+        public TravelMapSaveData GetTravelMapSaveData()
+        {
+            TravelMapSaveData data = new TravelMapSaveData();
+            data.filterDungeons = filterDungeons;
+            data.filterHomes = filterHomes;
+            data.filterTemples = filterTemples;
+            data.filterTowns = filterTowns;
+
+            if(popUp != null)
+            {
+                data.sleepInn = popUp.SleepModeInn;
+                data.speedCautious = popUp.SpeedCautious;
+                data.travelShip = popUp.TravelShip;
+            }
+
+            return data;
+        }
+
+        public void SetTravelMapFromSaveData(TravelMapSaveData data)
+        {
+            //if doesn't have save data, use defaults
+            if(data == null)
+                data = new TravelMapSaveData();
+
+            filterDungeons = data.filterDungeons;
+            filterHomes = data.filterHomes;
+            filterTemples = data.filterTemples;
+            filterTowns = data.filterTowns;
+
+            if(popUp == null)
+            {
+                popUp = new DaggerfallTravelPopUp(DaggerfallUI.UIManager, this, this);
+            }
+
+            popUp.SleepModeInn = data.sleepInn;
+            popUp.SpeedCautious = data.speedCautious;
+            popUp.TravelShip = data.travelShip;
+
+            UpdateSearchButtons();
+        }
         #endregion
 
         #region Helper Methods
@@ -1619,12 +1716,14 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             // Turn off flash after specified number of on states
             if (!lastIdentifyState && identifyState)
             {
-                if (++identifyChanges > identifyFlashCount)
+                int flashCount = locationSelected ? identifyFlashCountSelected : identifyFlashCount;
+                if (++identifyChanges > flashCount)
                 {
                     StopIdentify();
                 }
             }
         }
+
 
         #endregion
 

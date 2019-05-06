@@ -92,6 +92,7 @@ namespace DaggerfallWorkshop.Game.Serialization
         public BankDeedData_v1 bankDeeds;
         public FaceDetails[] escortingFaces;
         public SceneCache_v1 sceneCache;
+        public TravelMapSaveData travelMapData;
     }
 
     #endregion
@@ -144,6 +145,7 @@ namespace DaggerfallWorkshop.Game.Serialization
         public TransportModes transportMode;
         public PlayerPositionData_v1 boardShipPosition;  // Holds the player position from before boarding a ship.
         public Dictionary<int, GuildMembership_v1> guildMemberships;
+        public List<string> oneTimeQuestsAccepted;
     }
 
     [fsObject("v1")]
@@ -166,6 +168,7 @@ namespace DaggerfallWorkshop.Game.Serialization
         public int currentBreath;
         public short[] skillUses;
         public uint timeOfLastSkillIncreaseCheck;
+        public uint[] skillsRecentlyRaised;
         public int startingLevelUpSkillSum;
         public ulong[] equipTable;
         public ItemData_v1[] items;
@@ -199,6 +202,7 @@ namespace DaggerfallWorkshop.Game.Serialization
         public short reputationNobility;
         public short reputationScholars;
         public short reputationUnderworld;
+        public VampireClans previousVampireClan;
     }
 
     [fsObject("v1")]
@@ -238,7 +242,7 @@ namespace DaggerfallWorkshop.Game.Serialization
         public string name;
         public int mapID;
         public int buildingKey;
-        public Vector3 allocatedBed;
+        public int allocatedBedIndex;
         public ulong expiryTime;
     }
 
@@ -273,6 +277,16 @@ namespace DaggerfallWorkshop.Game.Serialization
         public MobileTypes trappedSoulType;
         public string className;
         public Poisons poisonType = Poisons.None;
+        public int potionRecipe;
+        public ItemRepairData_v1 repairData;
+    }
+
+    [fsObject("v1")]
+    public class ItemRepairData_v1
+    {
+        public string sceneName;
+        public ulong timeStarted;
+        public int repairTime;
     }
 
     #endregion
@@ -443,6 +457,18 @@ namespace DaggerfallWorkshop.Game.Serialization
         public uint loanDueDate;
         public int regionIndex;
         public bool hasDefaulted;
+    }
+
+    [fsObject("v1")]
+    public class TravelMapSaveData
+    {
+        public bool filterDungeons;
+        public bool filterTemples;
+        public bool filterHomes;
+        public bool filterTowns;
+        public bool sleepInn = true;
+        public bool speedCautious = true;
+        public bool travelShip = true;
     }
 
     #endregion

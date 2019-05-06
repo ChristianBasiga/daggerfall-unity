@@ -17,6 +17,8 @@ using DaggerfallWorkshop.Game.Entity;
 using DaggerfallConnect.FallExe;
 using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Utility;
+using DaggerfallWorkshop.Utility.AssetInjection;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game.Items
 {
@@ -47,9 +49,6 @@ namespace DaggerfallWorkshop.Game.Items
 
         // Enchantment point multipliers by material type. Iron through Daedric. Enchantment points is baseEnchanmentPoints * value / 4.
         static readonly short[] enchantmentPointMultipliersByMaterial = { 3, 4, 7, 5, 6, 5, 7, 8, 10, 12 };
-
-        // Value of potions indexed by recipe
-        static readonly ushort[] potionValues = { 25, 50, 50, 50, 75, 75, 75, 75, 100, 100, 100, 100, 125, 125, 125, 200, 200, 200, 250, 500 };
 
         // Enchantment point/gold value data for item powers
         static readonly int[] extraSpellPtsEnchantPts = { 0x1F4, 0x1F4, 0x1F4, 0x1F4, 0xC8, 0xC8, 0xC8, 0x2BC, 0x320, 0x384, 0x3E8 };
@@ -133,11 +132,11 @@ namespace DaggerfallWorkshop.Game.Items
         public static ArmorMaterialTypes RandomArmorMaterial(int playerLevel)
         {
             // Random armor material
-            int random = UnityEngine.Random.Range(1, 101);
+            int roll = Dice100.Roll();
 
-            if (random >= 70)
+            if (roll >= 70)
             {
-                if (random >= 90)
+                if (roll >= 90)
                 {
                     WeaponMaterialTypes plateMaterial = RandomMaterial(playerLevel);
                     return (ArmorMaterialTypes)(0x0200 + plateMaterial);
@@ -265,6 +264,12 @@ namespace DaggerfallWorkshop.Game.Items
             // TODO: Change DaggerfallUnityItem.message from int to ushort
             book.message = DaggerfallUnity.Instance.ItemHelper.getRandomBookID();
             book.CurrentVariant = UnityEngine.Random.Range(0, book.TotalVariants);
+            // Update item value for this book.
+            BookFile bookFile = new BookFile();
+            string name = BookFile.messageToBookFilename(book.message);
+            if (!BookReplacement.TryImportBook(name, bookFile))
+                bookFile.OpenBook(DaggerfallUnity.Instance.Arena2Path, name);
+            book.value = bookFile.Price;
             return book;
         }
 
@@ -324,7 +329,7 @@ namespace DaggerfallWorkshop.Game.Items
         /// Generates a weapon.
         /// </summary>
         /// <param name="weapon"></param>
-        /// <param name="material"></param>
+        /// <param name="material">Ignored for arrows</param>
         /// <returns></returns>
         public static DaggerfallUnityItem CreateWeapon(Weapons weapon, WeaponMaterialTypes material)
         {
@@ -332,18 +337,17 @@ namespace DaggerfallWorkshop.Game.Items
             int groupIndex = DaggerfallUnity.Instance.ItemHelper.GetGroupIndex(ItemGroups.Weapons, (int)weapon);
             DaggerfallUnityItem newItem = new DaggerfallUnityItem(ItemGroups.Weapons, groupIndex);
 
-            // Adjust material
-            newItem.nativeMaterialValue = (int)material;
-            newItem = SetItemPropertiesByMaterial(newItem, material);
-            newItem.dyeColor = DaggerfallUnity.Instance.ItemHelper.GetWeaponDyeColor(material);
-
-            // Handle arrows
-            if (groupIndex == 18)
-            {
-                newItem.stackCount = UnityEngine.Random.Range(1, 21);
+            if (weapon == Weapons.Arrow)
+            {   // Handle arrows
+                newItem.stackCount = UnityEngine.Random.Range(1, 20 + 1);
                 newItem.currentCondition = 0; // not sure if this is necessary, but classic does it
             }
-
+            else
+            {   // Adjust material
+                newItem.nativeMaterialValue = (int)material;
+                newItem = SetItemPropertiesByMaterial(newItem, material);
+                newItem.dyeColor = DaggerfallUnity.Instance.ItemHelper.GetWeaponDyeColor(material);
+            }
             return newItem;
         }
 
@@ -369,7 +373,7 @@ namespace DaggerfallWorkshop.Game.Items
             // Handle arrows
             if (groupIndex == 18)
             {
-                newItem.stackCount = UnityEngine.Random.Range(1, 21);
+                newItem.stackCount = UnityEngine.Random.Range(1, 20 + 1);
                 newItem.currentCondition = 0; // not sure if this is necessary, but classic does it
             }
 
@@ -416,7 +420,6 @@ namespace DaggerfallWorkshop.Game.Items
             }
 
             newItem.dyeColor = DaggerfallUnity.Instance.ItemHelper.GetArmorDyeColor((ArmorMaterialTypes)newItem.nativeMaterialValue);
-            FixLeatherHelm(newItem);
 
             // Adjust for variant
             if (variant >= 0)
@@ -467,7 +470,6 @@ namespace DaggerfallWorkshop.Game.Items
             }
 
             newItem.dyeColor = DaggerfallUnity.Instance.ItemHelper.GetArmorDyeColor(material);
-            FixLeatherHelm(newItem);
             RandomizeArmorVariant(newItem);
 
             return newItem;
@@ -665,7 +667,7 @@ namespace DaggerfallWorkshop.Game.Items
         {
             // Randomise ingredient group
             ItemGroups itemGroup;
-            int group = UnityEngine.Random.Range(0, 7);
+            int group = UnityEngine.Random.Range(0, 8);
             Array enumArray;
             switch (group)
             {
@@ -708,27 +710,34 @@ namespace DaggerfallWorkshop.Game.Items
         }
 
         /// <summary>
-        /// Creates a potion
+        /// Creates a potion.
         /// </summary>
         /// <param name="recipe">Recipe index for the potion</param>
-        /// <returns>DaggerfallUnityItem</returns>
-        public static DaggerfallUnityItem CreatePotion(byte recipe)
+        /// <returns>Potion DaggerfallUnityItem</returns>
+        public static DaggerfallUnityItem CreatePotion(int recipeKey, int stackSize = 1)
         {
-            return new DaggerfallUnityItem(ItemGroups.UselessItems1, 1)
-            {
-                typeDependentData = recipe,
-                value = potionValues[recipe],
-            };
+            return new DaggerfallUnityItem(ItemGroups.UselessItems1, 1) { PotionRecipeKey = recipeKey, stackCount = stackSize };
         }
 
         /// <summary>
-        /// Creates a random potion
+        /// Creates a random potion from all registered recipes.
         /// </summary>
-        /// <returns>DaggerfallUnityItem</returns>
-        public static DaggerfallUnityItem CreateRandomPotion()
+        /// <returns>Potion DaggerfallUnityItem</returns>
+        public static DaggerfallUnityItem CreateRandomPotion(int stackSize = 1)
         {
-            byte recipe = (byte)UnityEngine.Random.Range(0, 20);
-            return CreatePotion(recipe);
+            List<int> recipeKeys = GameManager.Instance.EntityEffectBroker.GetPotionRecipeKeys();
+            int recipeIdx = UnityEngine.Random.Range(0, recipeKeys.Count);
+            return CreatePotion(recipeKeys[recipeIdx]);
+        }
+
+        /// <summary>
+        /// Creates a random (classic) potion
+        /// </summary>
+        /// <returns>Potion DaggerfallUnityItem</returns>
+        public static DaggerfallUnityItem CreateRandomClassicPotion()
+        {
+            int recipeIdx = UnityEngine.Random.Range(0, MagicAndEffects.PotionRecipe.classicRecipeKeys.Length);
+            return CreatePotion(MagicAndEffects.PotionRecipe.classicRecipeKeys[recipeIdx]);
         }
 
         /// <summary>
@@ -784,17 +793,6 @@ namespace DaggerfallWorkshop.Game.Items
                 variant = UnityEngine.Random.Range(0, item.ItemTemplate.variants);
 
             SetVariant(item, variant);
-        }
-
-        /// <summary>
-        /// Set leather helms to use chain dye.
-        /// Daggerfall seems to do this also as "leather" helms have the chain tint in-game.
-        /// Might need to revisit this later.
-        /// </summary>
-        public static void FixLeatherHelm(DaggerfallUnityItem item)
-        {
-            if (item.TemplateIndex == (int)Armor.Helm && (ArmorMaterialTypes)item.nativeMaterialValue == ArmorMaterialTypes.Leather)
-                item.dyeColor = DyeColors.Chain;
         }
 
         #endregion

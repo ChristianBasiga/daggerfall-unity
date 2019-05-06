@@ -16,6 +16,8 @@ using DaggerfallConnect.FallExe;
 using DaggerfallWorkshop.Game.Serialization;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.Questing;
+using DaggerfallWorkshop.Utility;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game.Items
 {
@@ -57,6 +59,8 @@ namespace DaggerfallWorkshop.Game.Items
 
         // Soul trapped
         MobileTypes trappedSoulType = MobileTypes.None;
+        // Potion recipe
+        int potionRecipeKey;
 
         // Time for magically-created item to disappear
         uint timeForItemToDisappear = 0;
@@ -74,6 +78,9 @@ namespace DaggerfallWorkshop.Game.Items
 
         // References current slot if equipped
         EquipSlots equipSlot = EquipSlots.None;
+
+        // Repair data, used when left for repair.
+        ItemRepairData repairData = new ItemRepairData();
 
         #endregion
 
@@ -289,12 +296,55 @@ namespace DaggerfallWorkshop.Game.Items
         }
 
         /// <summary>
+        /// Checks if this item is a potion recipe.
+        /// </summary>
+        public bool IsPotionRecipe
+        {
+            get { return ItemGroup == ItemGroups.MiscItems && TemplateIndex == (int)MiscItems.Potion_recipe; }
+        }
+
+        /// <summary>
+        /// Checks if this item is a potion.
+        /// </summary>
+        public bool IsPotion
+        {
+            get { return ItemGroup == ItemGroups.UselessItems1 && TemplateIndex == (int)UselessItems1.Glass_Bottle; }
+        }
+
+        /// <summary>
+        /// Checks if this item is a parchment.
+        /// </summary>
+        public bool IsParchment
+        {
+            get { return ItemGroup == ItemGroups.UselessItems2 && TemplateIndex == (int)UselessItems2.Parchment; }
+        }
+
+        /// <summary>
         /// Gets/sets the soul trapped in a soul trap.
         /// </summary>
         public MobileTypes TrappedSoulType
         {
             get { return trappedSoulType; }
             set { trappedSoulType = value; }
+        }
+
+        /// <summary>
+        /// Gets/sets the key of the potion recipe allocated to this item.
+        /// Has a side effect (ugh, sorry) of populating the item value from the recipe price.
+        /// (due to value not being encapsulated) Also populates texture record.
+        /// </summary>
+        public int PotionRecipeKey
+        {
+            get { return potionRecipeKey; }
+            set {
+                MagicAndEffects.PotionRecipe potionRecipe = GameManager.Instance.EntityEffectBroker.GetPotionRecipe(value);
+                if (potionRecipe != null)
+                {
+                    potionRecipeKey = value;
+                    this.value = potionRecipe.Price;
+                    worldTextureRecord = potionRecipe.TextureRecord;
+                }
+            }
         }
 
         /// <summary>
@@ -336,6 +386,12 @@ namespace DaggerfallWorkshop.Game.Items
         public int NativeMaterialValue
         {
             get { return nativeMaterialValue; }
+        }
+
+        /// <summary>Gets the repair data for this item.</summary>
+        public ItemRepairData RepairData
+        {
+            get { return repairData; }
         }
 
         #endregion
@@ -444,7 +500,7 @@ namespace DaggerfallWorkshop.Game.Items
             unknown2 = 0;
             typeDependentData = 0;
             enchantmentPoints = itemTemplate.enchantmentPoints;
-            message = (itemGroup == ItemGroups.Paintings) ? UnityEngine.Random.Range(0, 65535) : 0;
+            message = (itemGroup == ItemGroups.Paintings) ? UnityEngine.Random.Range(0, 65536) : 0;
             stackCount = 1;
         }
 
@@ -477,16 +533,16 @@ namespace DaggerfallWorkshop.Game.Items
             playerTextureRecord = record;
             worldTextureArchive = archive;                  // Not sure about artifact world textures, just using player texture for now
             worldTextureRecord = record;
-            nativeMaterialValue = 0;
+            nativeMaterialValue = magicItemTemplate.material;
             dyeColor = DyeColors.Unchanged;
             weightInKg = itemTemplate.baseWeight;
             drawOrder = itemTemplate.drawOrderOrEffect;
             currentVariant = 0;
-            value = itemTemplate.basePrice;
+            value = magicItemTemplate.value;
             unknown = 0;
-            flags = artifactMask & identifiedMask;      // Set as artifact & identified.
-            currentCondition = itemTemplate.hitPoints;
-            maxCondition = itemTemplate.hitPoints;
+            flags = artifactMask | identifiedMask;      // Set as artifact & identified.
+            currentCondition = magicItemTemplate.uses;
+            maxCondition = magicItemTemplate.uses;
             unknown2 = 0;
             typeDependentData = 0;
             enchantmentPoints = 0;
@@ -532,9 +588,17 @@ namespace DaggerfallWorkshop.Game.Items
             return (TemplateIndex == templateIndex);
         }
 
+        // Horses, carts and arrows are not counted against encumbrance.
+        public float EffectiveUnitWeightInKg()
+        {
+            if (ItemGroup == ItemGroups.Transportation || TemplateIndex == (int)Weapons.Arrow)
+                return 0f;
+            return weightInKg;
+        }
+
         /// <summary>
         /// Determines if item is stackable.
-        /// Only ingredients, gold pieces, oil and arrows are stackable,
+        /// Only ingredients, potions, gold pieces, oil and arrows are stackable,
         /// but equipped items, enchanted ingredients and quest items are never stackable.
         /// </summary>
         /// <returns>True if item stackable.</returns>
@@ -542,7 +606,7 @@ namespace DaggerfallWorkshop.Game.Items
         {
             if (IsEquipped || IsQuestItem || IsEnchanted)
                 return false;
-            if (IsIngredient ||
+            if (IsIngredient || IsPotion ||
                 IsOfTemplate(ItemGroups.Currency, (int)Currency.Gold_pieces) ||
                 IsOfTemplate(ItemGroups.Weapons, (int)Weapons.Arrow) ||
                 IsOfTemplate(ItemGroups.UselessItems2, (int)UselessItems2.Oil))
@@ -559,6 +623,7 @@ namespace DaggerfallWorkshop.Game.Items
         {
             return stackCount > 1;
         }
+
         /// <summary>
         /// Allow use of item to be implemented by item object and overridden
         /// </summary>
@@ -663,6 +728,8 @@ namespace DaggerfallWorkshop.Game.Items
             data.poisonType = poisonType;
             if ((int)poisonType < MagicAndEffects.MagicEffects.PoisonEffect.startValue)
                 data.poisonType = Poisons.None;
+            data.potionRecipe = potionRecipeKey;
+            data.repairData = repairData.GetSaveData();
 
             return data;
         }
@@ -1049,7 +1116,7 @@ namespace DaggerfallWorkshop.Game.Items
         public void DamageThroughPhysicalHit(int damage, DaggerfallEntity owner)
         {
             int amount = (10 * damage + 50) / 100;
-            if ((amount == 0) && UnityEngine.Random.Range(1, 100 + 1) < 20)
+            if ((amount == 0) && Dice100.SuccessRoll(20))
                 amount = 1;
             currentCondition -= amount;
             if (currentCondition <= 0)
@@ -1165,6 +1232,7 @@ namespace DaggerfallWorkshop.Game.Items
             stackCount = other.stackCount;
             enchantmentPoints = other.enchantmentPoints;
             message = other.message;
+            potionRecipeKey = other.potionRecipeKey;
 
             if (other.legacyMagic != null)
                 legacyMagic = (DaggerfallEnchantment[])other.legacyMagic.Clone();
@@ -1218,6 +1286,10 @@ namespace DaggerfallWorkshop.Game.Items
             {
                 stackCount = 1;
             }
+            // Convert classic recipes to DFU recipe key.
+            if ((IsPotion || IsPotionRecipe) && typeDependentData < MagicAndEffects.PotionRecipe.classicRecipeKeys.Length)
+                potionRecipeKey = MagicAndEffects.PotionRecipe.classicRecipeKeys[typeDependentData];
+
             currentVariant = 0;
             enchantmentPoints = itemRecord.ParsedData.enchantmentPoints;
             message = (int)itemRecord.ParsedData.message;
@@ -1251,9 +1323,6 @@ namespace DaggerfallWorkshop.Game.Items
             // TEST: Force dye color to match material of imported weapons & armor
             // This is to fix cases where dye colour may be set incorrectly on imported item
             dyeColor = DaggerfallUnity.Instance.ItemHelper.GetDyeColor(this);
-
-            // Fix leather helms
-            ItemBuilder.FixLeatherHelm(this);
         }
 
         /// <summary>
@@ -1306,6 +1375,12 @@ namespace DaggerfallWorkshop.Game.Items
             poisonType = data.poisonType;
             if ((int)data.poisonType < MagicAndEffects.MagicEffects.PoisonEffect.startValue)
                 poisonType = Poisons.None;
+            potionRecipeKey = data.potionRecipe;
+            // Convert any old classic recipe items in saves to DFU recipe key.
+            if (potionRecipeKey == 0 && (IsPotion || IsPotionRecipe) && typeDependentData < MagicAndEffects.PotionRecipe.classicRecipeKeys.Length)
+                potionRecipeKey = MagicAndEffects.PotionRecipe.classicRecipeKeys[typeDependentData];
+
+            repairData.RestoreRepairData(data.repairData);
         }
 
         /// <summary>
@@ -1465,6 +1540,19 @@ namespace DaggerfallWorkshop.Game.Items
                 currentVariant = TotalVariants - 1;
             else
                 currentVariant = variant;
+        }
+
+        #endregion
+
+        #region Events
+
+        // OnWeaponStrike
+        public delegate void OnWeaponStrikeEventHandler(DaggerfallUnityItem item, DaggerfallEntityBehaviour receiver, int damage);
+        public event OnWeaponStrikeEventHandler OnWeaponStrike;
+        public void RaiseOnWeaponStrikeEvent(DaggerfallEntityBehaviour receiver, int damage)
+        {
+            if (OnWeaponStrike != null)
+                OnWeaponStrike(this, receiver, damage);
         }
 
         #endregion

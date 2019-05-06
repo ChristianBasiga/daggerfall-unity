@@ -15,6 +15,7 @@ using DaggerfallWorkshop.Game.Weather;
 using DaggerfallWorkshop.Game.Questing;
 using DaggerfallWorkshop.Game.MagicAndEffects;
 using DaggerfallWorkshop.Game.UserInterface;
+using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallConnect;
 using DaggerfallWorkshop.Game.Serialization;
 using DaggerfallWorkshop.Utility.AssetInjection;
@@ -56,6 +57,7 @@ namespace Wenzil.Console
             ConsoleCommandsDatabase.RegisterCommand(SetHealth.name, SetHealth.description, SetHealth.usage, SetHealth.Execute);
 
             ConsoleCommandsDatabase.RegisterCommand(ResetAssets.name, ResetAssets.description, ResetAssets.usage, ResetAssets.Execute);
+            ConsoleCommandsDatabase.RegisterCommand(RetryAssetImports.name, RetryAssetImports.description, RetryAssetImports.usage, RetryAssetImports.Execute);
 
             ConsoleCommandsDatabase.RegisterCommand(SetWalkSpeed.name, SetWalkSpeed.description, SetWalkSpeed.usage, SetWalkSpeed.Execute);
             ConsoleCommandsDatabase.RegisterCommand(SetMouseSensitivity.name, SetMouseSensitivity.description, SetMouseSensitivity.usage, SetMouseSensitivity.Execute);
@@ -75,8 +77,10 @@ namespace Wenzil.Console
             ConsoleCommandsDatabase.RegisterCommand(Groundme.name, Groundme.description, Groundme.usage, Groundme.Execute);
             ConsoleCommandsDatabase.RegisterCommand(ExecuteScript.name, ExecuteScript.description, ExecuteScript.usage, ExecuteScript.Execute);
             ConsoleCommandsDatabase.RegisterCommand(AddInventoryItem.name, AddInventoryItem.description, AddInventoryItem.usage, AddInventoryItem.Execute);
+            ConsoleCommandsDatabase.RegisterCommand(AddArtifact.name, AddArtifact.description, AddArtifact.usage, AddArtifact.Execute);
             ConsoleCommandsDatabase.RegisterCommand(ShowBankWindow.name, ShowBankWindow.description, ShowBankWindow.usage, ShowBankWindow.Execute);
             ConsoleCommandsDatabase.RegisterCommand(ShowSpellmakerWindow.name, ShowSpellmakerWindow.description, ShowSpellmakerWindow.usage, ShowSpellmakerWindow.Execute);
+            ConsoleCommandsDatabase.RegisterCommand(AddSpellBook.name, AddSpellBook.description, AddSpellBook.usage, AddSpellBook.Execute);
             ConsoleCommandsDatabase.RegisterCommand(StartQuest.name, StartQuest.usage, StartQuest.description, StartQuest.Execute);
 
             ConsoleCommandsDatabase.RegisterCommand(DiseasePlayer.name, DiseasePlayer.usage, DiseasePlayer.description, DiseasePlayer.Execute);
@@ -85,8 +89,12 @@ namespace Wenzil.Console
             ConsoleCommandsDatabase.RegisterCommand(DumpBlock.name, DumpBlock.description, DumpBlock.usage, DumpBlock.Execute);
             ConsoleCommandsDatabase.RegisterCommand(DumpLocBlocks.name, DumpLocBlocks.description, DumpLocBlocks.usage, DumpLocBlocks.Execute);
             ConsoleCommandsDatabase.RegisterCommand(DumpBuilding.name, DumpBuilding.description, DumpBuilding.usage, DumpBuilding.Execute);
+            ConsoleCommandsDatabase.RegisterCommand(IngredientUsage.name, IngredientUsage.description, IngredientUsage.usage, IngredientUsage.Execute);
 
             ConsoleCommandsDatabase.RegisterCommand(PlayFLC.name, PlayFLC.description, PlayFLC.usage, PlayFLC.Execute);
+            ConsoleCommandsDatabase.RegisterCommand(PrintLegalRep.name, PrintLegalRep.description, PrintLegalRep.usage, PrintLegalRep.Execute);
+            ConsoleCommandsDatabase.RegisterCommand(UnmuteQuestNPCs.name, UnmuteQuestNPCs.description, UnmuteQuestNPCs.usage, UnmuteQuestNPCs.Execute);
+
         }
 
         private static class DumpBlock
@@ -214,6 +222,23 @@ namespace Wenzil.Console
             }
         }
 
+        private static class IngredientUsage
+        {
+            public static readonly string name = "ingredUsage";
+            public static readonly string description = "Log an analysis of potion recipe usage of ingredients";
+            public static readonly string usage = "ingredUsage";
+
+            public static string Execute(params string[] args)
+            {
+                if (args == null || args.Length > 0)
+                    return usage;
+
+                GameManager.Instance.EntityEffectBroker.LogRecipeIngredientUsage();
+
+                return "Finished";
+            }
+        }
+
         private static class GodCommand
         {
             public static readonly string name = "tgm";
@@ -331,6 +356,21 @@ namespace Wenzil.Console
                 SaveLoadManager.Instance.QuickSave(true);
 
                 return "Cleared cache and reloaded world.";
+            }
+        }
+
+        private static class RetryAssetImports
+        {
+            public static readonly string name = "retry_assets";
+            public static readonly string error = "Could not retry asset imports";
+            public static readonly string description = "Clears records of import attempts for assets from loose files and mods.";
+            public static readonly string usage = "retry_assets";
+
+            public static string Execute(params string[] args)
+            {
+                MeshReplacement.RetryAssetImports();
+
+                return "Cleared records of import attempts for assets from loose files and mods.";
             }
         }
 
@@ -803,8 +843,8 @@ namespace Wenzil.Console
                                 int xpos, ypos;
                                 while (true)
                                 {
-                                    xpos = UnityEngine.Random.Range(0, MapsFile.MaxMapPixelX - 1);
-                                    ypos = UnityEngine.Random.Range(0, MapsFile.MaxMapPixelY - 1);
+                                    xpos = UnityEngine.Random.Range(0, MapsFile.MaxMapPixelX);
+                                    ypos = UnityEngine.Random.Range(0, MapsFile.MaxMapPixelY);
                                     DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSummary;
                                     if (DaggerfallWorkshop.DaggerfallUnity.Instance.ContentReader.HasLocation(xpos, ypos, out mapSummary))
                                     {
@@ -1057,6 +1097,12 @@ namespace Wenzil.Console
 
                 if (currentQuest.QuestTombstoned)
                     return "Quest is already tombstoned";
+
+                // Disallow ending main quest backbone
+                if (QuestMachine.IsProtectedQuest(currentQuest))
+                {
+                    return "Cannot end main quest backbone with 'enddebugquest'. Use 'clearmqstate' instead. Not this will clear ALL quests and ALL global variables.";
+                }
 
                 QuestMachine.Instance.TombstoneQuest(currentQuest);
 
@@ -1500,10 +1546,104 @@ namespace Wenzil.Console
             private static T RandomEnumValue<T>()
             {
                 var v = Enum.GetValues(typeof(T));
-                return (T)v.GetValue(UnityEngine.Random.Range(0, v.Length - 1));
+                return (T)v.GetValue(UnityEngine.Random.Range(0, v.Length));
             }
         }
 
+        private static class AddArtifact
+        {
+            public static readonly string name = "addArtifact";
+            public static readonly string description = "Adds an artifact of ID n to the character";
+            public static readonly string usage = "addArtifact [n]";
+
+            public static string Execute(params string[] args)
+            {
+                if (args.Length < 1) return "See usage.";
+
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                PlayerEntity playerEntity = player.GetComponent<DaggerfallEntityBehaviour>().Entity as PlayerEntity;
+                ItemCollection items = playerEntity.Items;
+                DaggerfallUnityItem newItem = null;
+
+                switch (args[0])
+                {
+                    case "0":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Masque_of_Clavicus);
+                        break;
+                    case "1":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Mehrunes_Razor);
+                        break;
+                    case "2":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Mace_of_Molag_Bal);
+                        break;
+                    case "3":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Hircine_Ring);
+                        break;
+                    case "4":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Sanguine_Rose);
+                        break;
+                    case "5":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Oghma_Infinium);
+                        break;
+                    case "6":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Wabbajack);
+                        break;
+                    case "7":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Ring_of_Namira);
+                        break;
+                    case "8":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Skull_of_Corruption);
+                        break;
+                    case "9":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Azuras_Star);
+                        break;
+                    case "10":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Volendrung);
+                        break;
+                    case "11":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Warlocks_Ring);
+                        break;
+                    case "12":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Auriels_Bow);
+                        break;
+                    case "13":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Necromancers_Amulet);
+                        break;
+                    case "14":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Chrysamere);
+                        break;
+                    case "15":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Lords_Mail);
+                        break;
+                    case "16":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Staff_of_Magnus);
+                        break;
+                    case "17":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Ring_of_Khajiit);
+                        break;
+                    case "18":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Ebony_Mail);
+                        break;
+                    case "19":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Auriels_Shield);
+                        break;
+                    case "20":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Spell_Breaker);
+                        break;
+                    case "21":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Skeletons_Key);
+                        break;
+                    case "22":
+                        newItem = ItemBuilder.CreateItem(ItemGroups.Artifacts, (int)ArtifactsSubTypes.Ebony_Blade);
+                        break;
+                    default:
+                        return "Invalid artifact ID.";
+                }
+                items.AddItem(newItem);
+
+                return "Success";
+            }
+        }
 
         private static class Groundme
         {
@@ -1566,6 +1706,21 @@ namespace Wenzil.Console
             }
         }
 
+        private static class AddSpellBook
+        {
+            public static readonly string name = "addspellbook";
+            public static readonly string description = "Gives player a new spellbook if they do not have one.";
+            public static readonly string usage = "addspellbook";
+
+            public static string Execute(params string[] args)
+            {
+                if (GameManager.Instance.ItemHelper.AddSpellbookItem(GameManager.Instance.PlayerEntity))
+                    return "Spellbook added";
+                else
+                    return "Player already has a spellbook";
+            }
+        }
+
         private static class StartQuest
         {
             public static readonly string name = "startquest";
@@ -1585,26 +1740,78 @@ namespace Wenzil.Console
         {
             public static readonly string name = "diseaseplayer";
             public static readonly string description = "Infect player with a classic disease.";
-            public static readonly string usage = "diseaseplayer index (a number 0-16)";
+            public static readonly string usage = "diseaseplayer index (a number 0-16) OR diseaseplayer vampire|werewolf|wereboar (Note: only vampire currently implemented)";
+
+            enum CommandDiseaseTypes
+            {
+                Numerical,
+                Vampire,
+                Werewolf,
+                Wereboar,
+            }
 
             public static string Execute(params string[] args)
             {
                 if (args == null || args.Length != 1)
                     return usage;
 
-                // Get index and validate range
-                int index;
-                if (!int.TryParse(args[0], out index))
-                    return string.Format("Could not parse argument `{0}` to a number", args[0]);
-                if (index < 0 || index > 16)
-                    return string.Format("Index {0} is out range. Must be 0-16.", index);
+                // Determine if valid string or expecting index
+                CommandDiseaseTypes diseaseType;
+                switch (args[0].ToLower())
+                {
+                    case "vampire":
+                        diseaseType = CommandDiseaseTypes.Vampire;
+                        break;
+                    case "werewolf":
+                        diseaseType = CommandDiseaseTypes.Werewolf;
+                        break;
+                    case "wereboar":
+                        diseaseType = CommandDiseaseTypes.Wereboar;
+                        break;
+                    default:
+                        diseaseType = CommandDiseaseTypes.Numerical;
+                        break;
+                }
 
-                // Infect player
-                Diseases disease = (Diseases)index;
-                EntityEffectBundle bundle = GameManager.Instance.PlayerEffectManager.CreateDisease(disease);
-                GameManager.Instance.PlayerEffectManager.AssignBundle(bundle);
-                
-                return string.Format("Player infected with {0}", disease.ToString());
+                // Disease player by index
+                if (diseaseType == CommandDiseaseTypes.Numerical)
+                {
+                    // Get index and validate range
+                    int index = -1;
+                    if (!int.TryParse(args[0], out index))
+                        return string.Format("Could not parse argument `{0}` to a number", args[0]);
+                    if (index < 0 || index > 16)
+                        return string.Format("Index {0} is out range. Must be 0-16.", index);
+
+                    // Infect player
+                    Diseases disease = (Diseases)index;
+                    EntityEffectBundle bundle = GameManager.Instance.PlayerEffectManager.CreateDisease(disease);
+                    GameManager.Instance.PlayerEffectManager.AssignBundle(bundle);
+                    return string.Format("Player infected with {0}", disease.ToString());
+                }
+
+                // Vampirism/Werewolf/Wereboar
+                if (diseaseType == CommandDiseaseTypes.Vampire)
+                {
+                    // Infect player with vampirism stage one
+                    EntityEffectBundle bundle = GameManager.Instance.PlayerEffectManager.CreateVampirismDisease();
+                    GameManager.Instance.PlayerEffectManager.AssignBundle(bundle);
+                    return "Player infected with vampirism.";
+                }
+                else if (diseaseType == CommandDiseaseTypes.Werewolf)
+                {
+                    // Infect player with werewolf stage one
+                    return "Werewolf disease not implemented yet.";
+                }
+                else if (diseaseType == CommandDiseaseTypes.Wereboar)
+                {
+                    // Infect player with wereboar stage one
+                    return "Wereboar disease not implemented yet.";
+                }
+                else
+                {
+                    return usage;
+                }
             }
         }
 
@@ -1727,6 +1934,75 @@ namespace Wenzil.Console
                 DaggerfallUI.Instance.UserInterfaceManager.PushWindow(window);
 
                 return "Finished";
+            }
+        }
+
+        private static class PrintLegalRep
+        {
+            public static readonly string name = "print_legalrep";
+            public static readonly string description = "Output current legal status and reputation value for all regions";
+            public static readonly string usage = "print_legalrep";
+
+            public static string Execute(params string[] args)
+            {
+                string output = string.Empty;
+                if (GameManager.Instance.PlayerEntity != null && GameManager.Instance.PlayerEntity.RegionData != null)
+                {
+                    for (int region = 0; region < GameManager.Instance.PlayerEntity.RegionData.Length; region++)
+                    {
+                        string regionName = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionName(region);
+                        string reputationString = string.Empty;
+                        int rep = GameManager.Instance.PlayerEntity.RegionData[region].LegalRep;
+                        if (rep > 80)
+                            reputationString = HardStrings.revered;
+                        else if (rep > 60)
+                            reputationString = HardStrings.esteemed;
+                        else if (rep > 40)
+                            reputationString = HardStrings.honored;
+                        else if (rep > 20)
+                            reputationString = HardStrings.admired;
+                        else if (rep > 10)
+                            reputationString = HardStrings.respected;
+                        else if (rep > 0)
+                            reputationString = HardStrings.dependable;
+                        else if (rep == 0)
+                            reputationString = HardStrings.aCommonCitizen;
+                        else if (rep < -80)
+                            reputationString = HardStrings.hated;
+                        else if (rep < -60)
+                            reputationString = HardStrings.pondScum;
+                        else if (rep < -40)
+                            reputationString = HardStrings.aVillain;
+                        else if (rep < -20)
+                            reputationString = HardStrings.aCriminal;
+                        else if (rep < -10)
+                            reputationString = HardStrings.aScoundrel;
+                        else if (rep < 0)
+                            reputationString = HardStrings.undependable;
+
+                        output += string.Format("In '{0}' you are {1} [{2}]\n", regionName, reputationString, rep);
+                    }
+                    output += "Finished";
+                }
+                else
+                {
+                    return "Could not read legal reputation data.";
+                }
+
+                return output;
+            }
+        }
+
+        private static class UnmuteQuestNPCs
+        {
+            public static readonly string name = "unmutequestnpcs";
+            public static readonly string description = "Unmutes all quest npcs when 'mute npc' is stuck from a bug. Has no effect on NPCs not muted by an active quest script.";
+            public static readonly string usage = "unmutequestnpcs";
+
+            public static string Execute(params string[] args)
+            {
+                int count = QuestMachine.Instance.UnmuteQuestNPCs();
+                return string.Format("Unmuted {0} active quest NPCs", count);
             }
         }
 

@@ -21,7 +21,7 @@ using DaggerfallWorkshop.Game.Questing;
 using System;
 using DaggerfallWorkshop.Game.Guilds;
 using DaggerfallWorkshop.Game.Formulas;
-using DaggerfallConnect.FallExe;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
@@ -74,8 +74,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         Guild guild;
         PlayerGPS.DiscoveredBuilding buildingDiscoveryData;
         int curingCost = 0;
-
-        static ItemCollection merchantItems;    // Temporary
 
         #endregion
 
@@ -162,7 +160,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 DaggerfallMessageBox messageBox = new DaggerfallMessageBox(uiManager, uiManager.TopWindow);
                 messageBox.SetTextTokens(updatedRank, guild);
                 messageBox.ClickAnywhereToClose = true;
-                uiManager.PushWindow(messageBox);
+                messageBox.Show();
             }
             // Check for free healing (Temple members)
             if (guild.FreeHealing() && playerEntity.CurrentHealth < playerEntity.MaxHealth)
@@ -212,7 +210,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     DaggerfallUnityItem magicItem = ItemBuilder.CreateItem(ItemGroups.MiscItems, (int)MiscItems.Soul_trap);
                     magicItem.value = 5000;
 
-                    if (UnityEngine.Random.Range(1, 101) >= 25)
+                    if (Dice100.FailedRoll(25))
                         magicItem.TrappedSoulType = MobileTypes.None;
                     else
                     {
@@ -231,8 +229,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         ItemCollection GetMerchantPotions()
         {
             ItemCollection potions = new ItemCollection();
-            for (int n = UnityEngine.Random.Range(12, 20); n > 0; n--)
-                potions.AddItem(ItemBuilder.CreateRandomPotion());
+            int n = buildingDiscoveryData.quality;
+            while (n-- >= 0)
+                potions.AddItem(ItemBuilder.CreateRandomPotion(UnityEngine.Random.Range(1, 5)));
             return potions;
         }
 
@@ -305,11 +304,11 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     break;
 
                 case GuildServices.MakePotions:
-                    CloseWindow();
-                    uiManager.PushWindow(DaggerfallUI.Instance.DfPotionMakerWindow);
+                    MakePotionService();
                     break;
 
                 case GuildServices.BuySpells:
+                case GuildServices.BuySpellsMages:
                     CloseWindow();
                     uiManager.PushWindow(new DaggerfallSpellBookWindow(uiManager, this, true));
                     break;
@@ -406,7 +405,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     messageBox.SetTextTokens(guild.TokensIneligible(playerEntity), guild);
                     messageBox.ClickAnywhereToClose = true;
                 }
-                uiManager.PushWindow(messageBox);
+                messageBox.Show();
             }
         }
 
@@ -420,7 +419,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 DaggerfallMessageBox messageBox = new DaggerfallMessageBox(uiManager, uiManager.TopWindow);
                 messageBox.SetTextTokens(guild.TokensWelcome(), guild);
                 messageBox.ClickAnywhereToClose = true;
-                uiManager.PushWindow(messageBox);
+                messageBox.Show();
             }
         }
 
@@ -447,7 +446,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             int factionId = (guildGroup == FactionFile.GuildGroups.HolyOrder || guildGroup == FactionFile.GuildGroups.KnightlyOrder) ? buildingFactionId : guildManager.GetGuildFactionId(guildGroup);
 
             // Select a quest at random from appropriate pool
-            offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(guildGroup, status, factionId, guild.GetReputation(playerEntity));
+            offeredQuest = GameManager.Instance.QuestListsManager.GetGuildQuest(guildGroup, status, factionId, guild.GetReputation(playerEntity), guild.Rank);
             if (offeredQuest != null)
             {
                 // Log offered quest
@@ -510,7 +509,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 DaggerfallMessageBox messageBox = new DaggerfallMessageBox(uiManager, uiManager.TopWindow);
                 messageBox.SetTextTokens(tokens);
                 messageBox.ClickAnywhereToClose = true;
-                uiManager.PushWindow(messageBox);
+                messageBox.Show();
             }
             else
             {   // Offer training price
@@ -520,7 +519,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 messageBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.Yes);
                 messageBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.No);
                 messageBox.OnButtonClick += ConfirmTraining_OnButtonClick;
-                uiManager.PushWindow(messageBox);
+                messageBox.Show();
             }
         }
 
@@ -558,7 +557,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 DaggerfallMessageBox messageBox = new DaggerfallMessageBox(uiManager, uiManager.TopWindow);
                 messageBox.SetTextTokens(tokens, guild);
                 messageBox.ClickAnywhereToClose = true;
-                uiManager.PushWindow(messageBox);
+                messageBox.Show();
             }
             else
             {   // Train the skill
@@ -568,7 +567,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 playerEntity.DeductGoldAmount(guild.GetTrainingPrice());
                 playerEntity.DecreaseFatigue(PlayerEntity.DefaultFatigueLoss * 180);
                 int skillAdvancementMultiplier = DaggerfallSkills.GetAdvancementMultiplier(skillToTrain);
-                short tallyAmount = (short)(UnityEngine.Random.Range(10, 21) * skillAdvancementMultiplier);
+                short tallyAmount = (short)(UnityEngine.Random.Range(10, 20 + 1) * skillAdvancementMultiplier);
                 playerEntity.TallySkill(skillToTrain, tallyAmount);
                 DaggerfallUI.MessageBox(TrainSkillId);
             }
@@ -605,21 +604,21 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
                     // Change reputation
                     int rep = Math.Abs(playerEntity.FactionData.GetReputation(factionId));
-                    if (UnityEngine.Random.Range(1, 101) <= (2 * amount / rep + 1))
+                    if (Dice100.SuccessRoll(2 * amount / rep + 1))
                         playerEntity.FactionData.ChangeReputation(factionId, 1); // Does not propagate in classic
 
                     // Show thanks message
                     DaggerfallMessageBox messageBox = new DaggerfallMessageBox(uiManager, uiManager.TopWindow);
                     messageBox.SetTextTokens(DaggerfallUnity.Instance.TextProvider.GetRandomTokens(DonationThanksId), this);
                     messageBox.ClickAnywhereToClose = true;
-                    uiManager.PushWindow(messageBox);
+                    messageBox.Show();
                 }
                 else
                 {
                     DaggerfallMessageBox messageBox = new DaggerfallMessageBox(uiManager, uiManager.TopWindow);
                     messageBox.SetTextTokens(DaggerfallUnity.Instance.TextProvider.GetRandomTokens(TooGenerousId), this);
                     messageBox.ClickAnywhereToClose = true;
-                    uiManager.PushWindow(messageBox);
+                    messageBox.Show();
                 }
             }
         }
@@ -667,7 +666,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 messageBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.Yes);
                 messageBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.No);
                 messageBox.OnButtonClick += ConfirmCuring_OnButtonClick;
-                uiManager.PushWindow(messageBox);
+                messageBox.Show();
             }
             else
             {   // Not diseased
@@ -690,6 +689,25 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 else
                     DaggerfallUI.MessageBox(NotEnoughGoldId);
             }
+        }
+
+        #endregion
+
+        #region Service Handling: Make Potions
+
+        private void MakePotionService()
+        {
+            // Open potion mixer window if player has some ingredients
+            CloseWindow();
+            for (int i = 0; i < playerEntity.Items.Count; i++)
+            {
+                if (playerEntity.Items.GetItem(i).IsIngredient)
+                {
+                    uiManager.PushWindow(DaggerfallUI.Instance.DfPotionMakerWindow);
+                    return;
+                }
+            }
+            DaggerfallUI.MessageBox(34);
         }
 
         #endregion

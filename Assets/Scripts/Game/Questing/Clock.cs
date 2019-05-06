@@ -1,4 +1,4 @@
-﻿// Project:         Daggerfall Tools For Unity
+// Project:         Daggerfall Tools For Unity
 // Copyright:       Copyright (C) 2009-2018 Daggerfall Workshop
 // Web Site:        http://www.dfworkshop.net
 // License:         MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -379,7 +379,7 @@ namespace DaggerfallWorkshop.Game.Questing
 
         int FromRange(int minSeconds, int maxSeconds)
         {
-            return UnityEngine.Random.Range(minSeconds, maxSeconds);
+            return UnityEngine.Random.Range(minSeconds, maxSeconds + 1);
         }
 
         void InitialiseTimer(int clockTimeInSeconds)

@@ -64,7 +64,7 @@ namespace DaggerfallWorkshop.Game
         ushort factionID = 0;
         PlayerGPS.DiscoveredBuilding buildingDiscoveryData;
 
-        DFLocation holidayTextLocation;
+        DaggerfallLocation holidayTextLocation;
         bool holidayTextPrimed = false;
         float holidayTextTimer = 0f;
 
@@ -277,6 +277,12 @@ namespace DaggerfallWorkshop.Game
                 }
             }
 
+            if (holidayTextPrimed && holidayTextLocation != GameManager.Instance.StreamingWorld.CurrentPlayerLocationObject)
+            {
+                holidayTextTimer = 0;
+                holidayTextPrimed = false;
+            }
+
             // Count down holiday text display
             if (holidayTextTimer > 0)
                 holidayTextTimer -= Time.deltaTime;
@@ -304,7 +310,7 @@ namespace DaggerfallWorkshop.Game
                 }
 
                 bool overEncumbered = (GameManager.Instance.PlayerEntity.CarriedWeight * 4 > 250);
-                if ((overEncumbered && levitateMotor.IsSwimming) && !displayAfloatMessage)
+                if ((overEncumbered && levitateMotor.IsSwimming) && !displayAfloatMessage && !GameManager.Instance.PlayerEntity.IsWaterWalking)
                 {
                     DaggerfallUI.AddHUDText(HardStrings.cannotFloat, 1.75f);
                     displayAfloatMessage = true;
@@ -385,6 +391,10 @@ namespace DaggerfallWorkshop.Game
             // Wait for end of frame so existing world data can be removed
             yield return new WaitForEndOfFrame();
 
+            // Store if player was inside a dungeon or building before respawning
+            bool playerWasInDungeon = IsPlayerInsideDungeon;
+            bool playerWasInBuilding = IsPlayerInsideBuilding;
+
             // Reset dungeon block on new spawn
             lastPlayerDungeonBlockIndex = -1;
             playerDungeonBlockData = new DFLocation.DungeonBlock();
@@ -426,6 +436,13 @@ namespace DaggerfallWorkshop.Game
                 // Wait until world is ready
                 while (world.IsInit)
                     yield return new WaitForEndOfFrame();
+
+                // Raise transition exterior event if player was inside a dungeon or building
+                // This helps inform other systems player has transitioned to exterior without clicking a door or reloading game
+                if (playerWasInDungeon)
+                    RaiseOnTransitionDungeonExteriorEvent();
+                else if (playerWasInBuilding)
+                    RaiseOnTransitionExteriorEvent();
             }
             else if (hasLocation && insideDungeon)
             {
@@ -464,7 +481,8 @@ namespace DaggerfallWorkshop.Game
             const int holidaysStartID = 8349;
 
             uint minutes = DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.ToClassicDaggerfallTime();
-            int holidayId = Formulas.FormulaHelper.GetHolidayId(minutes, holidayTextLocation.RegionIndex);
+            int holidayId = Formulas.FormulaHelper.GetHolidayId(minutes, GameManager.Instance.PlayerGPS.CurrentRegionIndex);
+
             if (holidayId != 0)
             {
                 DaggerfallMessageBox messageBox = new DaggerfallMessageBox(DaggerfallUI.UIManager);
@@ -1231,7 +1249,7 @@ namespace DaggerfallWorkshop.Game
                         holidayTextTimer = 2.5f; // Short delay to give save game fade-in time to finish
                         holidayTextPrimed = true;
                     }
-                    holidayTextLocation = location;
+                    holidayTextLocation = GameManager.Instance.StreamingWorld.CurrentPlayerLocationObject;
 
                     // note Nystul: this next line is not enough to manage questor dictionary update since player might load a savegame in an interior -
                     // so this never gets triggered and questor list is rebuild always as a consequence

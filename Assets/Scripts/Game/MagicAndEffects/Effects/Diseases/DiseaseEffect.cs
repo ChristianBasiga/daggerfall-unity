@@ -272,6 +272,7 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects
             public bool incubationOver;
             public uint lastDay;
             public int daysOfSymptomsLeft;
+            public object customDiseaseData;
         }
 
         public override object GetSaveData()
@@ -281,6 +282,7 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects
             data.incubationOver = incubationOver;
             data.lastDay = lastDay;
             data.daysOfSymptomsLeft = daysOfSymptomsLeft;
+            data.customDiseaseData = GetCustomDiseaseSaveData();
 
             return data;
         }
@@ -295,6 +297,16 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects
             incubationOver = data.incubationOver;
             lastDay = data.lastDay;
             daysOfSymptomsLeft = data.daysOfSymptomsLeft;
+            RestoreCustomDiseaseSaveData(data.customDiseaseData);
+        }
+
+        protected virtual object GetCustomDiseaseSaveData()
+        {
+            return null;
+        }
+
+        protected virtual void RestoreCustomDiseaseSaveData(object dataIn)
+        {
         }
 
         #endregion

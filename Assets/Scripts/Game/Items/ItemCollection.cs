@@ -96,13 +96,7 @@ namespace DaggerfallWorkshop.Game.Items
             float weight = 0;
             foreach (DaggerfallUnityItem item in items.Values)
             {
-                // Horses, carts and arrows are not counted against encumbrance.
-                if (item.ItemGroup != ItemGroups.Transportation && item.TemplateIndex != (int)Weapons.Arrow)
-                    weight += item.weightInKg * item.stackCount;
-
-                // Enemies carry around gold as an item, unlike the player
-                if (item.ItemGroup == ItemGroups.Currency)
-                    weight += item.stackCount / Banking.DaggerfallBankManager.gold1kg;
+                weight += item.stackCount * item.EffectiveUnitWeightInKg();
             }
             return weight;
         }
@@ -232,9 +226,12 @@ namespace DaggerfallWorkshop.Game.Items
             }
             else
             {
-                // Check duplicate key
+                // Log and exit if duplicate key found
                 if (items.Contains(item.UID))
-                    throw new Exception("AddItem() encountered a duplicate item UID for " + item.LongName);
+                {
+                    UnityEngine.Debug.LogError("AddItem() encountered a duplicate item UID for " + item.LongName);
+                    return;
+                }
 
                 // Add the item
                 switch (position)
@@ -283,6 +280,23 @@ namespace DaggerfallWorkshop.Game.Items
             if (items.Contains(item.UID))
             {
                 items.Remove(item.UID);
+            }
+        }
+
+        /// <summary>
+        /// Removes one item from this collection, decrementing stack count.
+        /// </summary>
+        /// <param name="item">Item to remove. Must exist inside this collection.</param>
+        public void RemoveOne(DaggerfallUnityItem item)
+        {
+            if (item == null)
+                return;
+
+            if (items.Contains(item.UID))
+            {
+                item.stackCount--;
+                if (item.stackCount <= 0)
+                    RemoveItem(item);
             }
         }
 
@@ -595,7 +609,8 @@ namespace DaggerfallWorkshop.Game.Items
             foreach (DaggerfallUnityItem checkItem in items.Values)
             {
                 if (checkItem != item && 
-                    checkItem.ItemGroup == itemGroup && checkItem.GroupIndex == groupIndex && 
+                    checkItem.ItemGroup == itemGroup && checkItem.GroupIndex == groupIndex &&
+                    checkItem.PotionRecipeKey == item.PotionRecipeKey &&
                     checkItem.IsStackable())
                     return checkItem;
             }

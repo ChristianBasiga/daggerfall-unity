@@ -80,12 +80,6 @@ namespace DaggerfallWorkshop.Game
         KeyCode lastKeyCode;
         FadeBehaviour fadeBehaviour = null;
 
-        string versionText;
-        DaggerfallFont versionFont;
-        Vector2 versionTextScale = Vector2.one;
-        float versionTextWidth;
-        Color versionTextColor = new Color(0.6f, 0.6f, 0.6f, 1);
-
         bool hudSetup = false;
         DaggerfallHUD dfHUD;
         DaggerfallPauseOptionsWindow dfPauseOptionsWindow;
@@ -102,6 +96,7 @@ namespace DaggerfallWorkshop.Game
         DaggerfallQuestJournalWindow dfQuestJournalWindow;
         DaggerfallPlayerHistoryWindow dfPlayerHistoryWindow;
         DaggerfallSpellBookWindow dfSpellBookWindow;
+        DaggerfallUseMagicItemWindow dfUseMagicItemWindow;
         DaggerfallSpellMakerWindow dfSpellMakerWindow;
         DaggerfallItemMakerWindow dfItemMakerWindow;
         DaggerfallPotionMakerWindow dfPotionMakerWindow;
@@ -298,6 +293,7 @@ namespace DaggerfallWorkshop.Game
             dfPlayerHistoryWindow = new DaggerfallPlayerHistoryWindow(uiManager);
             dfTalkWindow = new DaggerfallTalkWindow(uiManager);
             dfSpellBookWindow = new DaggerfallSpellBookWindow(uiManager);
+            dfUseMagicItemWindow = new DaggerfallUseMagicItemWindow(uiManager);
             dfSpellMakerWindow = new DaggerfallSpellMakerWindow(uiManager);
             dfItemMakerWindow = new DaggerfallItemMakerWindow(uiManager);
             dfPotionMakerWindow = new DaggerfallPotionMakerWindow(uiManager);
@@ -324,12 +320,6 @@ namespace DaggerfallWorkshop.Game
             // Create SDF font material
             if (sdfFontMaterial == null)
                 sdfFontMaterial = new Material(Shader.Find(MaterialReader._DaggerfallSDFFontShaderName));
-
-            // Set version text
-            versionFont = DefaultFont;
-            versionTextScale = new Vector2(Screen.width / 320, Screen.height / 200) / 2;
-            versionText = string.Format("{0} {1} {2}", VersionInfo.DaggerfallUnityProductName, VersionInfo.DaggerfallUnityStatus, VersionInfo.DaggerfallUnityVersion);
-            versionTextWidth = versionFont.GetCharacterWidth(versionText, -1, versionTextScale.x);
         }
 
         void Update()
@@ -414,13 +404,6 @@ namespace DaggerfallWorkshop.Game
                     uiManager.TopWindow.Draw();
                 }
 
-                // Draw version text when paused
-                if (ShowVersionText)
-                {
-                    Vector2 versionTextPos = new Vector2(Screen.width - versionTextWidth, 0);
-                    versionFont.DrawText(versionText, versionTextPos, versionTextScale, versionTextColor);
-                }
-
                 if (customRenderTarget)
                 {
                     RenderTexture.active = oldRT;
@@ -430,6 +413,7 @@ namespace DaggerfallWorkshop.Game
 
         void ProcessMessages()
         {
+            RacialOverrideEffect racialOverride = null;
             switch (uiManager.GetMessage())
             {
                 case DaggerfallUIMessages.dfuiSetupGameWizard:
@@ -464,7 +448,18 @@ namespace DaggerfallWorkshop.Game
                     break;
                 case DaggerfallUIMessages.dfuiOpenSpellBookWindow:
                     if (!GameManager.Instance.PlayerSpellCasting.IsPlayingAnim)
-                        uiManager.PushWindow(dfSpellBookWindow);
+                    {
+                        if (GameManager.Instance.PlayerEntity.Items.Contains(Items.ItemGroups.MiscItems, (int)Items.MiscItems.Spellbook))
+                            uiManager.PushWindow(dfSpellBookWindow);
+                        else
+                            AddHUDText(TextManager.Instance.GetText("ClassicEffects", "noSpellbook"));
+                    }
+                    break;
+                case DaggerfallUIMessages.dfuiOpenUseMagicItemWindow:
+                    if (dfUseMagicItemWindow.UpdateUsableMagicItems() > 0)
+                        uiManager.PushWindow(dfUseMagicItemWindow);
+                    else
+                        AddHUDText(TextManager.Instance.GetText("SpellmakerUI", "noItemToActivate"));
                     break;
                 case DaggerfallUIMessages.dfuiOpenCourtWindow:
                     uiManager.PushWindow(dfCourtWindow);
@@ -486,7 +481,13 @@ namespace DaggerfallWorkshop.Game
                         else
                         {
                             if (!GiveOffer())
+                            {
+                                racialOverride = GameManager.Instance.PlayerEffectManager.GetRacialOverrideEffect(); // Allow custom race to block fast travel (e.g. vampire during day)
+                                if (racialOverride != null && !racialOverride.CheckFastTravel(GameManager.Instance.PlayerEntity))
+                                    return;
+
                                 uiManager.PushWindow(dfTravelMapWindow);
+                            }
                         }
                     }
                     break;
@@ -524,7 +525,13 @@ namespace DaggerfallWorkshop.Game
                     else
                     {
                         if (!GiveOffer())
+                        {
+                            racialOverride = GameManager.Instance.PlayerEffectManager.GetRacialOverrideEffect(); // Allow custom race to block rest (e.g. vampire not sated)
+                            if (racialOverride != null && !racialOverride.CheckStartRest(GameManager.Instance.PlayerEntity))
+                                return;
+
                             uiManager.PushWindow(new DaggerfallRestWindow(uiManager));
+                        }
                     }
                     break;
                 case DaggerfallUIMessages.dfuiOpenTransportWindow:
@@ -992,7 +999,7 @@ namespace DaggerfallWorkshop.Game
 
             ImgFile imgFile = new ImgFile(Path.Combine(dfUnity.Arena2Path, name), FileUsage.UseMemory, readOnly);
             Texture2D texture;
-            if (!TextureReplacement.TryImportImage(name, out texture))
+            if (!TextureReplacement.TryImportImage(name, readOnly, out texture))
             {
                 imgFile.LoadPalette(Path.Combine(dfUnity.Arena2Path, imgFile.PaletteName));
                 texture = GetTextureFromImg(imgFile, format, readOnly);
@@ -1042,7 +1049,7 @@ namespace DaggerfallWorkshop.Game
 
             CifRciFile cifRciFile = new CifRciFile(Path.Combine(dfUnity.Arena2Path, name), FileUsage.UseMemory, true);
             Texture2D texture;
-            if (!TextureReplacement.TryImportCifRci(name, record, frame, out texture))
+            if (!TextureReplacement.TryImportCifRci(name, record, frame, true, out texture))
             {
                 cifRciFile.LoadPalette(Path.Combine(dfUnity.Arena2Path, cifRciFile.PaletteName));
                 DFBitmap bitmap = cifRciFile.GetDFBitmap(record, frame);

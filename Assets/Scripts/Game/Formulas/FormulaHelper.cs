@@ -22,6 +22,7 @@ using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.Items;
 using DaggerfallWorkshop.Utility;
 using DaggerfallConnect.Save;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game.Formulas
 {
@@ -269,8 +270,8 @@ namespace DaggerfallWorkshop.Game.Formulas
                 return del(player);
 
             int minRoll = player.Career.HitPointsPerLevel / 2;
-            int maxRoll = player.Career.HitPointsPerLevel + 1; // Adding +1 as Unity Random.Range(int,int) is exclusive of maximum value
-            int addHitPoints = UnityEngine.Random.Range(minRoll, maxRoll);
+            int maxRoll = player.Career.HitPointsPerLevel;
+            int addHitPoints = UnityEngine.Random.Range(minRoll, maxRoll + 1); // Adding +1 as Unity Random.Range(int,int) is exclusive of maximum value
             addHitPoints += HitPointsModifier(player.Stats.LiveEndurance);
             if (addHitPoints < 1)
                 addHitPoints = 1;
@@ -313,6 +314,80 @@ namespace DaggerfallWorkshop.Game.Formulas
         public static int CalculateTempleBlessing(int donationAmount, int deityRep)
         {
             return 1;   // TODO Amount of stat boost, guessing what this formula might need...
+        }
+
+        // Gets vampire clan based on region
+        public static VampireClans GetVampireClan(DaggerfallRegions region)
+        {
+            // Clan assignment according to UESP https://en.uesp.net/wiki/Daggerfall:Vampirism
+            switch (region)
+            {
+                // Anthotis
+                case DaggerfallRegions.AlikrDesert:
+                case DaggerfallRegions.Antiphyllos:
+                case DaggerfallRegions.Bergama:
+                case DaggerfallRegions.Dakfron:
+                case DaggerfallRegions.Tigonus:
+                    return VampireClans.Anthotis;
+
+                // Garlythi
+                case DaggerfallRegions.Northmoor:
+                case DaggerfallRegions.Phrygias:
+                    return VampireClans.Garlythi;
+
+                // Haarvenu
+                case DaggerfallRegions.Anticlere:
+                case DaggerfallRegions.IlessanHills:
+                case DaggerfallRegions.Shalgora:
+                    return VampireClans.Haarvenu;
+
+                // Khulari
+                case DaggerfallRegions.DragontailMountains:
+                case DaggerfallRegions.Ephesus:
+                case DaggerfallRegions.Kozanset:
+                case DaggerfallRegions.Santaki:
+                case DaggerfallRegions.Totambu:
+                    return VampireClans.Khulari;
+
+                // Lyrezi (default bloodline)
+                default:
+                    return VampireClans.Lyrezi;
+
+                // Montalion
+                case DaggerfallRegions.Bhoraine:
+                case DaggerfallRegions.Gavaudon:
+                case DaggerfallRegions.Lainlyn:
+                case DaggerfallRegions.Mournoth:
+                case DaggerfallRegions.Satakalaam:
+                case DaggerfallRegions.Wayrest:
+                    return VampireClans.Montalion;
+
+                // Selenu
+                case DaggerfallRegions.AbibonGora:
+                case DaggerfallRegions.Ayasofya:
+                case DaggerfallRegions.Cybiades:
+                case DaggerfallRegions.Kairou:
+                case DaggerfallRegions.Myrkwasa:
+                case DaggerfallRegions.Pothago:
+                case DaggerfallRegions.Sentinel:
+                    return VampireClans.Selenu;
+
+                // Thrafey
+                case DaggerfallRegions.Daenia:
+                case DaggerfallRegions.Dwynnen:
+                case DaggerfallRegions.Ykalon:
+                case DaggerfallRegions.Urvaius:
+                    return VampireClans.Thrafey;
+
+                // Vraseth
+                case DaggerfallRegions.Betony:
+                case DaggerfallRegions.Daggerfall:
+                case DaggerfallRegions.Glenpoint:
+                case DaggerfallRegions.GlenumbraMoors:
+                case DaggerfallRegions.Kambria:
+                case DaggerfallRegions.Tulune:
+                    return VampireClans.Vraseth;
+            }
         }
 
         #endregion
@@ -596,7 +671,7 @@ namespace DaggerfallWorkshop.Game.Formulas
             if (formula_2i.TryGetValue("CalculateBackstabDamage", out del))
                 return del(damage, backstabbingLevel);
 
-            if (backstabbingLevel > 1 && UnityEngine.Random.Range(1, 100 + 1) <= backstabbingLevel)
+            if (backstabbingLevel > 1 && Dice100.SuccessRoll(backstabbingLevel))
             {
                 damage *= 3;
                 string backstabMessage = UserInterfaceWindows.HardStrings.successfulBackstab;
@@ -680,18 +755,18 @@ namespace DaggerfallWorkshop.Game.Formulas
             byte[] diseaseListA = { 1 };
             byte[] diseaseListB = { 1, 3, 5 };
             byte[] diseaseListC = { 1, 2, 3, 4, 5, 6, 8, 9, 11, 13, 14 };
-
+            float random;
             switch (attacker.CareerIndex)
             {
                 case (int)MonsterCareers.Rat:
                     // In classic rat can only give plague (diseaseListA), but DF Chronicles says plague, stomach rot and brain fever (diseaseListB).
                     // Don't know which was intended. Using B since it has more variety.
-                    if (UnityEngine.Random.Range(1, 100 + 1) <= 5)
+                    if (Dice100.SuccessRoll(5))
                         InflictDisease(target, diseaseListB);
                     break;
                 case (int)MonsterCareers.GiantBat:
                     // Classic uses 2% chance, but DF Chronicles says 5% chance. Not sure which was intended.
-                    if (UnityEngine.Random.Range(1, 100 + 1) <= 2)
+                    if (Dice100.SuccessRoll(2))
                         InflictDisease(target, diseaseListB);
                     break;
                 case (int)MonsterCareers.Spider:
@@ -709,37 +784,52 @@ namespace DaggerfallWorkshop.Game.Formulas
                     }
                     break;
                 case (int)MonsterCareers.Werewolf:
-                    //uint random = DFRandom.rand();
-                    //if (random < 400)
-                    //  InflictLycanthropy (werewolf version)
+                    random = UnityEngine.Random.Range(0f, 100f);
+                    if (random <= 0.6f)
+                    {
+                        // TODO: Werewolf
+                        //EntityEffectBundle bundle = GameManager.Instance.PlayerEffectManager.CreateWerewolfDisease();
+                        //GameManager.Instance.PlayerEffectManager.AssignBundle(bundle);
+                        //Debug.Log("Player infected by werewolf.");
+                    }
                     break;
                 case (int)MonsterCareers.Nymph:
                     FatigueDamage(target, damage);
                     break;
                 case (int)MonsterCareers.Wereboar:
-                    //uint random = DFRandom.rand();
-                    //if (random < 400)
-                    //  InflictLycanthropy (wereboar version)
+                    random = UnityEngine.Random.Range(0f, 100f);
+                    if (random <= 0.6f)
+                    {
+                        // TODO: Wereboar
+                        //EntityEffectBundle bundle = GameManager.Instance.PlayerEffectManager.CreateWereboarDisease();
+                        //GameManager.Instance.PlayerEffectManager.AssignBundle(bundle);
+                        //Debug.Log("Player infected by wereboar.");
+                    }
                     break;
                 case (int)MonsterCareers.Zombie:
                     // Nothing in classic. DF Chronicles says 2% chance of disease, which seems like it was probably intended.
                     // Diseases listed in DF Chronicles match those of mummy (except missing cholera, probably a mistake)
-                    if (UnityEngine.Random.Range(1, 100 + 1) <= 2)
+                    if (Dice100.SuccessRoll(2))
                         InflictDisease(target, diseaseListC);
                     break;
                 case (int)MonsterCareers.Mummy:
-                    if (UnityEngine.Random.Range(1, 100 + 1) <= 5)
+                    if (Dice100.SuccessRoll(5))
                         InflictDisease(target, diseaseListC);
                     break;
                 case (int)MonsterCareers.Vampire:
                 case (int)MonsterCareers.VampireAncient:
-                    uint random = DFRandom.rand();
-                    if (random >= 400 && UnityEngine.Random.Range(1, 100 + 1) <= 2)
+                    random = UnityEngine.Random.Range(0f, 100f);
+                    if (random <= 0.6f)
+                    {
+                        // Inflict stage one vampirism disease
+                        EntityEffectBundle bundle = GameManager.Instance.PlayerEffectManager.CreateVampirismDisease();
+                        GameManager.Instance.PlayerEffectManager.AssignBundle(bundle);
+                        Debug.Log("Player infected by vampire.");
+                    }
+                    else if (random <= 2.0f)
+                    {
                         InflictDisease(target, diseaseListA);
-                    // else
-                    //{
-                    //    InflictVampirism
-                    //}
+                    }
                     break;
                 case (int)MonsterCareers.Lamia:
                     // Nothing in classic, but DF Chronicles says 2 pts of fatigue damage per health damage
@@ -806,7 +896,7 @@ namespace DaggerfallWorkshop.Game.Formulas
             chanceToHit -= (target.Skills.GetLiveSkillValue(DFCareer.Skills.Dodging) / 4);
 
             // Apply critical strike modifier.
-            if (UnityEngine.Random.Range(0, 100 + 1) < attacker.Skills.GetLiveSkillValue(DFCareer.Skills.CriticalStrike))
+            if (Dice100.SuccessRoll(attacker.Skills.GetLiveSkillValue(DFCareer.Skills.CriticalStrike)))
             {
                 chanceToHit += (attacker.Skills.GetLiveSkillValue(DFCareer.Skills.CriticalStrike) / 10);
             }
@@ -822,9 +912,7 @@ namespace DaggerfallWorkshop.Game.Formulas
 
             Mathf.Clamp(chanceToHit, 3, 97);
 
-            int roll = UnityEngine.Random.Range(0, 100 + 1);
-
-            if (roll <= chanceToHit)
+            if (Dice100.SuccessRoll(chanceToHit))
                 return 1;
             else
                 return 0;
@@ -931,7 +1019,7 @@ namespace DaggerfallWorkshop.Game.Formulas
             if (target.HasResistanceFlag(elementType))
             {
                 int chance = target.GetResistanceChance(elementType);
-                if (UnityEngine.Random.Range(1, 100 + 1) <= chance)
+                if (Dice100.SuccessRoll(chance))
                     return 0;
             }
 
@@ -998,7 +1086,7 @@ namespace DaggerfallWorkshop.Game.Formulas
             savingThrow = Mathf.Clamp(savingThrow, 5, 95);
 
             int percentDamageOrDuration = 0;
-            int roll = UnityEngine.Random.Range(1, 100 + 1);
+            int roll = Dice100.Roll();
 
             if (roll <= savingThrow)
             {
@@ -1297,6 +1385,13 @@ namespace DaggerfallWorkshop.Game.Formulas
             return cost;
         }
 
+        public static int CalculateItemRepairTime(int condition, int max)
+        {
+            int damage = max - condition;
+            int repairTime = (damage * DaggerfallDateTime.SecondsPerDay / 1000);
+            return Mathf.Max(repairTime, DaggerfallDateTime.SecondsPerDay);
+        }
+
         public static int CalculateItemIdentifyCost(int baseItemValue, Guild guild)
         {
             // Free on Witches Festival
@@ -1389,7 +1484,7 @@ namespace DaggerfallWorkshop.Game.Formulas
         public static void RandomizeInitialRegionalPrices(ref PlayerEntity.RegionDataRecord[] regionData)
         {
             for (int i = 0; i < regionData.Length; i++)
-                regionData[i].PriceAdjustment = (ushort)(UnityEngine.Random.Range(0, 501) + 750);
+                regionData[i].PriceAdjustment = (ushort)(UnityEngine.Random.Range(0, 500 + 1) + 750);
         }
 
         public static void UpdateRegionalPrices(ref PlayerEntity.RegionDataRecord[] regionData, int times)
@@ -1408,7 +1503,7 @@ namespace DaggerfallWorkshop.Game.Formulas
                     {
                         int chanceOfPriceRise = ((merchantsFaction.power) - (regionFaction.power)) / 5
                             + 50 - (regionData[i].PriceAdjustment - 1000) / 25;
-                        if (UnityEngine.Random.Range(0, 101) >= chanceOfPriceRise)
+                        if (Dice100.FailedRoll(chanceOfPriceRise))
                             regionData[i].PriceAdjustment = (ushort)(49 * regionData[i].PriceAdjustment / 50);
                         else
                             regionData[i].PriceAdjustment = (ushort)(51 * regionData[i].PriceAdjustment / 50);
@@ -1444,8 +1539,11 @@ namespace DaggerfallWorkshop.Game.Formulas
         /// <param name="totalGoldCostOut">Total gold cost out.</param>
         /// <param name="totalSpellPointCostOut">Total spellpoint cost out.</param>
         /// <param name="casterEntity">Caster entity. Assumed to be player if null.</param>
-        public static void CalculateTotalEffectCosts(EffectEntry[] effectEntries, TargetTypes targetType, out int totalGoldCostOut, out int totalSpellPointCostOut, DaggerfallEntity casterEntity = null)
+        /// <param name="minimumCastingCost">Spell point always costs minimum (e.g. from vampirism). Do not set true for reflection/absorption cost calculations.</param>
+        public static void CalculateTotalEffectCosts(EffectEntry[] effectEntries, TargetTypes targetType, out int totalGoldCostOut, out int totalSpellPointCostOut, DaggerfallEntity casterEntity = null, bool minimumCastingCost = false)
         {
+            const int castCostFloor = 5;
+
             totalGoldCostOut = 0;
             totalSpellPointCostOut = 0;
 
@@ -1464,8 +1562,14 @@ namespace DaggerfallWorkshop.Game.Formulas
             // Multipliers for target type
             totalGoldCostOut = ApplyTargetCostMultiplier(totalGoldCostOut, targetType);
             totalSpellPointCostOut = ApplyTargetCostMultiplier(totalSpellPointCostOut, targetType);
-            if (totalSpellPointCostOut < 5)
-                totalSpellPointCostOut = 5;
+
+            // Set vampire spell cost
+            if (minimumCastingCost)
+                totalSpellPointCostOut = castCostFloor;
+
+            // Enforce minimum
+            if (totalSpellPointCostOut < castCostFloor)
+                totalSpellPointCostOut = castCostFloor;
         }
 
         /// <summary>

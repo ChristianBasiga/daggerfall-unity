@@ -17,7 +17,10 @@ using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.UserInterface;
 using DaggerfallWorkshop.Game.Questing;
 using DaggerfallWorkshop.Game.Player;
-
+using DaggerfallConnect;
+using System.Linq;
+using DaggerfallConnect.Utility;
+using DaggerfallWorkshop.Utility;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
@@ -66,14 +69,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             ActiveQuests,
             FinshedQuests,
-            Notebook
+            Notebook,
+            Messages
         }
 
         #endregion
 
         #region Constructors
 
-        public DaggerfallQuestJournalWindow(UserInterfaceManager uiManager) : base(uiManager) 
+        public DaggerfallQuestJournalWindow(IUserInterfaceManager uiManager) : base(uiManager)
         {
         }
 
@@ -84,6 +88,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         protected override void Setup()
         {
             base.Setup();
+
+            // Always dim background
+            ParentPanel.BackgroundColor = ScreenDimColor;
 
             Texture2D texture = DaggerfallUI.GetTextureFromImg(nativeImgName);
             if (texture == null)
@@ -210,6 +217,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     case JournalDisplay.Notebook:
                         SetTextNotebook();
                         break;
+                    case JournalDisplay.Messages:
+                        SetTextMessages();
+                        break;
                 }
             }
         }
@@ -229,6 +239,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     DisplayMode = JournalDisplay.Notebook;
                     break;
                 case JournalDisplay.Notebook:
+                    DisplayMode = JournalDisplay.Messages;
+                    break;
+                case JournalDisplay.Messages:
                     DisplayMode = JournalDisplay.ActiveQuests;
                     break;
             }
@@ -328,7 +341,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #endregion
 
-        #region region Private Methods
+        #region Private Methods
 
         private void HandleClick(Vector2 position, bool remove = false)
         {
@@ -354,12 +367,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                     !string.IsNullOrEmpty(place.SiteDetails.locationName) &&
                     place.SiteDetails.locationName != GameManager.Instance.PlayerGPS.CurrentLocation.Name)
                 {
-                    findPlaceRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionIndex(place.SiteDetails.regionName);
                     findPlaceName = place.SiteDetails.locationName;
-                    string entryStr = string.Format("{0} in {1} province", findPlaceName, place.SiteDetails.regionName);
-                    DaggerfallMessageBox dialogBox = CreateDialogBox(GetDialogText(entryStr, "selectedPlace", "confirmFind"));
-                    dialogBox.OnButtonClick += FindPlace_OnButtonClick;
-                    DaggerfallUI.UIManager.PushWindow(dialogBox);
+                    if (DaggerfallUI.Instance.DfTravelMapWindow.CanFindPlace(place.SiteDetails.regionName, findPlaceName))
+                    {
+                        findPlaceRegion = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetRegionIndex(place.SiteDetails.regionName);
+                        string entryStr = string.Format("{0} in {1} province", findPlaceName, place.SiteDetails.regionName);
+                        DaggerfallMessageBox dialogBox = CreateDialogBox(entryStr, "confirmFind");
+                        dialogBox.OnButtonClick += FindPlace_OnButtonClick;
+                        DaggerfallUI.UIManager.PushWindow(dialogBox);
+                    }
                 }
             }
             else
@@ -376,7 +392,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                         TextFile.Token[] entry = GetEntry(selectedEntry);
                         if (entry != null && entry.Length > 0)
                         {
-                            DaggerfallMessageBox dialogBox = CreateDialogBox(GetDialogText(entry[0].text, "selectedEntry", remove ? "confirmRemove" : "confirmMove"));
+                            DaggerfallMessageBox dialogBox = CreateDialogBox(entry[0].text, remove ? "confirmRemove" : "confirmMove");
                             if (remove)
                                 dialogBox.OnButtonClick += RemoveEntry_OnButtonClick;
                             else
@@ -396,20 +412,21 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
-        private static string[] GetDialogText(string entryStr, string preKey, string postKey)
+        private DaggerfallMessageBox CreateDialogBox(string entryStr, string baseKey)
         {
-            return new string[] {
-                TextManager.Instance.GetText(textDatabase, preKey),
-                "", "    " + entryStr, "",
-                TextManager.Instance.GetText(textDatabase, postKey), "",
-                TextManager.Instance.GetText(textDatabase, postKey + "2"),
+            string heading = TextManager.Instance.GetText(textDatabase, baseKey + "Head");
+            string action = TextManager.Instance.GetText(textDatabase, baseKey);
+            string explanation = TextManager.Instance.GetText(textDatabase, baseKey + "2");
+            TextFile.Token[] tokens = new TextFile.Token[] {
+                TextFile.CreateTextToken(heading), TextFile.CreateFormatToken(TextFile.Formatting.JustifyCenter), TextFile.NewLineToken,
+                TextFile.CreateTextToken(action), TextFile.NewLineToken, TextFile.NewLineToken,
+                new TextFile.Token() { text = entryStr, formatting = TextFile.Formatting.TextHighlight }, TextFile.CreateFormatToken(TextFile.Formatting.JustifyCenter), TextFile.NewLineToken,
+                TextFile.CreateTextToken(explanation), TextFile.CreateFormatToken(TextFile.Formatting.EndOfRecord)
             };
-        }
 
-        private DaggerfallMessageBox CreateDialogBox(string[] dialogText)
-        {
             DaggerfallMessageBox dialogBox = new DaggerfallMessageBox(uiManager, this);
-            dialogBox.SetText(dialogText);
+            dialogBox.SetHighlightColor(Color.white);
+            dialogBox.SetTextTokens(tokens);
             dialogBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.Yes);
             dialogBox.AddButton(DaggerfallMessageBox.MessageBoxButtons.No);
             return dialogBox;
@@ -535,6 +552,16 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             titleLabel.Text = TextManager.Instance.GetText(textDatabase, "notebook");
             titleLabel.ToolTipText = TextManager.Instance.GetText(textDatabase, "notebookInfo");
             SetTextWithListEntries(notes, maxLinesSmall);
+        }
+
+        private void SetTextMessages()
+        {
+            List<TextFile.Token[]> messages = GameManager.Instance.PlayerEntity.Notebook.GetMessages();
+            messageCount = messages.Count;
+            questLogLabel.TextScale = textScaleSmall;
+            titleLabel.Text = TextManager.Instance.GetText(textDatabase, "messages");
+            titleLabel.ToolTipText = TextManager.Instance.GetText(textDatabase, "messagesInfo");
+            SetTextWithListEntries(messages, maxLinesSmall);
         }
 
         private void SetTextWithListEntries(List<TextFile.Token[]> entries, int maxLines)

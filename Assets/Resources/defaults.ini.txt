@@ -66,6 +66,8 @@ ClickToAttack = False
 CameraRecoilStrength = 3
 SoundVolume = 1.0
 MusicVolume = 1.0
+InstantRepairs = False
+AllowMagicRepairs = False
 
 [Map]
 AutomapNumberOfDungeons=5
@@ -79,6 +81,8 @@ StartInDungeon=True
 
 [Experimental]
 TerrainDistance=3
+TerrainHeightmapPixelError=5
+SmallerDungeons=False
 
 [Enhancements]
 LypyL_GameConsole=True

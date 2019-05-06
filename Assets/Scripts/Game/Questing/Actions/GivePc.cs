@@ -1,4 +1,4 @@
-﻿// Project:         Daggerfall Tools For Unity
+// Project:         Daggerfall Tools For Unity
 // Copyright:       Copyright (C) 2009-2018 Daggerfall Workshop
 // Web Site:        http://www.dfworkshop.net
 // License:         MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -45,6 +45,7 @@ namespace DaggerfallWorkshop.Game.Questing.Actions
         public GivePc(Quest parentQuest)
             : base(parentQuest)
         {
+            allowRearm = false;
         }
 
         public override IQuestAction CreateNew(string source, Quest parentQuest)
@@ -89,7 +90,7 @@ namespace DaggerfallWorkshop.Game.Questing.Actions
                 // If we were waiting then add a small random delay so messages don't all arrive at once
                 if (waitingForTown)
                 {
-                    ticksUntilFire = UnityEngine.Random.Range(minDelay, maxDelay);
+                    ticksUntilFire = UnityEngine.Random.Range(minDelay, maxDelay + 1);
                     waitingForTown = false;
                     RaiseOnOfferPendingEvent(this);
                 }

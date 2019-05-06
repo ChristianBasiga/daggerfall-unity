@@ -18,6 +18,7 @@ using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.Serialization;
+using DaggerfallWorkshop.Utility;
 
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 
@@ -98,6 +99,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         internal DFPosition EndPos { get { return endPos; } set { endPos = value;} }
         internal DaggerfallTravelMapWindow TravelWindow { get { return travelWindow; } set { travelWindow = value; } }
+        public bool SpeedCautious { get { return speedCautious;} set {speedCautious = value; } }
+        public bool TravelShip { get { return travelShip;} set { travelShip = value;} }
+        public bool SleepModeInn { get { return sleepModeInn; } set { sleepModeInn = value; } }
 
         public TravelTimeCalculator TravelTimeCalculator { set { travelTimeCalculator = value; } }
 
@@ -358,10 +362,13 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             // Halt random enemy spawns for next playerEntity update so player isn't bombarded by spawned enemies at the end of a long trip
             GameManager.Instance.PlayerEntity.PreventEnemySpawns = true;
 
-            // Raise arrival time to just after 7am if cautious travel would otherwise arrive at night
-            // Increasing this from 6am to 7am as game is quite dark on at 6am (in Daggerfall Unity, Daggerfall is lighter)
-            // Will consider retuning lighting so this can be like classic, although +1 hours to travel time isn't likely to be a problem for now
-            if (speedCautious) /*Include checking cautious during interrupt choosing.*/
+            // Vampires always arrive just after 6pm regardless of travel type
+            // Otherwise raise arrival time to just after 7am if cautious travel would arrive at night
+            if (GameManager.Instance.PlayerEffectManager.HasVampirism())
+            {
+                DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.RaiseTime((DaggerfallDateTime.DuskHour - DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.Hour) * 3600);
+            }
+            else if (speedCautious)
             {
 
                
@@ -389,6 +396,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             //Maybe not raise skills if interrupted.
             GameManager.Instance.PlayerEntity.RaiseSkills();
             DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
+
+            RaiseOnPostFastTravelEvent();
         }
 
         // Return whether player has enough gold for the selected travel options
@@ -500,6 +509,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             sleepModeInn = !sleepModeInn;
             Refresh();
+        }
+
+        // OnPostFastTravel
+        public delegate void OnOnPostFastTravelEventHandler();
+        public static event OnOnPostFastTravelEventHandler OnPostFastTravel;
+        void RaiseOnPostFastTravelEvent()
+        {
+            if (OnPostFastTravel != null)
+                OnPostFastTravel();
         }
 
         #endregion

@@ -48,15 +48,19 @@ namespace DaggerfallWorkshop.Game.Player
         public uint lastTimePlayerBoughtTraining;
         public uint timeForThievesGuildLetter;
         public uint timeForDarkBrotherhoodLetter;
+        public byte vampireClan;
         public byte darkBrotherhoodRequirementTally;
         public byte thievesGuildRequirementTally;
         public uint timeToBecomeVampireOrWerebeast;
+        public byte hasStartedInitialVampireQuest;
+        public uint lastTimeVampireNeedToKillSatiated;
         public uint lastTimePlayerAteOrDrankAtTavern;
         public sbyte biographyReactionMod;
         public List<string> biographyEffects;
         public int classIndex;
         public List<string> backStory;
         public bool isCustom = false;
+        public Races classicTransformedRace = Races.None;
 
         public CharacterDocument()
         {
@@ -76,6 +80,8 @@ namespace DaggerfallWorkshop.Game.Player
             startingLevelUpSkillSum = 0;
             faceIndex = 0;
             skillUses = new short[DaggerfallSkills.Count];
+            skillsRaisedThisLevel1 = 0;
+            skillsRaisedThisLevel2 = 0;
             for (int i = 0; i < armorValues.Length; i++)
             {
                 armorValues[i] = 100;

@@ -226,6 +226,14 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             base.CancelWindow();
         }
 
+        public override void OnPop()
+        {
+            base.OnPop();
+            if (!leveling)
+                playerEntity.ResetSkillsRecentlyRaised();
+            leveling = false;
+        }
+
         #endregion
 
         #region Private Methods
@@ -242,20 +250,23 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         // Creates formatting tokens for skill popups
         TextFile.Token[] CreateSkillTokens(DFCareer.Skills skill, bool twoColumn = false, int startPosition = 0)
         {
+            bool highlight = playerEntity.GetSkillRecentlyIncreased(skill);
+
             List<TextFile.Token> tokens = new List<TextFile.Token>();
+            TextFile.Formatting formatting = highlight ? TextFile.Formatting.TextHighlight : TextFile.Formatting.Text;
 
             TextFile.Token skillNameToken = new TextFile.Token();
+            skillNameToken.formatting = formatting;
             skillNameToken.text = DaggerfallUnity.Instance.TextProvider.GetSkillName(skill);
-            skillNameToken.formatting = TextFile.Formatting.Text;
 
             TextFile.Token skillValueToken = new TextFile.Token();
+            skillValueToken.formatting = formatting;
             skillValueToken.text = string.Format("{0}%", playerEntity.Skills.GetLiveSkillValue(skill));
-            skillValueToken.formatting = TextFile.Formatting.Text;
 
             DFCareer.Stats primaryStat = DaggerfallSkills.GetPrimaryStat(skill);
             TextFile.Token skillPrimaryStatToken = new TextFile.Token();
+            skillPrimaryStatToken.formatting = formatting;
             skillPrimaryStatToken.text = DaggerfallUnity.Instance.TextProvider.GetAbbreviatedStatName(primaryStat);
-            skillPrimaryStatToken.formatting = TextFile.Formatting.Text;
 
             TextFile.Token positioningToken = new TextFile.Token();
             positioningToken.formatting = TextFile.Formatting.PositionPrefix;
@@ -338,6 +349,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
 
             DaggerfallMessageBox messageBox = new DaggerfallMessageBox(uiManager, this);
+            messageBox.SetHighlightColor(DaggerfallUI.DaggerfallUnityStatIncreasedTextColor);
             messageBox.SetTextTokens(tokens.ToArray(), null, false);
             messageBox.ClickAnywhereToClose = true;
             messageBox.Show();
@@ -456,7 +468,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
             else
             {
-                leveling = false;
                 PlayerEntity.Stats = statsRollout.WorkingStats;
                 NativePanel.Components.Remove(statsRollout);
                 return true;
@@ -467,6 +478,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             List<string> specials = new List<string>();
             DFCareer career = GameManager.Instance.PlayerEntity.Career;
+            RaceTemplate race = GameManager.Instance.PlayerEntity.RaceTemplate;
 
             // Tolerances
             Dictionary<DFCareer.Tolerance, string> tolerances = new Dictionary<DFCareer.Tolerance, string>
@@ -689,6 +701,81 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             if (career.DamageFromHolyPlaces)
                 specials.Add(HardStrings.damage + " " + HardStrings.fromHolyPlaces);
+
+            // Add racial tolerances and abilities
+            Dictionary<DFCareer.EffectFlags, string> raceEffectMods = new Dictionary<DFCareer.EffectFlags, string>
+            {
+                { DFCareer.EffectFlags.Paralysis, HardStrings.toParalysis },
+                { DFCareer.EffectFlags.Magic, HardStrings.toMagic },
+                { DFCareer.EffectFlags.Poison, HardStrings.toPoison },
+                { DFCareer.EffectFlags.Fire, HardStrings.toFire },
+                { DFCareer.EffectFlags.Frost, HardStrings.toFrost },
+                { DFCareer.EffectFlags.Shock, HardStrings.toShock },
+                { DFCareer.EffectFlags.Disease, HardStrings.toDisease },
+            };
+            foreach (DFCareer.EffectFlags effectFlag in Enum.GetValues(typeof(DFCareer.EffectFlags)))
+            {
+                if (effectFlag != DFCareer.EffectFlags.None)
+                {
+                    // Resistances
+                    if ((race.ResistanceFlags & effectFlag) == effectFlag)
+                    { 
+                        string toAdd = HardStrings.resistance + " " + raceEffectMods[effectFlag];
+                        if (!specials.Contains(toAdd)) // prevent duplicates from career
+                        {
+                            specials.Add(toAdd);
+                        }
+                    }
+                    // Immunities
+                    if ((race.ImmunityFlags & effectFlag) == effectFlag)
+                    {
+                        string toAdd = HardStrings.immunity + " " + raceEffectMods[effectFlag];
+                        if (!specials.Contains(toAdd))
+                        {
+                            specials.Add(toAdd);
+                        }
+                    }
+                    // Low tolerances
+                    if ((race.LowToleranceFlags & effectFlag) == effectFlag)
+                    {
+                        string toAdd = HardStrings.lowTolerance + " " + raceEffectMods[effectFlag];
+                        if (!specials.Contains(toAdd))
+                        {
+                            specials.Add(toAdd);
+                        }
+                    }
+                    // Critical weaknesses
+                    if ((race.CriticalWeaknessFlags & effectFlag) == effectFlag)
+                    {
+                        string toAdd = HardStrings.criticalWeakness + " " + raceEffectMods[effectFlag];
+                        if (!specials.Contains(toAdd))
+                        {
+                            specials.Add(toAdd);
+                        }
+                    }
+                }
+            }
+
+            Dictionary<DFCareer.SpecialAbilityFlags, string> raceAbilities = new Dictionary<DFCareer.SpecialAbilityFlags, string>
+            {
+                { DFCareer.SpecialAbilityFlags.AcuteHearing, HardStrings.acuteHearing },
+                { DFCareer.SpecialAbilityFlags.Athleticism, HardStrings.acuteHearing },
+                { DFCareer.SpecialAbilityFlags.AdrenalineRush, HardStrings.adrenalineRush },
+                { DFCareer.SpecialAbilityFlags.NoRegenSpellPoints, HardStrings.inabilityToRegen },
+                { DFCareer.SpecialAbilityFlags.SunDamage, HardStrings.damage + " " + HardStrings.fromSunlight },
+                { DFCareer.SpecialAbilityFlags.HolyDamage, HardStrings.damage + " " + HardStrings.fromHolyPlaces }
+            };
+            foreach (DFCareer.SpecialAbilityFlags abilityFlag in Enum.GetValues(typeof(DFCareer.SpecialAbilityFlags)))
+            {
+                if (abilityFlag != DFCareer.SpecialAbilityFlags.None && (race.SpecialAbilities & abilityFlag) == abilityFlag)
+                {
+                    string toAdd = raceAbilities[abilityFlag];
+                    if (!specials.Contains(toAdd))
+                    {
+                        specials.Add(toAdd);
+                    }
+                }
+            }
 
             return specials.ToArray();
         }

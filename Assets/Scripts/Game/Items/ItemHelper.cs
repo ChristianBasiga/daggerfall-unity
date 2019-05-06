@@ -42,7 +42,6 @@ namespace DaggerfallWorkshop.Game.Items
         const string magicItemTemplatesFilename = "MagicItemTemplates";
         const string containerIconsFilename = "INVE16I0.CIF";
         const string bookMappingFilename = "books";
-        const string recipeMappingFilename = "PotionRecipes";
 
         const int artifactMaleTextureArchive = 432;
         const int artifactFemaleTextureArchive = 433;
@@ -53,7 +52,6 @@ namespace DaggerfallWorkshop.Game.Items
         readonly Dictionary<int, ImageData> itemImages = new Dictionary<int, ImageData>();
         readonly Dictionary<InventoryContainerImages, ImageData> containerImages = new Dictionary<InventoryContainerImages, ImageData>();
         readonly Dictionary<int, String> bookIDNameMapping = new Dictionary<int, String>();
-        readonly Dictionary<int, RecipeMapping> potionRecipeMapping = new Dictionary<int, RecipeMapping>();
 
         #endregion
 
@@ -64,7 +62,6 @@ namespace DaggerfallWorkshop.Game.Items
             LoadItemTemplates();
             LoadMagicItemTemplates();
             LoadBookIDNameMapping();
-            LoadPotionRecipeIDMapping();
         }
 
         #endregion
@@ -198,7 +195,7 @@ namespace DaggerfallWorkshop.Game.Items
             }
 
             // Resolve potion names
-            if (item.ItemGroup == ItemGroups.UselessItems1 && item.TemplateIndex == (int)UselessItems1.Glass_Bottle)
+            if (item.IsPotion)
                 return MacroHelper.GetValue("%po", item);
 
             // Resolve quest letters, get last 2 lines which should be the signoff
@@ -209,7 +206,7 @@ namespace DaggerfallWorkshop.Game.Items
                 if (quest != null)
                 {
                     Item questItem = quest.GetItem(item.QuestItemSymbol);
-                    if (questItem.UsedMessageID != 0)
+                    if (questItem.UsedMessageID >= 0)
                     {
                         Message msg = quest.GetMessage(questItem.UsedMessageID);
                         TextFile.Token[] tokens = msg.GetTextTokens();
@@ -228,6 +225,24 @@ namespace DaggerfallWorkshop.Game.Items
                         }
                     }
                 }
+            }
+
+            // Show trapped soul name if any
+            if (item.ItemGroup == ItemGroups.MiscItems && item.TemplateIndex == (int)MiscItems.Soul_trap)
+            {
+                if (item.TrappedSoulType != MobileTypes.None)
+                {
+                    MobileEnemy soul;
+                    if (EnemyBasics.GetEnemy(item.TrappedSoulType, out soul))
+                    {
+                        MobileEnemy mobileEnemy = GameObjectHelper.EnemyDict[(int)item.TrappedSoulType];
+                        result += string.Format(" ({0})", soul.Name);
+                    }
+                }
+                //else
+                //{
+                //    // Considering showing (empty) for empty soul traps
+                //}
             }
 
             return result;
@@ -408,18 +423,6 @@ namespace DaggerfallWorkshop.Game.Items
         }
 
         /// <summary>
-        /// Gets the recipe(s) for a potion based on the recipe's ID
-        /// </summary>
-        /// <param name="id">The ID of the requested potion recipe</param>
-        /// <returns>A KeyValuePair<string, Recipe[]>, where the string is the name of the recipe and the Recipe array contains the different ways it can be made</returns>
-        public KeyValuePair<string, Recipe[]> getPotionRecipesByID(int id)
-        {
-            RecipeMapping mapping;
-            potionRecipeMapping.TryGetValue(id, out mapping);
-            return new KeyValuePair<string, Recipe[]>(mapping.name, mapping.recipes);
-        }
-
-        /// <summary>
         /// Gets the Daggerfall name of a book based on its "message" field. The ID is derived from this message using Daggerfall's
         /// bitmasking (message & 0xFF)
         /// </summary>
@@ -439,7 +442,7 @@ namespace DaggerfallWorkshop.Game.Items
         {
             List<int> keys = new List<int>(bookIDNameMapping.Keys);
             int size = bookIDNameMapping.Count;
-            return keys[UnityEngine.Random.Range(0, size - 1)];
+            return keys[UnityEngine.Random.Range(0, size)];
         }
 
         /// <summary>
@@ -558,7 +561,7 @@ namespace DaggerfallWorkshop.Game.Items
 
                 case ItemGroups.MiscItems:
                     // A few items in the MiscItems group have their own text display
-                    if (item.TemplateIndex == (int)MiscItems.Potion_recipe)
+                    if (item.IsPotionRecipe)
                         return GetPotionRecipeTokens();                             // Handle potion recipes
                     else if (item.TemplateIndex == (int)MiscItems.House_Deed)
                         return textProvider.GetRSCTokens(houseDeedTextId);          // Handle house deeds
@@ -572,8 +575,7 @@ namespace DaggerfallWorkshop.Game.Items
                 default:
                     // Handle potions in glass bottles
                     // In classic, the check is whether RecordRoot.SublistHead is non-null and of PotionMix type.
-                    // TODO: Do we need it or will glass bottles with typedependentdata cover it?
-                    if (item.ItemGroup == ItemGroups.UselessItems1 && item.TemplateIndex == (int)UselessItems1.Glass_Bottle)
+                    if (item.IsPotion)
                         return textProvider.GetRSCTokens(potionTextId);
 
                     // Handle Azura's Star
@@ -760,9 +762,6 @@ namespace DaggerfallWorkshop.Game.Items
                         return MetalTypes.Iron;
                     case ArmorMaterialTypes.Steel:
                         return MetalTypes.Steel;
-                    case ArmorMaterialTypes.Chain:
-                    case ArmorMaterialTypes.Chain2:
-                        return MetalTypes.Chain;
                     case ArmorMaterialTypes.Silver:
                         return MetalTypes.Silver;
                     case ArmorMaterialTypes.Elven:
@@ -819,8 +818,9 @@ namespace DaggerfallWorkshop.Game.Items
                 case WeaponMaterialTypes.Steel:
                     return DyeColors.Steel;
                 case WeaponMaterialTypes.Silver:
+                    return DyeColors.Silver;
                 case WeaponMaterialTypes.Elven:
-                    return DyeColors.SilverOrElven;
+                    return DyeColors.Elven;
                 case WeaponMaterialTypes.Dwarven:
                     return DyeColors.Dwarven;
                 case WeaponMaterialTypes.Mithril:
@@ -848,16 +848,14 @@ namespace DaggerfallWorkshop.Game.Items
         {
             switch (material)
             {
-                case ArmorMaterialTypes.Chain:
-                case ArmorMaterialTypes.Chain2:
-                    return DyeColors.Chain;
                 case ArmorMaterialTypes.Iron:
                     return DyeColors.Iron;
                 case ArmorMaterialTypes.Steel:
                     return DyeColors.Steel;
                 case ArmorMaterialTypes.Silver:
+                    return DyeColors.Silver;
                 case ArmorMaterialTypes.Elven:
-                    return DyeColors.SilverOrElven;
+                    return DyeColors.Elven;
                 case ArmorMaterialTypes.Dwarven:
                     return DyeColors.Dwarven;
                 case ArmorMaterialTypes.Mithril:
@@ -994,12 +992,24 @@ namespace DaggerfallWorkshop.Game.Items
                     items.AddItem(ItemBuilder.CreateItem(ItemGroups.MiscItems, (int)MiscItems.Spellbook));
                 }
             }
+        }
 
-            // Player should now have a valid spellbook, otherwise create one
-            if (!items.Contains(ItemGroups.MiscItems, (int)MiscItems.Spellbook))
+        /// <summary>
+        /// Gives a new spellbook item to player entity (if they don't already have one).
+        /// </summary>
+        /// <param name="playerEntity">Player entity to receive spellbook item.</param>
+        /// <returns>True if spellbook added, false is player already has a spellbook item.</returns>
+        public bool AddSpellbookItem(PlayerEntity playerEntity)
+        {
+            ItemCollection items = playerEntity.Items;
+            DaggerfallUnityItem spellbook = items.GetItem(ItemGroups.MiscItems, (int)MiscItems.Spellbook);
+            if (spellbook == null)
             {
                 items.AddItem(ItemBuilder.CreateItem(ItemGroups.MiscItems, (int)MiscItems.Spellbook));
+                return true;
             }
+
+            return false;
         }
 
         /// <summary>
@@ -1158,29 +1168,6 @@ namespace DaggerfallWorkshop.Game.Items
             catch
             {
                 Debug.Log("Could not load the BookIDName mapping from Resources. Check file exists and is in correct format.");
-            }
-        }
-
-        /// <summary>
-        /// Loads potion recipe ID mappings from JSON file. This is used whenever you need to read the content of a potion recipe item
-        /// It should be called once to initilaize the internal data structures used for potion-related helper functions.
-        /// This data was obtained by looking at the internal array of potion objects in the FALL.EXE file and combining it
-        /// with a known resource for potion ingredients. The IDs in the file correspond to the DFU IDs in the ItemTemplates.txt
-        /// </summary>
-        void LoadPotionRecipeIDMapping()
-        {
-            try
-            {
-                TextAsset recipeNames = Resources.Load<TextAsset>(recipeMappingFilename);
-                List<RecipeMapping> mappings = SaveLoadManager.Deserialize(typeof(List<RecipeMapping>), recipeNames.text) as List<RecipeMapping>;
-                for (int x = 0; x < mappings.Count; ++x)
-                {
-                    potionRecipeMapping.Add(x, mappings[x]);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.Log("Could not load the Potion recipe mapping from Resources. Check file exists and is in correct format. " + e.ToString());
             }
         }
 

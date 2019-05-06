@@ -16,6 +16,7 @@ using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game.MagicAndEffects;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game
 {
@@ -30,34 +31,20 @@ namespace DaggerfallWorkshop.Game
         public float MeleeTimer = 0;                // Must be 0 for a melee attack or touch spell to be done
         public DaggerfallMissile ArrowMissilePrefab;
 
-        //EnemyMotor motor;
+        EnemyMotor motor;
         EnemySenses senses;
         EnemySounds sounds;
         DaggerfallMobileUnit mobile;
         DaggerfallEntityBehaviour entityBehaviour;
         int damage = 0;
-        float classicUpdateTimer = 0f;
-        bool classicUpdate = false;
 
         void Start()
         {
-            //motor = GetComponent<EnemyMotor>();
+            motor = GetComponent<EnemyMotor>();
             senses = GetComponent<EnemySenses>();
             sounds = GetComponent<EnemySounds>();
             mobile = GetComponentInChildren<DaggerfallMobileUnit>();
             entityBehaviour = GetComponent<DaggerfallEntityBehaviour>();
-        }
-
-        void FixedUpdate()
-        {
-            classicUpdateTimer += Time.deltaTime;
-            if (classicUpdateTimer >= PlayerEntity.ClassicUpdateInterval)
-            {
-                classicUpdateTimer = 0;
-                classicUpdate = true;
-            }
-            else
-                classicUpdate = false;
         }
 
         void Update()
@@ -90,7 +77,7 @@ namespace DaggerfallWorkshop.Game
 
             // Note: Speed comparison here is reversed from classic. Classic's way makes fewer attack
             // attempts at higher speeds, so it seems backwards.
-            if (classicUpdate && (DFRandom.rand() % speed >= (speed >> 3) + 6 && MeleeTimer == 0))
+            if (GameManager.ClassicUpdate && (DFRandom.rand() % speed >= (speed >> 3) + 6 && MeleeTimer == 0))
             {
                 if (!MeleeAnimation())
                     return;
@@ -101,7 +88,7 @@ namespace DaggerfallWorkshop.Game
 
         public void ResetMeleeTimer()
         {
-            MeleeTimer = Random.Range(1500, 3001);
+            MeleeTimer = Random.Range(1500, 3000 + 1);
             MeleeTimer -= 50 * (GameManager.Instance.PlayerEntity.Level - 10);
 
             // Note: In classic, what happens here is
@@ -121,17 +108,17 @@ namespace DaggerfallWorkshop.Game
 
         public void BowDamage(Vector3 direction)
         {
-            if (entityBehaviour.Target == null)
+            if (senses.Target == null)
                 return;
 
             EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
-            if (entityBehaviour.Target == GameManager.Instance.PlayerEntityBehaviour)
+            if (senses.Target == GameManager.Instance.PlayerEntityBehaviour)
                 damage = ApplyDamageToPlayer(entity.ItemEquipTable.GetItem(Items.EquipSlots.RightHand));
             else
                 damage = ApplyDamageToNonPlayer(entity.ItemEquipTable.GetItem(Items.EquipSlots.RightHand), direction, true);
 
             Items.DaggerfallUnityItem arrow = Items.ItemBuilder.CreateItem(Items.ItemGroups.Weapons, (int)Items.Weapons.Arrow);
-            entityBehaviour.Target.Entity.Items.AddItem(arrow);
+            senses.Target.Entity.Items.AddItem(arrow);
         }
 
         #region Private Methods
@@ -139,7 +126,7 @@ namespace DaggerfallWorkshop.Game
         private bool MeleeAnimation()
         {
             // Are we in range and facing target? Then start attack.
-            if (senses.TargetInSight)
+            if (senses.DetectedTarget && senses.TargetIsWithinYawAngle(22.5f, senses.LastKnownTargetPos))
             {
                 // Take the rate of target approach into account when deciding if to attack
                 if (senses.DistanceToTarget >= MeleeDistance + senses.TargetRateOfApproach)
@@ -167,8 +154,8 @@ namespace DaggerfallWorkshop.Game
                 EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
                 EnemyEntity targetEntity = null;
 
-                if (entityBehaviour.Target != null && entityBehaviour.Target != GameManager.Instance.PlayerEntityBehaviour)
-                    targetEntity = entityBehaviour.Target.Entity as EnemyEntity;
+                if (senses.Target != null && senses.Target != GameManager.Instance.PlayerEntityBehaviour)
+                    targetEntity = senses.Target.Entity as EnemyEntity;
 
                 // Switch to hand-to-hand if enemy is immune to weapon
                 Items.DaggerfallUnityItem weapon = entity.ItemEquipTable.GetItem(Items.EquipSlots.RightHand);
@@ -180,20 +167,26 @@ namespace DaggerfallWorkshop.Game
 
                 damage = 0;
 
-                // Are we still in range and facing target? Then apply melee damage.
-                if (entityBehaviour.Target != null && senses.DistanceToTarget <= MeleeDistance && senses.TargetInSight)
+                // Melee hit detection, matched to classic
+                if (senses.Target != null && (senses.TargetInSight && senses.DistanceToTarget <= 0.25f
+                    || senses.DistanceToTarget <= MeleeDistance && senses.TargetIsWithinYawAngle(35.156f, senses.Target.transform.position)))
                 {
-                    if (entityBehaviour.Target == GameManager.Instance.PlayerEntityBehaviour)
+                    if (senses.Target == GameManager.Instance.PlayerEntityBehaviour)
                         damage = ApplyDamageToPlayer(weapon);
                     else
                         damage = ApplyDamageToNonPlayer(weapon, transform.forward);
+                }
+                // Handle bashing door
+                else if (motor.Bashing && senses.LastKnownDoor != null && senses.DistanceToDoor <= MeleeDistance && !senses.LastKnownDoor.IsOpen)
+                {
+                    senses.LastKnownDoor.AttemptBash(false);
                 }
                 else
                 {
                     sounds.PlayMissSound(weapon);
                 }
 
-                if (DaggerfallUnity.Settings.CombatVoices && entity.EntityType == EntityTypes.EnemyClass && Random.Range(1, 101) <= 20)
+                if (DaggerfallUnity.Settings.CombatVoices && entity.EntityType == EntityTypes.EnemyClass && Dice100.SuccessRoll(20))
                 {
                     Genders gender;
                     if (mobile.Summary.Enemy.Gender == MobileGender.Male || entity.MobileEnemy.ID == (int)MobileTypes.Knight_CityWatch)
@@ -273,13 +266,13 @@ namespace DaggerfallWorkshop.Game
 
         private int ApplyDamageToNonPlayer(Items.DaggerfallUnityItem weapon, Vector3 direction, bool bowAttack = false)
         {
-            if (entityBehaviour.Target == null)
+            if (senses.Target == null)
                 return 0;
             // TODO: Merge with hit code in WeaponManager to eliminate duplicate code
             EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
-            EnemyEntity targetEntity = entityBehaviour.Target.Entity as EnemyEntity;
-            EnemySounds targetSounds = entityBehaviour.Target.GetComponent<EnemySounds>();
-            EnemyMotor targetMotor = entityBehaviour.Target.transform.GetComponent<EnemyMotor>();
+            EnemyEntity targetEntity = senses.Target.Entity as EnemyEntity;
+            EnemySounds targetSounds = senses.Target.GetComponent<EnemySounds>();
+            EnemyMotor targetMotor = senses.Target.transform.GetComponent<EnemyMotor>();
 
             // Calculate damage
             damage = FormulaHelper.CalculateAttackDamage(entity, targetEntity, weapon, -1);
@@ -293,10 +286,9 @@ namespace DaggerfallWorkshop.Game
             {
                 targetSounds.PlayHitSound(weapon);
 
-                EnemyBlood blood = entityBehaviour.Target.transform.GetComponent<EnemyBlood>();
-
-                Vector3 bloodPos = entityBehaviour.Target.transform.position;
-                CharacterController targetController = entityBehaviour.Target.transform.GetComponent<CharacterController>();
+                EnemyBlood blood = senses.Target.transform.GetComponent<EnemyBlood>();
+                CharacterController targetController = senses.Target.transform.GetComponent<CharacterController>();
+                Vector3 bloodPos = senses.Target.transform.position + targetController.center;
                 bloodPos.y += targetController.height / 8;
 
                 if (blood)
@@ -326,9 +318,9 @@ namespace DaggerfallWorkshop.Game
                     }
                 }
 
-                if (DaggerfallUnity.Settings.CombatVoices && entityBehaviour.Target.EntityType == EntityTypes.EnemyClass && Random.Range(1, 101) <= 40)
+                if (DaggerfallUnity.Settings.CombatVoices && senses.Target.EntityType == EntityTypes.EnemyClass && Dice100.SuccessRoll(40))
                 {
-                    DaggerfallMobileUnit targetMobileUnit = entityBehaviour.Target.GetComponentInChildren<DaggerfallMobileUnit>();
+                    DaggerfallMobileUnit targetMobileUnit = senses.Target.GetComponentInChildren<DaggerfallMobileUnit>();
                     Genders gender;
                     if (targetMobileUnit.Summary.Enemy.Gender == MobileGender.Male || targetEntity.MobileEnemy.ID == (int)MobileTypes.Knight_CityWatch)
                         gender = Genders.Male;

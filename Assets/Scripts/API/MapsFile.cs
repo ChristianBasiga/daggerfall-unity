@@ -12,6 +12,7 @@
 #region Using Statements
 using System;
 using System.IO;
+using System.Collections.Generic;
 using DaggerfallConnect.Utility;
 #endregion
 
@@ -43,7 +44,7 @@ namespace DaggerfallConnect.Arena2
         /// <summary>
         /// All region names.
         /// </summary>
-        private readonly string[] regionNames = {
+        private static readonly string[] regionNames = {
             "Alik'r Desert", "Dragontail Mountains", "Glenpoint Foothills", "Daggerfall Bluffs",
             "Yeorth Burrowland", "Dwynnen", "Ravennian Forest", "Devilrock",
             "Malekna Forest", "Isle of Balfiera", "Bantha", "Dak'fron",
@@ -208,7 +209,7 @@ namespace DaggerfallConnect.Arena2
         /// <summary>
         /// Gets all region names as string array.
         /// </summary>
-        public string[] RegionNames
+        public static string[] RegionNames
         {
             get { return regionNames; }
         }
@@ -451,12 +452,12 @@ namespace DaggerfallConnect.Arena2
                     settings.Names = FactionFile.FactionRaces.Redguard;
                     break;
                 case (int)Climates.MountainWoods:
-                    settings.ClimateType = DFLocation.ClimateBaseType.Mountain;
+                    settings.ClimateType = DFLocation.ClimateBaseType.Temperate;
                     settings.GroundArchive = 102;
                     settings.NatureArchive = (int)DFLocation.ClimateTextureSet.Nature_TemperateWoodland;
                     settings.SkyBase = 16;
-                    settings.People = FactionFile.FactionRaces.Nord;
-                    settings.Names = FactionFile.FactionRaces.Nord;
+                    settings.People = FactionFile.FactionRaces.Breton;
+                    settings.Names = FactionFile.FactionRaces.Breton;
                     break;
                 case (int)Climates.Woodlands:
                     settings.ClimateType = DFLocation.ClimateBaseType.Temperate;
@@ -687,6 +688,14 @@ namespace DaggerfallConnect.Arena2
             // Store indices
             dfLocation.RegionIndex = region;
             dfLocation.LocationIndex = location;
+
+            // Generate smaller dungeon when enabled
+            if (dfLocation.HasDungeon &&
+                DaggerfallWorkshop.DaggerfallUnity.Settings.SmallerDungeons &&
+                !DaggerfallWorkshop.DaggerfallDungeon.IsMainStoryDungeon(dfLocation.MapTableData.MapId))
+            {
+                GenerateSmallerDungeon(ref dfLocation);
+            }
 
             return dfLocation;
         }
@@ -923,7 +932,7 @@ namespace DaggerfallConnect.Arena2
             for (int i = 0; i < regions[region].DFRegion.LocationCount; i++)
             {
                 // Read map name data
-                regions[region].DFRegion.MapNames[i] = regions[region].MapNames.ReadCStringSkip(reader, 0, 32);
+                regions[region].DFRegion.MapNames[i] = FileProxy.ReadCStringSkip(reader, 0, 32);
 
                 // Add to dictionary
                 if (!regions[region].DFRegion.MapNameLookup.ContainsKey(regions[region].DFRegion.MapNames[i]))
@@ -1032,7 +1041,7 @@ namespace DaggerfallConnect.Arena2
             }
 
             // Read ExteriorData
-            dfLocation.Exterior.ExteriorData.AnotherName = regions[region].MapPItem.ReadCStringSkip(reader, 0, 32);
+            dfLocation.Exterior.ExteriorData.AnotherName = FileProxy.ReadCStringSkip(reader, 0, 32);
             dfLocation.Exterior.ExteriorData.MapId = reader.ReadInt32();
             dfLocation.Exterior.ExteriorData.LocationId = reader.ReadUInt32();
             dfLocation.Exterior.ExteriorData.Width = reader.ReadByte();
@@ -1104,7 +1113,7 @@ namespace DaggerfallConnect.Arena2
             recordElement.Header.IsInterior = reader.ReadUInt16();
             recordElement.Header.ExteriorLocationId = reader.ReadUInt32();
             recordElement.Header.NullValue6 = reader.ReadBytes(26);
-            recordElement.Header.LocationName = regions[region].MapPItem.ReadCStringSkip(reader, 0, 32);
+            recordElement.Header.LocationName = FileProxy.ReadCStringSkip(reader, 0, 32);
             recordElement.Header.Unknown3 = reader.ReadBytes(9);
         }
 
@@ -1177,6 +1186,100 @@ namespace DaggerfallConnect.Arena2
 
             // Set dungeon flag
             dfLocation.HasDungeon = true;
+        }
+
+        #endregion
+
+        #region ExperimentalSmallerDungeons
+
+        // Generates a smaller dungeon by overwriting the block layout
+        // Creates a single interior block surrounded by 4 border blocks (smallest viable dungeon)
+        // Should not be called for main story dungeons
+        // Will filter out dungeons that are already below a threshold size
+        void GenerateSmallerDungeon(ref DFLocation dfLocation)
+        {
+            // Smallest viable dungeon block count, comprised of 1x interior block and 4x border blocks
+            const int threshold = 5;
+
+            // Must not be called for main story dungeons
+            if (DaggerfallWorkshop.DaggerfallDungeon.IsMainStoryDungeon(dfLocation.MapTableData.MapId))
+                throw new Exception("GenerateSmallerDungeon() must not be called on a main story dungeon.");
+
+            // Ignore small dungeons under threshold - this will exclude already small crypts and the like
+            if (dfLocation.Dungeon.Blocks == null || dfLocation.Dungeon.Blocks.Length <= threshold)
+                return;
+
+            // Dungeon layout might be looked up multiple times in a row by different systems
+            // It is expected to see this output more than once in log when generating quests, etc.
+            // Disabling for now just to reduce spam to logs
+            //UnityEngine.Debug.LogFormat("Generating smaller dungeon for {0}/{1}", dfLocation.RegionName, dfLocation.Name);
+
+            // TODO: Some potential issues for later:
+            //  * Quests assigned to a dungeon will probably break/crash as marker layout different in smaller dungeon, must handle this
+            //  * Might need to ensure automap cache is cleared when switching smaller dungeons setting on/off
+
+            // Seed random generation with map ID so we get the same layout each time map is looked up
+            DaggerfallWorkshop.DFRandom.Seed = (uint)dfLocation.MapTableData.MapId;
+
+            // Generate new dungeon layout with smallest viable dungeon (1x normal block surrounded by 4x border blocks)
+            DFLocation.DungeonBlock[] layout = new DFLocation.DungeonBlock[5];
+            layout[0] = GenerateRDBBlock(0, 0, false, true, ref dfLocation);           // Central starting block
+            layout[1] = GenerateRDBBlock(0, -1, true, false, ref dfLocation);          // North border block
+            layout[2] = GenerateRDBBlock(-1, 0, true, false, ref dfLocation);          // West border block
+            layout[3] = GenerateRDBBlock(1, 0, true, false, ref dfLocation);           // East border block
+            layout[4] = GenerateRDBBlock(0, 1, true, false, ref dfLocation);           // South border block
+
+            // Inject new block array into location
+            dfLocation.Dungeon.Blocks = layout;
+        }
+
+        /// <summary>
+        /// Generates a new dungeon block by selecting one at random from a reference dungeon layout.
+        /// </summary>
+        /// <param name="x">X block tile position.</param>
+        /// <param name="z">Z block tile position.</param>
+        /// <param name="borderBlock">True to select a border block, false to select an interior block.</param>
+        /// <param name="startingBlock">True to make this a starting block (must only be one).</param>
+        /// <param name="dfLocation">Reference location to select a random block from.</param>
+        /// <returns>DFLocation.DungeonBlock</returns>
+        DFLocation.DungeonBlock GenerateRDBBlock(sbyte x, sbyte z, bool borderBlock, bool startingBlock, ref DFLocation dfLocation)
+        {
+            // Get random block from reference location and overwrite some properties
+            DFLocation.DungeonBlock block = GetRandomBlock(borderBlock, ref dfLocation);
+            block.X = x;
+            block.Z = z;
+            block.IsStartingBlock = startingBlock;
+
+            return block;
+        }
+
+        /// <summary>
+        /// Gets a random block from reference location.
+        /// </summary>
+        /// <param name="borderBlock">True to select a border block, false to select an interior block.</param>
+        /// <param name="dfLocation">Reference location to select a random block from.</param>
+        /// <returns>DFLocation.DungeonBlock</returns>
+        DFLocation.DungeonBlock GetRandomBlock(bool borderBlock, ref DFLocation dfLocation)
+        {
+            List<DFLocation.DungeonBlock> filteredBlocks = new List<DFLocation.DungeonBlock>();
+            foreach (DFLocation.DungeonBlock block in dfLocation.Dungeon.Blocks)
+            {
+                // Is this a border block?
+                bool isBorderBlock = block.BlockName.StartsWith("B", StringComparison.InvariantCultureIgnoreCase);
+
+                // Collect blocks based on params
+                if (borderBlock && isBorderBlock)
+                    filteredBlocks.Add(block);
+                else if (!borderBlock && !isBorderBlock)
+                    filteredBlocks.Add(block);
+            }
+
+            // Should have found at least one block
+            if (filteredBlocks.Count == 0)
+                throw new Exception(string.Format("GetRandomBlock() failed to find a suitable block. borderBlock={0}, region={1}, location={2}", borderBlock.ToString(), dfLocation.RegionName, dfLocation.Name));
+
+            // Select a random index from pool and return this block
+            return filteredBlocks[DaggerfallWorkshop.DFRandom.random_range(filteredBlocks.Count)];
         }
 
         #endregion

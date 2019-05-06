@@ -25,6 +25,7 @@ using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop.Game.Player;
 using DaggerfallWorkshop.Game.Guilds;
 using Wenzil.Console;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game
 {
@@ -93,151 +94,20 @@ namespace DaggerfallWorkshop.Game
 
         const string textDatabase = "ConversationText";
 
-        // dislike answer set (doesn't tell)
-        const int dislikePlayerAnswerWhereIsDefault = 7256;
-        const int dislikePlayerAnswerWhereIsGuildMembers = 7255;
-        const int dislikePlayerAnswerWhereIsMerchants = 7256;
-        const int dislikePlayerAnswerWhereIsNobility = 7258;
-        const int dislikePlayerAnswerWhereIsScholars = 7257;
-        const int dislikePlayerAnswerWhereIsUnderworld = 7259;
-        // neutral answer set
-        const int neutralToPlayerAnswerWhereIsDefault = 7271;
-        const int neutralToPlayerAnswerWhereIsGuildMembers = 7270;
-        const int neutralToPlayerAnswerWhereIsMerchants = 7271;
-        const int neutralToPlayerAnswerWhereIsScholars = 7272;
-        const int neutralToPlayerAnswerWhereIsNobility = 7273;
-        const int neutralToPlayerAnswerWhereIsUnderworld = 7274;
-        // like answer set
-        const int likePlayerAnswerWhereIsDefault = 7291;
-        const int likePlayerAnswerWhereIsGuildMembers = 7290;
-        const int likePlayerAnswerWhereIsMerchants = 7291;
-        const int likePlayerAnswerWhereIsScholars = 7292;
-        const int likePlayerAnswerWhereIsNobility = 7293;
-        const int likePlayerAnswerWhereIsUnderworld = 7294;
-        // very like answer set
-        const int veryLikePlayerAnswerWhereIsDefault = 7286;
-        const int veryLikePlayerAnswerWhereIsGuildMembers = 7285;
-        const int veryLikePlayerAnswerWhereIsMerchants = 7286;
-        const int veryLikePlayerAnswerWhereIsScholars = 7287;
-        const int veryLikePlayerAnswerWhereIsNobility = 7288;
-        const int veryLikePlayerAnswerWhereIsUnderworld = 7289;
+        const int minNeutralReaction = 0;
+        const int minLikeReaction = 10;
+        const int minVeryLikeReaction = 30;
 
-        // dislike does not know set
-        const int dislikePlayerDoesNotKnowWhereIsDefault = 7251;
-        const int dislikePlayerDoesNotKnowWhereIsGuildMembers = 7250;
-        const int dislikePlayerDoesNotKnowWhereIsMerchants = 7251;
-        const int dislikePlayerDoesNotKnowWhereIsNobility = 7252;
-        const int dislikePlayerDoesNotKnowWhereIsScholars = 7253;
-        const int dislikePlayerDoesNotKnowWhereIsUnderworld = 7304; // no matching underworld set (7254 is empty), used 7304 since it seems to fit (note: not in list of uesp)
-        // neutral does not know set
-        const int neutralToPlayerDoesNotKnowWhereIsDefault = 7266;
-        const int neutralToPlayerDoesNotKnowWhereIsGuildMembers = 7265;
-        const int neutralToPlayerDoesNotKnowWhereIsMerchants = 7266;
-        const int neutralToPlayerDoesNotKnowWhereIsScholars = 7267;
-        const int neutralToPlayerDoesNotKnowWhereIsNobility = 7268;
-        const int neutralToPlayerDoesNotKnowWhereIsUnderworld = 7269;
-        // like does not know set
-        const int likePlayerDoesNotKnowWhereIsDefault = 7281;
-        const int likePlayerDoesNotKnowWhereIsGuildMembers = 7280;
-        const int likePlayerDoesNotKnowWhereIsMerchants = 7281;
-        const int likePlayerDoesNotKnowWhereIsScholars = 7282;
-        const int likePlayerDoesNotKnowWhereIsNobility = 7283;
-        const int likePlayerDoesNotKnowWhereIsUnderworld = 7284;
-        // very like does not know set
-        const int veryLikePlayerDoesNotKnowWhereIsDefault = 7281;
-        const int veryLikePlayerDoesNotKnowWhereIsGuildMembers = 7280;
-        const int veryLikePlayerDoesNotKnowWhereIsMerchants = 7281;
-        const int veryLikePlayerDoesNotKnowWhereIsScholars = 7282;
-        const int veryLikePlayerDoesNotKnowWhereIsNobility = 7283;
-        const int veryLikePlayerDoesNotKnowWhereIsUnderworld = 7284;
+        readonly short[] questionTypeReactionMods = { 10, -5,  0, 0, 0, -10, -5, -5 };
 
-        // dislike answer set (doesn't tell)
-        const int dislikePlayerAnswerTellMeAboutDefault = 7261;
-        const int dislikePlayerAnswerTellMeAboutGuildMembers = 7260;
-        const int dislikePlayerAnswerTellMeAboutMerchants = 7261;
-        const int dislikePlayerAnswerTellMeAboutNobility = 7262;
-        const int dislikePlayerAnswerTellMeAboutScholars = 7263;
-        const int dislikePlayerAnswerTellMeAboutUnderworld = 7264;
-        // neutral answer set
-        const int neutralToPlayerAnswerTellMeAboutDefault = 7276;
-        const int neutralToPlayerAnswerTellMeAboutGuildMembers = 7275;
-        const int neutralToPlayerAnswerTellMeAboutMerchants = 7276;
-        const int neutralToPlayerAnswerTellMeAboutScholars = 7277;
-        const int neutralToPlayerAnswerTellMeAboutNobility = 7278;
-        const int neutralToPlayerAnswerTellMeAboutUnderworld = 7279;
-        // like answer set
-        const int likePlayerAnswerTellMeAboutDefault = 7291;
-        const int likePlayerAnswerTellMeAboutGuildMembers = 7290;
-        const int likePlayerAnswerTellMeAboutMerchants = 7291;
-        const int likePlayerAnswerTellMeAboutScholars = 7292;
-        const int likePlayerAnswerTellMeAboutNobility = 7293;
-        const int likePlayerAnswerTellMeAboutUnderworld = 7294;
-        // very like answer set
-        const int veryLikePlayerAnswerTellMeAboutDefault = 7286;
-        const int veryLikePlayerAnswerTellMeAboutGuildMembers = 7285;
-        const int veryLikePlayerAnswerTellMeAboutMerchants = 7286;
-        const int veryLikePlayerAnswerTellMeAboutScholars = 7287;
-        const int veryLikePlayerAnswerTellMeAboutNobility = 7288;
-        const int veryLikePlayerAnswerTellMeAboutUnderworld = 7289;
-
-        // dislike does not know set
-        const int dislikePlayerDoesNotKnowTellMeAboutDefault = 7251;
-        const int dislikePlayerDoesNotKnowTellMeAboutGuildMembers = 7250;
-        const int dislikePlayerDoesNotKnowTellMeAboutMerchants = 7251;
-        const int dislikePlayerDoesNotKnowTellMeAboutNobility = 7252;
-        const int dislikePlayerDoesNotKnowTellMeAboutScholars = 7253;
-        const int dislikePlayerDoesNotKnowTellMeAboutUnderworld = 7304; // no matching underworld set (7254 is empty), used 7304 since it seems to fit (note: not in list of uesp)
-        // neutral does not know set
-        const int neutralToPlayerDoesNotKnowTellMeAboutDefault = 7266;
-        const int neutralToPlayerDoesNotKnowTellMeAboutGuildMembers = 7265;
-        const int neutralToPlayerDoesNotKnowTellMeAboutMerchants = 7266;
-        const int neutralToPlayerDoesNotKnowTellMeAboutScholars = 7267;
-        const int neutralToPlayerDoesNotKnowTellMeAboutNobility = 7268;
-        const int neutralToPlayerDoesNotKnowTellMeAboutUnderworld = 7269;
-        // like does not know set
-        const int likePlayerDoesNotKnowTellMeAboutDefault = 7281;
-        const int likePlayerDoesNotKnowTellMeAboutGuildMembers = 7280;
-        const int likePlayerDoesNotKnowTellMeAboutMerchants = 7281;
-        const int likePlayerDoesNotKnowTellMeAboutScholars = 7282;
-        const int likePlayerDoesNotKnowTellMeAboutNobility = 7283;
-        const int likePlayerDoesNotKnowTellMeAboutUnderworld = 7284;
-        // very like does not know set
-        const int veryLikePlayerDoesNotKnowTellMeAboutDefault = 7281;
-        const int veryLikePlayerDoesNotKnowTellMeAboutGuildMembers = 7280;
-        const int veryLikePlayerDoesNotKnowTellMeAboutMerchants = 7281;
-        const int veryLikePlayerDoesNotKnowTellMeAboutScholars = 7282;
-        const int veryLikePlayerDoesNotKnowTellMeAboutNobility = 7283;
-        const int veryLikePlayerDoesNotKnowTellMeAboutUnderworld = 7284;
-
-        public static List<FactionFile.FactionIDs> factionsUsedForFactionInNews = new List<FactionFile.FactionIDs>()
-        {
-            FactionFile.FactionIDs.Abibon_Gora, FactionFile.FactionIDs.Alcaire, FactionFile.FactionIDs.Alikra, FactionFile.FactionIDs.Anticlere,
-            FactionFile.FactionIDs.Antiphyllos, FactionFile.FactionIDs.Ayasofya, FactionFile.FactionIDs.Bergama, FactionFile.FactionIDs.Betony,
-            FactionFile.FactionIDs.Bhoraine, FactionFile.FactionIDs.Cybiades, FactionFile.FactionIDs.Daenia, FactionFile.FactionIDs.Daggerfall,
-            FactionFile.FactionIDs.Dakfron, FactionFile.FactionIDs.Dragontail, FactionFile.FactionIDs.Dwynnen, FactionFile.FactionIDs.Ephesus,
-            FactionFile.FactionIDs.Gavaudon, FactionFile.FactionIDs.Glenpoint, FactionFile.FactionIDs.Ilessan_Hills, FactionFile.FactionIDs.Isle_of_Balfiera,
-            FactionFile.FactionIDs.Kairou, FactionFile.FactionIDs.Kambria, FactionFile.FactionIDs.Koegria, FactionFile.FactionIDs.Kozanset,
-            FactionFile.FactionIDs.Lainlyn, FactionFile.FactionIDs.Menevia, FactionFile.FactionIDs.Mournoth, FactionFile.FactionIDs.Myrkwasa,
-            FactionFile.FactionIDs.Northmoor, FactionFile.FactionIDs.Orsinium, FactionFile.FactionIDs.Phrygia, FactionFile.FactionIDs.Pothago,
-            FactionFile.FactionIDs.Santaki, FactionFile.FactionIDs.Satakalaam, FactionFile.FactionIDs.Sentinel, FactionFile.FactionIDs.Shalgora,
-            FactionFile.FactionIDs.Tigonus, FactionFile.FactionIDs.Totambu, FactionFile.FactionIDs.Tulune, FactionFile.FactionIDs.Urvaius,
-            FactionFile.FactionIDs.Wayrest, FactionFile.FactionIDs.Wrothgaria, FactionFile.FactionIDs.Ykalon
-        };
-
-        public static List<FactionFile.FactionIDs> factionsUsedForRulers = new List<FactionFile.FactionIDs>()
-        {
-            FactionFile.FactionIDs.Abibon_Gora, FactionFile.FactionIDs.Alcaire, FactionFile.FactionIDs.Alikra,
-            FactionFile.FactionIDs.Antiphyllos, FactionFile.FactionIDs.Ayasofya, FactionFile.FactionIDs.Bergama, FactionFile.FactionIDs.Betony,
-            FactionFile.FactionIDs.Bhoraine, FactionFile.FactionIDs.Cybiades, FactionFile.FactionIDs.Daenia,
-            FactionFile.FactionIDs.Dakfron, FactionFile.FactionIDs.Dragontail, FactionFile.FactionIDs.Dwynnen, FactionFile.FactionIDs.Ephesus,
-            FactionFile.FactionIDs.Gavaudon, FactionFile.FactionIDs.Glenpoint, FactionFile.FactionIDs.Ilessan_Hills,
-            FactionFile.FactionIDs.Kairou, FactionFile.FactionIDs.Kambria, FactionFile.FactionIDs.Koegria, FactionFile.FactionIDs.Kozanset,
-            FactionFile.FactionIDs.Lainlyn, FactionFile.FactionIDs.Menevia, FactionFile.FactionIDs.Mournoth, FactionFile.FactionIDs.Myrkwasa,
-            FactionFile.FactionIDs.Northmoor, FactionFile.FactionIDs.Phrygia, FactionFile.FactionIDs.Pothago,
-            FactionFile.FactionIDs.Santaki, FactionFile.FactionIDs.Satakalaam, FactionFile.FactionIDs.Shalgora,
-            FactionFile.FactionIDs.Tigonus, FactionFile.FactionIDs.Totambu, FactionFile.FactionIDs.Tulune, FactionFile.FactionIDs.Urvaius,
-            FactionFile.FactionIDs.Wrothgaria, FactionFile.FactionIDs.Ykalon
-        };
+        // From FALL.EXE. In classic the answers for sgroup 0 (commoners) and sgroup 1 (merchants) are reversed, and classic flips reference to these sgroups
+        // during dialogue to compensate, but it's cleaner to just fix the data. It is fixed to the correct order here.
+        // For Underworld social group "dislike player + don't know answer" combination, classic points to 7254 but this is empty. Using 7304 instead, which
+        // seems to be where those responses actually are.
+        readonly ushort[] answersToDirections =     { 7251, 7266, 7281, 7250, 7265, 7280, 7252, 7267, 7282, 7253, 7268, 7283, 7304, 7269, 7284,
+                                                      7256, 7271, 7286, 7255, 7270, 7285, 7257, 7272, 7287, 7258, 7273, 7288, 7259, 7274, 7289};
+        readonly ushort[] answersToNonDirections =  { 7251, 7266, 7281, 7250, 7265, 7280, 7252, 7267, 7282, 7253, 7268, 7283, 7304, 7269, 7284,
+                                                      7261, 7276, 7291, 7260, 7275, 7290, 7262, 7277, 7292, 7263, 7278, 7293, 7264, 7279, 7294};
 
         const float DefaultChanceKnowsSomethingAboutWhereIs = 0.5f; // chances unknown
         const float DefaultChanceKnowsSomethingAboutQuest = 0.5f; // chances unknown
@@ -353,7 +223,9 @@ namespace DaggerfallWorkshop.Game
         KeySubjectType currentKeySubjectType = KeySubjectType.Unset; 
         int currentKeySubjectBuildingKey = -1; // building key of building if key subject is building, also used when person's location is determined if person is in a building
         int reactionToPlayer = 0;
-
+        int reactionToPlayer_0_1_2 = 0;
+        int[] toneReactionForTalkSession = { 0, 0, 0 };
+        int lastToneIndex = -1;
 
         //The lists that contain the topics to select
         List<ListItem> listTopicTellMeAbout;
@@ -459,6 +331,12 @@ namespace DaggerfallWorkshop.Game
             public RumorType rumorType;            
             public List<TextFile.Token[]> listRumorVariants;
             public ulong questID; // questID used for RumorType::QuestProgressRumor and RumorType::QuestRumorMill, otherwise not set
+            public ulong timeLimit; // Classic game minute after which this rumor expires
+            public int faction1; // First faction ID involved
+            public int faction2; // Second faction ID involved
+            public int regionID; // ID of region involved.
+            public int flags; // Rumor flags
+            public int type; // Rumor type
         }
         // list of rumors in rumor mill
         List<RumorMillEntry> listRumorMill = new List<RumorMillEntry>();
@@ -556,7 +434,7 @@ namespace DaggerfallWorkshop.Game
         {
             get { return consoleCommandFlag_npcsKnowEverything; }
             set { consoleCommandFlag_npcsKnowEverything = value; }
-        }        
+        }
 
         #endregion
 
@@ -654,10 +532,91 @@ namespace DaggerfallWorkshop.Game
             reactionToPlayer = NPCfaction.rep;
             reactionToPlayer += player.BiographyReactionMod;
 
-            if (NPCfaction.sgroup < player.SGroupReputations.Length) // one of the five general social groups
+            if (socialGroup >= 0 && (int)socialGroup < player.SGroupReputations.Length) // one of the five general social groups
                 reactionToPlayer += player.SGroupReputations[(int)socialGroup];
 
             return (reactionToPlayer);
+        }
+
+        int GetReactionToPlayer_0_1_2(QuestionType qt)
+        {
+            int toneModifier = 0;
+            int toneIndex = DaggerfallTalkWindow.TalkToneToIndex(currentTalkTone);
+            PlayerEntity player = GameManager.Instance.PlayerEntity;
+            short skillValue = 0;
+
+            if (toneIndex == 0)
+            {
+                skillValue = player.Skills.GetLiveSkillValue(DFCareer.Skills.Etiquette);
+                if (toneReactionForTalkSession[0] == 0)
+                    player.TallySkill(DFCareer.Skills.Etiquette, 1);
+            }
+            else if (toneIndex == 2)
+            {
+                skillValue = player.Skills.GetLiveSkillValue(DFCareer.Skills.Streetwise);
+                if (toneReactionForTalkSession[2] == 0)
+                    player.TallySkill(DFCareer.Skills.Streetwise, 1);
+            }
+
+            // Make roll result be the same every time for a given NPC.
+            if (currentNPCType == NPCType.Mobile)
+                DFRandom.Seed = (uint)lastTargetMobileNPC.GetHashCode();
+            else if (currentNPCType == NPCType.Static)
+                DFRandom.Seed = (uint)lastTargetStaticNPC.GetHashCode();
+
+            if (toneIndex != 1)
+                toneModifier = DFRandom.random_range_inclusive(1, 100) >= skillValue ? -5 : 10;
+
+            // Convert question type to index to classic data
+            int classicDataIndex = 2; // Using as default, as this gives no bonus or penalty.
+
+            switch (qt)
+            {
+                case QuestionType.LocalBuilding:
+                case QuestionType.Regional:
+                    classicDataIndex = 0; // == Where is Location
+                    break;
+                case QuestionType.Person:
+                    classicDataIndex = 1; // == Where is Person
+                    break;
+                case QuestionType.Thing: // Not used
+                    classicDataIndex = 2; // == Where is Thing
+                    break;
+                case QuestionType.Work:
+                    classicDataIndex = 3; // == Where is Work
+                    break;
+                case QuestionType.QuestLocation:
+                case QuestionType.OrganizationInfo:
+                    classicDataIndex = 4; // == Tell me about Location (Also sticking OrganizationInfo here. In classic I think "OrganizationInfo" might just
+                                          // take whichever of location, person, item or work buttons you've last clicked on for the reaction roll.)
+                    break;
+                case QuestionType.QuestPerson:
+                    classicDataIndex = 5; // == Tell me about Person
+                    break;
+                case QuestionType.QuestItem:
+                    classicDataIndex = 6; // == Tell me about Thing
+                    break;
+                // 7 == Tell me about Work (not used)
+            }
+
+            int reaction = player.Stats.LivePersonality / 5
+               + questionTypeReactionMods[classicDataIndex]
+               + toneModifier;
+
+            int rollToBeat = DFRandom.random_range_inclusive(0, 20);
+            if (toneReactionForTalkSession[toneIndex] != 0)
+                reaction = toneReactionForTalkSession[toneIndex];
+            else
+                toneReactionForTalkSession[toneIndex] = reaction;
+
+            // Store that we've done the reaction check for this tone this talk session
+            lastToneIndex = toneIndex;
+
+            if (reaction < rollToBeat)
+                return 0;
+            if (reaction < rollToBeat + 30)
+                return 1;
+            return 2;
         }
 
         // Player has clicked on a mobile talk target
@@ -766,7 +725,13 @@ namespace DaggerfallWorkshop.Game
             DaggerfallUI.Instance.TalkWindow.UpdateNameNPC();
 
             FactionFile.FactionData factionData;
-            GameManager.Instance.PlayerEntity.FactionData.GetFactionData(targetStaticNPC.Data.factionID, out factionData);            
+            GameManager.Instance.PlayerEntity.FactionData.GetFactionData(targetStaticNPC.Data.factionID, out factionData);
+
+            // Matched to classic. For dialogue, NPCs that are not of type 2, 7 or 9 use their first parent that is, if such a parent exists
+            while (factionData.parent != 0 && factionData.type != 2 && factionData.type != 7 && factionData.type != 9)
+            {
+                GameManager.Instance.PlayerEntity.FactionData.GetFactionData(factionData.parent, out factionData);
+            }
 
             npcData = new NPCData();
             npcData.socialGroup = (FactionFile.SocialGroups)factionData.sgroup;
@@ -777,6 +742,16 @@ namespace DaggerfallWorkshop.Game
             npcData.chanceKnowsSomethingAboutQuest = DefaultChanceKnowsSomethingAboutQuest;
             npcData.chanceKnowsSomethingAboutOrganizations = DefaultChanceKnowsSomethingAboutOrganizationsStaticNPC;
             npcData.isSpyMaster = false;
+
+            // Social group assignment. Matched to classic.
+            if (factionData.sgroup >= 5)
+            {
+                npcData.socialGroup = FactionFile.SocialGroups.Merchants;
+            }
+            else
+            {
+                npcData.socialGroup = (FactionFile.SocialGroups)factionData.sgroup;
+            }
 
             this.reactionToPlayer = reactionToPlayer;
 
@@ -850,25 +825,25 @@ namespace DaggerfallWorkshop.Game
             {
                 if (npcData.guildGroup == FactionFile.GuildGroups.HolyOrder) // holy orders use message 8553, 8554
                 {
-                    if (reactionToPlayer >= 30) // what reputation is needed to show like greeting message?
+                    if (reactionToPlayer >= minVeryLikeReaction) // what reputation is needed to show like greeting message?
                         return ExpandRandomTextRecord(isInSameHolyOrderLikePlayerGreetingTextId);
-                    else if (reactionToPlayer >= 0) // not sure here - are member greeting messages also shown if npc dislikes pc (but still talks to pc)?
+                    else if (reactionToPlayer >= minNeutralReaction) // not sure here - are member greeting messages also shown if npc dislikes pc (but still talks to pc)?
                         return ExpandRandomTextRecord(isInSameHolyOrderNeutralPlayerGreetingTextId);
                 }
                 else // all other guilds (including Knightly Orders) seem to use messages 8550, 8551
                 {
-                    if (reactionToPlayer >= 30) // what reputation is needed to show like greeting message?
+                    if (reactionToPlayer >= minVeryLikeReaction) // what reputation is needed to show like greeting message?
                         return ExpandRandomTextRecord(isInSameGuildLikePlayerGreetingTextId);
-                    else if (reactionToPlayer >= 0) // not sure here - are member greeting messages also shown if npc dislikes pc (but still talks to pc)?
+                    else if (reactionToPlayer >= minNeutralReaction) // not sure here - are member greeting messages also shown if npc dislikes pc (but still talks to pc)?
                         return ExpandRandomTextRecord(isInSameGuildNeutralPlayerGreetingTextId);
                 }
             }
 
-            if (reactionToPlayer >= 30)
+            if (reactionToPlayer >= minVeryLikeReaction)
                 return ExpandRandomTextRecord(veryLikePlayerGreetingTextId);
-            else if (reactionToPlayer >= 10)
+            else if (reactionToPlayer >= minLikeReaction)
                 return ExpandRandomTextRecord(likePlayerGreetingTextId);
-            else if (reactionToPlayer >= 0)
+            else if (reactionToPlayer >= minNeutralReaction)
                 return ExpandRandomTextRecord(neutralToPlayerGreetingTextId);
             else            
                 return ExpandRandomTextRecord(dislikePlayerGreetingTextId);
@@ -1037,16 +1012,33 @@ namespace DaggerfallWorkshop.Game
             if (npcData.numAnswersGivenTellMeAboutOrRumors < maxNumAnswersNpcGivesTellMeAboutOrRumors || npcData.isSpyMaster || consoleCommandFlag_npcsKnowEverything)
             {
                 string news = TextManager.Instance.GetText(textDatabase, "resolvingError");
-                int randomIndex = UnityEngine.Random.Range(0, listRumorMill.Count);
-                RumorMillEntry entry = listRumorMill[randomIndex];
+                List<RumorMillEntry> validRumors = GetValidRumors();
+
+                if (validRumors.Count == 0)
+                    return ExpandRandomTextRecord(outOfNewsRecordIndex);
+
+                int randomIndex = UnityEngine.Random.Range(0, validRumors.Count);
+                RumorMillEntry entry = validRumors[randomIndex];
                 if (entry.rumorType == RumorType.CommonRumor)
                 {
                     if (entry.listRumorVariants != null)
                     {
                         TextFile.Token[] tokens = entry.listRumorVariants[0];
-                        MacroHelper.ResetFactionAndRulerIds(); // reset so that a new set of rulers and factions can be generated
+                        int regionID = -1;
+                        FactionFile.FactionData factionData;
+
+                        if (entry.regionID != -1)
+                            regionID = entry.regionID;
+                        else if (GameManager.Instance.PlayerEntity.FactionData.GetFactionData(entry.faction1, out factionData) && factionData.region != -1)
+                            regionID = factionData.region;
+                        else if (GameManager.Instance.PlayerEntity.FactionData.GetFactionData(entry.faction2, out factionData) && factionData.region != -1)
+                            regionID = factionData.region;
+                        else // Classic uses a random region in this case, but that can create odd results for the witches rumor and maybe more. Using current region.
+                            regionID = GameManager.Instance.PlayerGPS.CurrentRegionIndex;
+
+                        MacroHelper.SetFactionIdsAndRegionID(entry.faction1, entry.faction2, regionID);
                         MacroHelper.ExpandMacros(ref tokens, this);
-                        MacroHelper.ResetFactionAndRulerIds(); // reset again so %reg macro may resolve to current region if needed
+                        MacroHelper.SetFactionIdsAndRegionID(-1, -1, -1); // reset again so %reg macro may resolve to current region if needed
                         news = TokensToString(tokens, false);
                     }
                 }
@@ -1067,6 +1059,44 @@ namespace DaggerfallWorkshop.Game
             }
             else
                 return ExpandRandomTextRecord(outOfNewsRecordIndex);
+        }
+
+        private List<RumorMillEntry> GetValidRumors()
+        {
+            List<RumorMillEntry> validRumors = new List<RumorMillEntry>();
+
+            foreach (RumorMillEntry entry in listRumorMill)
+            {
+                if (entry.rumorType == RumorType.CommonRumor)
+                {
+                    // Note: Classic only checks that regionID matches for sign messages. Because of this, some rumors that seem they were supposed to
+                    // show only in affected regions (crime wave, new ruler) are seen everywhere, and their regionID data goes unused.
+                    // The ruler messages seem relevant for everyone to say, and are commonly seen in classic, so for DFU the regionID component is removed.
+                    // Crime waves, though, should only be talked about for the affected regions.
+                    if (entry.regionID != -1 && entry.regionID != GameManager.Instance.PlayerGPS.CurrentRegionIndex)
+                        continue;
+
+                    // TODO: For now, only spoken rumors, no sign messages
+                    if ((entry.flags & 1) == 1)
+                        continue;
+
+                    if (entry.faction1 != 0 || entry.faction2 != 0 || entry.type != 100)
+                    {
+                        FactionFile.FactionData factionData1;
+                        FactionFile.FactionData factionData2;
+
+                        // Flag 1 being set makes faction's rumors less likely to appear in conversation.
+                        if ((entry.faction1 != 0 && GameManager.Instance.PlayerEntity.FactionData.GetFactionData(entry.faction1, out factionData1) && (factionData1.flags & 1) == 1
+                            || entry.faction2 != 0 && GameManager.Instance.PlayerEntity.FactionData.GetFactionData(entry.faction2, out factionData2) && (factionData2.flags & 1) == 1)
+                            && Dice100.SuccessRoll(75))
+                            continue;
+                    }
+                }
+
+                validRumors.Add(entry);
+            }
+
+            return validRumors;
         }
 
         public string GetAnswerWhereAmI()
@@ -1429,18 +1459,10 @@ namespace DaggerfallWorkshop.Game
                 }
             }
 
-
             if (listItem.npcKnowledgeAboutItem == NPCKnowledgeAboutItem.DoesNotKnowAboutItem)
             {
-                // messages if npc does not know
-                if (reactionToPlayer >= 30)
-                    return getRecordIdByNpcsSocialGroup(veryLikePlayerDoesNotKnowWhereIsDefault, veryLikePlayerDoesNotKnowWhereIsGuildMembers, veryLikePlayerDoesNotKnowWhereIsMerchants, veryLikePlayerDoesNotKnowWhereIsScholars, veryLikePlayerDoesNotKnowWhereIsNobility, veryLikePlayerDoesNotKnowWhereIsUnderworld);
-                else if (reactionToPlayer >= 10)
-                    return getRecordIdByNpcsSocialGroup(likePlayerDoesNotKnowWhereIsDefault, likePlayerDoesNotKnowWhereIsGuildMembers, likePlayerDoesNotKnowWhereIsMerchants, likePlayerDoesNotKnowWhereIsScholars, likePlayerDoesNotKnowWhereIsNobility, likePlayerDoesNotKnowWhereIsUnderworld);
-                else if (reactionToPlayer >= 0)
-                    return getRecordIdByNpcsSocialGroup(neutralToPlayerDoesNotKnowWhereIsDefault, neutralToPlayerDoesNotKnowWhereIsGuildMembers, neutralToPlayerDoesNotKnowWhereIsMerchants, neutralToPlayerDoesNotKnowWhereIsScholars, neutralToPlayerDoesNotKnowWhereIsNobility, neutralToPlayerDoesNotKnowWhereIsUnderworld);
-                else
-                    return getRecordIdByNpcsSocialGroup(dislikePlayerDoesNotKnowWhereIsDefault, dislikePlayerDoesNotKnowWhereIsGuildMembers, dislikePlayerDoesNotKnowWhereIsMerchants, dislikePlayerDoesNotKnowWhereIsScholars, dislikePlayerDoesNotKnowWhereIsNobility, dislikePlayerDoesNotKnowWhereIsUnderworld);
+                // Messages if NPC doesn't know answer to give directions
+                return ExpandRandomTextRecord(answersToDirections[3 * (int)npcData.socialGroup + reactionToPlayer_0_1_2]);
             }
             else
             {
@@ -1467,16 +1489,8 @@ namespace DaggerfallWorkshop.Game
                     }
                 }
 
-
-                // location related messages if npc knows
-                if (reactionToPlayer >= 30)
-                    return getRecordIdByNpcsSocialGroup(veryLikePlayerAnswerWhereIsDefault, veryLikePlayerAnswerWhereIsGuildMembers, veryLikePlayerAnswerWhereIsMerchants, veryLikePlayerAnswerWhereIsScholars, veryLikePlayerAnswerWhereIsNobility, veryLikePlayerAnswerWhereIsUnderworld);
-                else if (reactionToPlayer >= 10)
-                    return getRecordIdByNpcsSocialGroup(likePlayerAnswerWhereIsDefault, likePlayerAnswerWhereIsGuildMembers, likePlayerAnswerWhereIsMerchants, likePlayerAnswerWhereIsScholars, likePlayerAnswerWhereIsNobility, likePlayerAnswerWhereIsUnderworld);
-                else if (reactionToPlayer >= 0)
-                    return getRecordIdByNpcsSocialGroup(neutralToPlayerAnswerWhereIsDefault, neutralToPlayerAnswerWhereIsGuildMembers, neutralToPlayerAnswerWhereIsMerchants, neutralToPlayerAnswerWhereIsScholars, neutralToPlayerAnswerWhereIsNobility, neutralToPlayerAnswerWhereIsUnderworld);
-                else
-                    return getRecordIdByNpcsSocialGroup(dislikePlayerAnswerWhereIsDefault, dislikePlayerAnswerWhereIsGuildMembers, dislikePlayerAnswerWhereIsMerchants, dislikePlayerAnswerWhereIsScholars, dislikePlayerAnswerWhereIsNobility, dislikePlayerAnswerWhereIsUnderworld);
+                // Messages if NPC does know answer to give directions
+                return ExpandRandomTextRecord(answersToDirections[15 + 3 * (int)npcData.socialGroup + reactionToPlayer_0_1_2]);
             }
         }
 
@@ -1604,6 +1618,9 @@ namespace DaggerfallWorkshop.Game
 
         public string GetAnswerText(TalkManager.ListItem listItem)
         {
+            if (lastToneIndex != DaggerfallTalkWindow.TalkToneToIndex(currentTalkTone))
+                reactionToPlayer_0_1_2 = GetReactionToPlayer_0_1_2(listItem.questionType);
+
             string answer = "";
             currentQuestionListItem = listItem;
             switch (listItem.questionType)
@@ -1640,15 +1657,20 @@ namespace DaggerfallWorkshop.Game
                 case QuestionType.Work:
                     if (!WorkAvailable)
                     {
-                        answer = ExpandRandomTextRecord(8078); // TODO: find when 8075 should be used
+                        answer = ExpandRandomTextRecord(8078);
                         break;
                     }
-                    else
+                    if (reactionToPlayer_0_1_2 == 0)
                     {
-                        SetRandomQuestor(); // Pick a random Work questor from the pool
-                        answer = ExpandRandomTextRecord(8076); // TODO: find when 8077 should be used
+                        answer = ExpandRandomTextRecord(8075);
                         break;
                     }
+                    if (reactionToPlayer_0_1_2 == 1)
+                        answer = ExpandRandomTextRecord(8076);
+                    else if (reactionToPlayer_0_1_2 == 2)
+                        answer = ExpandRandomTextRecord(8077);
+                    SetRandomQuestor(); // Pick a random Work questor from the pool
+                    break;
             }
 
             numQuestionsAsked++;
@@ -1670,29 +1692,15 @@ namespace DaggerfallWorkshop.Game
 
             if (listItem.npcKnowledgeAboutItem == NPCKnowledgeAboutItem.DoesNotKnowAboutItem || (npcData.numAnswersGivenTellMeAboutOrRumors >= maxNumAnswersNpcGivesTellMeAboutOrRumors && !npcData.isSpyMaster && !consoleCommandFlag_npcsKnowEverything))
             {
-                // messages if npc does not know
-                if (reactionToPlayer >= 30)
-                    return getRecordIdByNpcsSocialGroup(veryLikePlayerDoesNotKnowTellMeAboutDefault, veryLikePlayerDoesNotKnowTellMeAboutGuildMembers, veryLikePlayerDoesNotKnowTellMeAboutMerchants, veryLikePlayerDoesNotKnowTellMeAboutScholars, veryLikePlayerDoesNotKnowTellMeAboutNobility, veryLikePlayerDoesNotKnowTellMeAboutUnderworld);
-                else if (reactionToPlayer >= 10)
-                    return getRecordIdByNpcsSocialGroup(likePlayerDoesNotKnowTellMeAboutDefault, likePlayerDoesNotKnowTellMeAboutGuildMembers, likePlayerDoesNotKnowTellMeAboutMerchants, likePlayerDoesNotKnowTellMeAboutScholars, likePlayerDoesNotKnowTellMeAboutNobility, likePlayerDoesNotKnowTellMeAboutUnderworld);
-                else if (reactionToPlayer >= 0)
-                    return getRecordIdByNpcsSocialGroup(neutralToPlayerDoesNotKnowTellMeAboutDefault, neutralToPlayerDoesNotKnowTellMeAboutGuildMembers, neutralToPlayerDoesNotKnowTellMeAboutMerchants, neutralToPlayerDoesNotKnowTellMeAboutScholars, neutralToPlayerDoesNotKnowTellMeAboutNobility, neutralToPlayerDoesNotKnowTellMeAboutUnderworld);
-                else
-                    return getRecordIdByNpcsSocialGroup(dislikePlayerDoesNotKnowTellMeAboutDefault, dislikePlayerDoesNotKnowTellMeAboutGuildMembers, dislikePlayerDoesNotKnowTellMeAboutMerchants, dislikePlayerDoesNotKnowTellMeAboutScholars, dislikePlayerDoesNotKnowTellMeAboutNobility, dislikePlayerDoesNotKnowTellMeAboutUnderworld);
+                // Messages if NPC doesn't know answer to non-directions question
+                return ExpandRandomTextRecord(answersToNonDirections[3 * (int)npcData.socialGroup + reactionToPlayer_0_1_2]);
             }
             else
             {
                 npcData.numAnswersGivenTellMeAboutOrRumors++;
 
-                // location related messages if npc knows
-                if (reactionToPlayer >= 30)
-                    return getRecordIdByNpcsSocialGroup(veryLikePlayerAnswerTellMeAboutDefault, veryLikePlayerAnswerTellMeAboutGuildMembers, veryLikePlayerAnswerTellMeAboutMerchants, veryLikePlayerAnswerTellMeAboutScholars, veryLikePlayerAnswerTellMeAboutNobility, veryLikePlayerAnswerTellMeAboutUnderworld);
-                else if (reactionToPlayer >= 10)
-                    return getRecordIdByNpcsSocialGroup(likePlayerAnswerTellMeAboutDefault, likePlayerAnswerTellMeAboutGuildMembers, likePlayerAnswerTellMeAboutMerchants, likePlayerAnswerTellMeAboutScholars, likePlayerAnswerTellMeAboutNobility, likePlayerAnswerTellMeAboutUnderworld);
-                else if (reactionToPlayer >= 0)
-                    return getRecordIdByNpcsSocialGroup(neutralToPlayerAnswerTellMeAboutDefault, neutralToPlayerAnswerTellMeAboutGuildMembers, neutralToPlayerAnswerTellMeAboutMerchants, neutralToPlayerAnswerTellMeAboutScholars, neutralToPlayerAnswerTellMeAboutNobility, neutralToPlayerAnswerTellMeAboutUnderworld);
-                else
-                    return getRecordIdByNpcsSocialGroup(dislikePlayerAnswerTellMeAboutDefault, dislikePlayerAnswerTellMeAboutGuildMembers, dislikePlayerAnswerTellMeAboutMerchants, dislikePlayerAnswerTellMeAboutScholars, dislikePlayerAnswerTellMeAboutNobility, dislikePlayerAnswerTellMeAboutUnderworld);
+                // Messages if NPC does know answer to non-directions question
+                return ExpandRandomTextRecord(answersToNonDirections[15 + 3 * (int)npcData.socialGroup + reactionToPlayer_0_1_2]);
             }
         }
 
@@ -2116,11 +2124,14 @@ namespace DaggerfallWorkshop.Game
             // search for orphaned entries in rumor mill
             for (int i = listRumorMill.Count - 1; i >= 0; i--)
             {
-                ulong questID = listRumorMill[i].questID;
-                if (GameManager.Instance.QuestMachine.GetQuest(questID) == null)
+                if (listRumorMill[i].rumorType == RumorType.QuestRumorMill || listRumorMill[i].rumorType == RumorType.QuestProgressRumor)
                 {
-                    Debug.Log(String.Format("save data contains orphaned rumors for quest with id {0}. Removing these rumors...", questID));
-                    listRumorMill.Remove(listRumorMill[i]);
+                    ulong questID = listRumorMill[i].questID;
+                    if (GameManager.Instance.QuestMachine.GetQuest(questID) == null)
+                    {
+                        Debug.Log(String.Format("save data contains orphaned rumors for quest with id {0}. Removing these rumors...", questID));
+                        listRumorMill.Remove(listRumorMill[i]);
+                    }
                 }
             }
 
@@ -2222,6 +2233,12 @@ namespace DaggerfallWorkshop.Game
                 // TODO: match classic daggerfall - in classic npc remember their knowledge about topics for their time of existence
                 if (!sameTalkTargetAsBefore)
                     ResetNPCKnowledge();
+
+                // Reset last checked tone index for NPC reaction and tone results
+                lastToneIndex = -1;
+                toneReactionForTalkSession[0] = 0;
+                toneReactionForTalkSession[1] = 0;
+                toneReactionForTalkSession[2] = 0;
             }
             else
             {
@@ -2249,36 +2266,102 @@ namespace DaggerfallWorkshop.Game
             }
         }
 
+        public void ImportClassicRumor(RumorFile.DaggerfallRumor rumor)
+        {
+            if (listRumorMill == null)
+                listRumorMill = new List<RumorMillEntry>();
+
+            RumorMillEntry entry = new RumorMillEntry();
+
+            TextFile.Token[] tokens = TextFile.ReadTokens(ref rumor.RumorText, 0, TextFile.Formatting.EndOfRecord);
+
+            if ((rumor.Flags & 4) != 0) // A quest rumor, don't import for now
+                return;
+
+            if ((rumor.Flags & 1) != 0) // A sign message, don't import for now
+                return;
+
+            if (rumor.NPCID != 0) // A post-quest greeting specific to a particular NPC. Don't import for now.
+                return;
+
+            entry.rumorType = RumorType.CommonRumor;
+            entry.listRumorVariants = new List<TextFile.Token[]>();
+            entry.listRumorVariants.Add(tokens);
+            entry.faction1 = rumor.Faction1;
+            entry.faction2 = rumor.Faction2;
+            entry.type = (int)rumor.Type;
+            entry.regionID = rumor.RegionID;
+            entry.flags = rumor.Flags;
+            entry.timeLimit = rumor.TimeLimit;
+            listRumorMill.Add(entry);
+        }
+
+        public void AddNonQuestRumor(int faction1, int faction2, int regionID, int type, int textID)
+        {
+            if (listRumorMill == null)
+                listRumorMill = new List<RumorMillEntry>();
+            RumorMillEntry entry = new RumorMillEntry();
+
+            TextFile.Token[] tokens = DaggerfallUnity.Instance.TextProvider.GetRandomTokens(textID);
+
+            entry.rumorType = RumorType.CommonRumor;
+            entry.listRumorVariants = new List<TextFile.Token[]>();
+            entry.listRumorVariants.Add(tokens);
+            entry.faction1 = faction1;
+            entry.faction2 = faction2;
+            entry.type = type;
+            entry.regionID = regionID;
+            entry.flags = GetFlagsForNewRumor(type);
+            entry.timeLimit = DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.ToClassicDaggerfallTime() + 43140;
+
+            listRumorMill.Add(entry);
+        }
+
+        private int GetFlagsForNewRumor(int type)
+        {
+            int flags = 0;
+
+            switch (type)
+            {
+                case 10: // Witch burnings
+                case 18: // Persecuted temple
+                case 7:  // Famine
+                case 4:  // Plague
+                case 28: // War started
+                case 27: // Enemy faction
+                case 26: // Alliance started
+                    flags = 1; // Sign message
+                    break;
+
+                default:
+                    flags = 8; // Spoken rumor
+                    break;
+            }
+
+            return flags;
+        }
+
+        public void RefreshRumorMill()
+        {
+            if (listRumorMill == null)
+                listRumorMill = new List<RumorMillEntry>();
+
+            DaggerfallDateTime now = DaggerfallUnity.Instance.WorldTime.Now;
+            uint nowClassic = now.ToClassicDaggerfallTime();
+
+            for (int i = listRumorMill.Count - 1; i >= 0; i--)
+            {
+                if (listRumorMill[i].timeLimit < nowClassic)
+                {
+                    listRumorMill.RemoveAt(i);
+                }
+            }
+        }
 
         private void SetupRumorMill()
         {
             if (listRumorMill == null)
                 listRumorMill = new List<RumorMillEntry>();
-            if (listRumorMill.Count == 0)
-            {
-                for (int i = 0; i < 10; i++) // setup 10 random common rumors (this is very early work in progress)
-                {
-                    RumorMillEntry entry = new RumorMillEntry();
-
-                    TextFile.Token[] tokens;
-                    int randomNum = UnityEngine.Random.Range(0, 20);
-                    if (randomNum >= 0 && randomNum <= 9)
-                        tokens = DaggerfallUnity.Instance.TextProvider.GetRandomTokens(1400 + randomNum);
-                    else if (randomNum == 10)
-                        tokens = DaggerfallUnity.Instance.TextProvider.GetRandomTokens(1456);
-                    else if (randomNum >= 11 && randomNum <= 15)
-                        tokens = DaggerfallUnity.Instance.TextProvider.GetRandomTokens(1480);
-                    else if (randomNum >= 16 && randomNum <= 20)
-                        tokens = DaggerfallUnity.Instance.TextProvider.GetRandomTokens(1481);
-                    else
-                        tokens = DaggerfallUnity.Instance.TextProvider.GetRandomTokens(1457);
-                    entry.rumorType = RumorType.CommonRumor;
-                    entry.listRumorVariants = new List<TextFile.Token[]>();
-                    entry.listRumorVariants.Add(tokens);
-
-                    listRumorMill.Add(entry);
-                }
-            }
         }
 
         private void GetBuildingList()
@@ -3069,33 +3152,6 @@ namespace DaggerfallWorkshop.Game
 
             return (tokens[0].text);
         }
-
-        private string getRecordIdByNpcsSocialGroup(int textRecordIdDefault, int textRecordIdGuildMembers, int textRecordIdMerchants, int textRecordIdScholars, int textRecordIdNobility, int textRecordIdUnderworld)
-        {
-            switch (npcData.socialGroup)
-            {
-                case FactionFile.SocialGroups.None:
-                case FactionFile.SocialGroups.Commoners:
-                case FactionFile.SocialGroups.SGroup10:
-                case FactionFile.SocialGroups.SGroup5:
-                case FactionFile.SocialGroups.SGroup8:
-                case FactionFile.SocialGroups.SGroup9:
-                case FactionFile.SocialGroups.SupernaturalBeings:
-                default:
-                    return ExpandRandomTextRecord(textRecordIdDefault);
-                case FactionFile.SocialGroups.GuildMembers:
-                    return ExpandRandomTextRecord(textRecordIdGuildMembers);
-                case FactionFile.SocialGroups.Merchants:
-                    return ExpandRandomTextRecord(textRecordIdMerchants);
-                case FactionFile.SocialGroups.Nobility:
-                    return ExpandRandomTextRecord(textRecordIdNobility);
-                case FactionFile.SocialGroups.Scholars:
-                    return ExpandRandomTextRecord(textRecordIdScholars);
-                case FactionFile.SocialGroups.Underworld:
-                    return ExpandRandomTextRecord(textRecordIdUnderworld); // todo: this needs to be tested with a npc of social group underworld in vanilla df
-            }
-        }
-
 
         #endregion
 

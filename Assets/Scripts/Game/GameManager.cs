@@ -34,10 +34,13 @@ namespace DaggerfallWorkshop.Game
     public class GameManager : MonoBehaviour
     {
         #region Fields
+        public const float classicUpdateInterval = 0.0625f;        // Update every 1/16 of a second. An approximation of classic's update loop, which varies with framerate.
 
         public bool Verbose = false;
         bool isGamePaused = false;
         float savedTimeScale;
+        float classicUpdateTimer = 0;                       // Timer for matching classic's update loop
+        bool classicUpdate = false;                         // True when reached a classic update
         //Texture2D pauseScreenshot;
 
         GameObject playerObject = null;
@@ -93,6 +96,11 @@ namespace DaggerfallWorkshop.Game
         public static bool IsGamePaused
         {
             get { return Instance.isGamePaused; }
+        }
+
+        public static bool ClassicUpdate
+        {
+            get { return Instance.classicUpdate; }
         }
 
         public StateManager StateManager
@@ -431,6 +439,9 @@ namespace DaggerfallWorkshop.Game
             // Try to set all properties at startup
             //GetProperties();
 
+            // Always start game paused
+            PauseGame(true);
+
             // Log welcome message
             Debug.Log("Welcome to Daggerfall Unity " + VersionInfo.DaggerfallUnityVersion);
         }
@@ -439,6 +450,16 @@ namespace DaggerfallWorkshop.Game
         {
             if (!IsPlayingGame())
                 return;
+
+            // Update timer that approximates the timing of original Daggerfall's game update loop
+            classicUpdateTimer += Time.deltaTime;
+            if (classicUpdateTimer >= classicUpdateInterval)
+            {
+                classicUpdateTimer = 0;
+                classicUpdate = true;
+            }
+            else
+                classicUpdate = false;
 
             // Post message to open options dialog on escape during gameplay
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -478,6 +499,10 @@ namespace DaggerfallWorkshop.Game
             else if (InputManager.Instance.ActionComplete(InputManager.Actions.CastSpell))
             {
                 DaggerfallUI.PostMessage(DaggerfallUIMessages.dfuiOpenSpellBookWindow);
+            }
+            else if (InputManager.Instance.ActionComplete(InputManager.Actions.UseMagicItem))
+            {
+                DaggerfallUI.PostMessage(DaggerfallUIMessages.dfuiOpenUseMagicItemWindow);
             }
 
             if (InputManager.Instance.ActionComplete(InputManager.Actions.Status))
@@ -546,7 +571,7 @@ namespace DaggerfallWorkshop.Game
         /// </summary>
         /// <param name="minMonsterSpawnerDistance">Monster spawners must be at least this close.</param>
         /// <returns>True if enemies are nearby.</returns>
-        public bool AreEnemiesNearby(float minMonsterSpawnerDistance = 12f)
+        public bool AreEnemiesNearby(float minMonsterSpawnerDistance = 12f, bool includingPacified = false)
         {
             bool areEnemiesNearby = false;
             DaggerfallEntityBehaviour[] entityBehaviours = FindObjectsOfType<DaggerfallEntityBehaviour>();
@@ -559,10 +584,15 @@ namespace DaggerfallWorkshop.Game
                     if (enemySenses)
                     {
                         // Can enemy see player or is close enough they would be spawned in classic?
-                        if ((entityBehaviour.Target == Instance.PlayerEntityBehaviour && enemySenses.TargetInSight) || enemySenses.WouldBeSpawnedInClassic)
+                        if ((enemySenses.Target == Instance.PlayerEntityBehaviour && enemySenses.TargetInSight) || enemySenses.WouldBeSpawnedInClassic)
                         {
-                            areEnemiesNearby = true;
-                            break;
+                            // Is it hostile or pacified?
+                            EnemyMotor enemyMotor = entityBehaviour.GetComponent<EnemyMotor>();
+                            if (includingPacified || enemyMotor.IsHostile)
+                            {
+                                areEnemiesNearby = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -589,7 +619,7 @@ namespace DaggerfallWorkshop.Game
         /// <param name="type">Enemy type to search for.</param>
         /// <param name="stopLookingIfFound">Return as soon as an enemy of given type is found.</param>
         /// <returns>Number of this enemy type.</returns>
-        public int HowManyEnemiesOfType(MobileTypes type, bool stopLookingIfFound = false)
+        public int HowManyEnemiesOfType(MobileTypes type, bool stopLookingIfFound = false, bool includingPacified = false)
         {
             int numberOfEnemies = 0;
             DaggerfallEntityBehaviour[] entityBehaviours = FindObjectsOfType<DaggerfallEntityBehaviour>();
@@ -601,9 +631,14 @@ namespace DaggerfallWorkshop.Game
                     EnemyEntity entity = entityBehaviour.Entity as EnemyEntity;
                     if (entity.MobileEnemy.ID == (int)type)
                     {
-                        numberOfEnemies++;
-                        if (stopLookingIfFound)
-                            return numberOfEnemies;
+                        // Is it hostile or pacified?
+                        EnemyMotor enemyMotor = entityBehaviour.GetComponent<EnemyMotor>();
+                        if (includingPacified || enemyMotor.IsHostile)
+                        {
+                            numberOfEnemies++;
+                            if (stopLookingIfFound)
+                                return numberOfEnemies;
+                        }
                     }
                 }
             }
@@ -713,8 +748,10 @@ namespace DaggerfallWorkshop.Game
             return false;
         }
 
-        // Returns true when gameplay is active
-        bool IsPlayingGame()
+        /// <summary>
+        /// Returns true when gameplay is active.
+        /// </summary>
+        public bool IsPlayingGame()
         {
             // Game not active when paused
             if (isGamePaused)

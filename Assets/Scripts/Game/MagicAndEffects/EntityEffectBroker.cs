@@ -109,6 +109,7 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
                         variantEffect.CurrentVariant = i;
                         magicEffectTemplates.Add(variantEffect.Key, variantEffect);
                         IndexEffectRecipes(variantEffect);
+                        MapClassicKey(variantEffect);
                     }
                 }
                 else
@@ -116,24 +117,7 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
                     // Just store singleton effect
                     magicEffectTemplates.Add(effect.Key, effect);
                     IndexEffectRecipes(effect);
-                }
-
-                // Map classic key when defined - output error in case of classic key conflict
-                // NOTE: Mods should also be able to replace classic effect - will need to handle substitutions later
-                // NOTE: Not mapping effect keys for non spell effects at this time
-                byte groupIndex, subGroupIndex;
-                BaseEntityEffect.ClassicEffectFamily family;
-                BaseEntityEffect.ReverseClasicKey(effect.Properties.ClassicKey, out groupIndex, out subGroupIndex, out family);
-                if (effect.Properties.ClassicKey != 0 && family == BaseEntityEffect.ClassicEffectFamily.Spells)
-                {
-                    if (classicEffectMapping.ContainsKey(effect.Properties.ClassicKey))
-                    {
-                        Debug.LogErrorFormat("EntityEffectBroker: Detected duplicate classic effect key for {0} ({1}, {2})", effect.Key, groupIndex, subGroupIndex);
-                    }
-                    else
-                    {
-                        classicEffectMapping.Add(effect.Properties.ClassicKey, effect.Key);
-                    }
+                    MapClassicKey(effect);
                 }
             }
         }
@@ -239,11 +223,61 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
             if (recipe != null)
             {
                 int recipeKey = recipe.GetHashCode();
-                if (!potionEffectTemplates.ContainsKey(recipeKey))
+                if (potionEffectTemplates.ContainsKey(recipeKey))
                     return potionEffectTemplates[recipeKey];
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Gets PotionRecipe from effect that matches the recipeKey provided.
+        /// </summary>
+        /// <param name="recipeKey">Hashcode of a set of ingredients.</param>
+        /// <returns>PotionRecipe if the key matches one from an effect, otherwise null.</returns>
+        public PotionRecipe GetPotionRecipe(int recipeKey)
+        {
+            if (potionEffectTemplates.ContainsKey(recipeKey))
+            {
+                foreach (PotionRecipe recipe in potionEffectTemplates[recipeKey].PotionProperties.Recipes)
+                    if (recipe.GetHashCode() == recipeKey)
+                        return recipe;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Get recipeKeys for all registered potion recipes.
+        /// </summary>
+        /// <returns>List of int recipeKeys</returns>
+        public List<int> GetPotionRecipeKeys()
+        {
+            return new List<int>(potionEffectTemplates.Keys);
+        }
+
+        /// <summary>
+        /// Logs a summary of how many recipes ingredients are used in so new recipes can choose to use little used ingredients.
+        /// Intended for mod devs, used by invoking 'ingredUsage' console command.
+        /// </summary>
+        public void LogRecipeIngredientUsage()
+        {
+            Dictionary<int, int> ingredCounts = new Dictionary<int, int>();
+            foreach (int key in potionEffectTemplates.Keys)
+            {
+                PotionRecipe potionRecipe = GetPotionRecipe(key);
+                foreach (PotionRecipe.Ingredient ingred in potionRecipe.Ingredients)
+                {
+                    if (ingredCounts.ContainsKey(ingred.id))
+                        ingredCounts[ingred.id]++;
+                    else
+                        ingredCounts.Add(ingred.id, 1);
+                }
+            }
+            foreach (int key in ingredCounts.Keys)
+            {
+                DaggerfallConnect.FallExe.ItemTemplate ingredientTemplate = DaggerfallUnity.Instance.ItemHelper.GetItemTemplate(key);
+                Debug.LogFormat("{0} recipes use: {1}", ingredCounts[key], ingredientTemplate.name);
+            }
         }
 
         /// <summary>
@@ -490,6 +524,28 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
             }
         }
 
+        void MapClassicKey(IEntityEffect effect)
+        {
+            byte groupIndex, subGroupIndex;
+            BaseEntityEffect.ClassicEffectFamily family;
+
+            // Map classic key when defined - output error in case of classic key conflict
+            // NOTE: Mods should also be able to replace classic effect - will need to handle substitutions later
+            // NOTE: Not mapping effect keys for non spell effects at this time
+            BaseEntityEffect.ReverseClasicKey(effect.Properties.ClassicKey, out groupIndex, out subGroupIndex, out family);
+            if (effect.Properties.ClassicKey != 0 && family == BaseEntityEffect.ClassicEffectFamily.Spells)
+            {
+                if (classicEffectMapping.ContainsKey(effect.Properties.ClassicKey))
+                {
+                    Debug.LogErrorFormat("EntityEffectBroker: Detected duplicate classic effect key for {0} ({1}, {2})", effect.Key, groupIndex, subGroupIndex);
+                }
+                else
+                {
+                    classicEffectMapping.Add(effect.Properties.ClassicKey, effect.Key);
+                }
+            }
+        }
+
         // Called when game starts or loaded, after world time has been set/restored
         // Syncs initial magic round timer with game time for counting magic rounds
         void InitMagicRoundTimer()
@@ -543,7 +599,9 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
                 ElementType = ClassicElementIndexToElementType(spellRecordData.element),
                 Name = spellRecordData.spellName,
                 IconIndex = spellRecordData.icon,
+                Icon = new SpellIcon(),
             };
+            effectBundleSettingsOut.Icon.index = effectBundleSettingsOut.IconIndex;
 
             // Assign effects
             List<EffectEntry> foundEffects = new List<EffectEntry>();
@@ -699,7 +757,12 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
             // Check if effect template is implemented for this slot - instant fail if effect not implemented
             int classicKey = BaseEntityEffect.MakeClassicKey((byte)type, (byte)subType);
 
-            return GameManager.Instance.EntityEffectBroker.GetEffectTemplate(classicKey);
+            // Attempt to find the effect template
+            IEntityEffect result = GameManager.Instance.EntityEffectBroker.GetEffectTemplate(classicKey);
+            if (result == null)
+                Debug.LogErrorFormat("Could not find effect template for type={0} subType={1}", type, subType);
+
+            return result;
         }
 
         /// <summary>

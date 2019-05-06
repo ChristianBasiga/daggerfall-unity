@@ -14,6 +14,7 @@ using DaggerfallConnect;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Utility;
 using DaggerfallWorkshop.Game.Formulas;
+using DaggerfallWorkshop.Game.Utility;
 
 namespace DaggerfallWorkshop.Game.MagicAndEffects
 {
@@ -141,6 +142,12 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
         void End();
 
         /// <summary>
+        /// Perform a chance roll on this effect based on chance settings.
+        /// Can be used by custom chance effects that need to roll chance other than at start.
+        /// </summary>
+        bool RollChance();
+
+        /// <summary>
         /// Get effect state data to serialize.
         /// </summary>
         object GetSaveData();
@@ -163,6 +170,8 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
     public abstract partial class BaseEntityEffect : IEntityEffect
     {
         #region Fields
+
+        protected const string textDatabase = "ClassicEffects";
 
         protected EffectProperties properties = new EffectProperties();
         protected EffectSettings settings = new EffectSettings();
@@ -234,7 +243,7 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
             set { settings = value; }
         }
 
-        public PotionProperties PotionProperties
+        public virtual PotionProperties PotionProperties
         {
             get { return potionProperties; }
         }
@@ -487,16 +496,33 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
             return false;
         }
 
+        /// <summary>
+        /// Performs a chance roll for this effect based on chance settings.
+        /// </summary>
+        /// <returns>True if chance roll succeeded.</returns>
+        public virtual bool RollChance()
+        {
+            if (!Properties.SupportChance)
+                return false;
+
+            bool outcome = Dice100.SuccessRoll(ChanceValue());
+
+            //Debug.LogFormat("Effect '{0}' has a {1}% chance of succeeding and rolled {2} for a {3}", Key, ChanceValue(), roll, (outcome) ? "success" : "fail");
+
+            return outcome;
+        }
+
         #endregion
 
         #region Protected Helpers
 
         protected DaggerfallEntityBehaviour GetPeeredEntityBehaviour(EntityEffectManager manager)
         {
-            if (manager == null)
-                return null;
-
-            return manager.GetComponent<DaggerfallEntityBehaviour>();
+            // Return cached entity behaviour or attempt to get component directly
+            if (manager && manager.EntityBehaviour)
+                return manager.EntityBehaviour;
+            else
+                return manager.GetComponent<DaggerfallEntityBehaviour>();
         }
 
         protected int GetMagnitude(DaggerfallEntityBehaviour caster = null)
@@ -597,20 +623,8 @@ namespace DaggerfallWorkshop.Game.MagicAndEffects
         protected int ChanceValue()
         {
             int casterLevel = (caster) ? caster.Entity.Level : 1;
+            //Debug.LogFormat("{5} ChanceValue {0} = base + plus * (level/chancePerLevel) = {1} + {2} * ({3}/{4})", settings.ChanceBase + settings.ChancePlus * (int)Mathf.Floor(casterLevel / settings.ChancePerLevel), settings.ChanceBase, settings.ChancePlus, casterLevel, settings.ChancePerLevel, Key);
             return settings.ChanceBase + settings.ChancePlus * (int)Mathf.Floor(casterLevel / settings.ChancePerLevel);
-        }
-
-        protected bool RollChance()
-        {
-            if (!Properties.SupportChance)
-                return false;
-
-            int roll = UnityEngine.Random.Range(1, 100);
-            bool outcome = (roll <= ChanceValue());
-
-            //Debug.LogFormat("Effect '{0}' has a {1}% chance of succeeding and rolled {2} for a {3}", Key, ChanceValue(), roll, (outcome) ? "success" : "fail");
-
-            return outcome;
         }
 
         #endregion
