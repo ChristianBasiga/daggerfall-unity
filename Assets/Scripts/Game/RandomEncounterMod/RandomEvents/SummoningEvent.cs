@@ -128,7 +128,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     summoners[0].GetComponent<EnemyMotor>().IsHostile = true;
 
                     //Forces their target to be player.
-                    summoners[0].GetComponent<DaggerfallEntityBehaviour>().Target = GameManager.Instance.PlayerEntityBehaviour;
+                //    summoners[0].GetComponent<DaggerfallEntityBehaviour>().Target = GameManager.Instance.PlayerEntityBehaviour;
 
                     summon = GameObjectHelper.CreateEnemy("summon", summonType, GameManager.Instance.PlayerObject.transform.position);
 
@@ -143,7 +143,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                         }
                     };
 
-                    summon.GetComponent<DaggerfallEntityBehaviour>().Target = GameManager.Instance.PlayerEntityBehaviour;
+                  //  summon.GetComponent<DaggerfallEntityBehaviour>().Target = GameManager.Instance.PlayerEntityBehaviour;
                     //It may be averted as it goes on.
                 }
             }
@@ -176,6 +176,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             if (summon != null)
             {
+                //Ohh right this change, forgot what ti is now.
+                /*
                 if (summon.GetComponent<DaggerfallEntityBehaviour>().Target != player)
                 {
                     summon.GetComponent<DaggerfallEntityBehaviour>().Target = player;
@@ -187,7 +189,8 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             {
                 summoners[0].GetComponent<DaggerfallEntityBehaviour>().Target = player;
             }
-
+            */
+            }
         }
     }
 }
