@@ -12,20 +12,6 @@ using DaggerfallWorkshop;
 public class PathBuilder {
 
 
-    public struct StepState
-    {
-        public int pixelY;
-        public int pixelX;
-
-        //All need to do interrupt and calculate time for that step.
-        //making struct incase need more.
-
-    }
-
-    //Actions to do at every single step along path creation.
-    //Passing in here will be state of path.
-    //Args will be stuff to do at start of each loop.
-    public delegate void ActionPerStep(StepState state);
     //Could just be delegates in builder but for sake of matching pattern exactly.
     //For these actions we'd like to know slope and current position, and travel options
     public interface TravelAlongSlopeAction
@@ -48,14 +34,22 @@ public class PathBuilder {
     public interface NewLegAction
     {
         //Not sure what other params this needs, for calculation really just adds taken taken this leg to full. If keep the taken this leg variable.
-        void Execute(DFPosition newStartingPoint, int legSize);
+        void Execute(List<DFPosition> leg, bool travelShip);
 
+    }
+
+    //When we've hit the destination.
+    public interface PathBuiltAction
+    {
+
+        void Execute(LinkedList<DFPosition> fullPath, bool travelShip);
     }
 
 
     LinkedList<NewLegAction> newLegActions;
     LinkedList<PathRerouteAction> pathRerouteActions;
     LinkedList<TravelAlongSlopeAction> travelAlongSlopeActions;
+    LinkedList<PathBuiltAction> pathBuiltActions;
 
 
     public PathBuilder()
@@ -86,8 +80,19 @@ public class PathBuilder {
         travelAlongSlopeActions.AddLast(action);
     }
 
+    public void addPathBuiltAction(PathBuiltAction action)
+    {
+
+        pathBuiltActions.AddLast(action);
+
+    }
+
     public LinkedList<DFPosition> getPath(DFPosition start, DFPosition destination, bool travelShip)
     {
+
+        //Maybe make list instead for interrupt? then just append to full path
+        //so for speed contemplate switching back to subPath then fullpath two diff lists, for quick access on interrupt.
+
 
         LinkedList<DFPosition> path = new LinkedList<DFPosition>();
         bool isAtDestination = false;
@@ -98,13 +103,14 @@ public class PathBuilder {
         int pixelsAdded = 0;
         const double angleIncrement = 0.0523599;// 3 degrees 0.0436332; // 5 degrees in radians
 
+        List<DFPosition> leg = new List<DFPosition>();
         while (!isAtDestination)
         {
 
 
-            foreach (BuildingSteps.NewLegAction action in newLegActions)
+            foreach (NewLegAction action in newLegActions)
             {
-                action.Execute(currPos, pixelsAdded);
+                action.Execute(leg, travelShip);
             }
 
 
@@ -238,6 +244,7 @@ public class PathBuilder {
 
 
                     path.AddLast(mapPixel);
+                    leg.Add(mapPixel);
 
                     pixelsAdded += 1;
 
@@ -289,6 +296,8 @@ public class PathBuilder {
                     //So the time taken needs to include destination though.
                     if (terrain == (int)MapsFile.Climates.Ocean)
                     {
+                        //No interrupts at all on ocean.
+                        leg.Clear();
 
                         //Check within bounds of ocean pixel set to see if anything in that set is this pixel.
                         if (!travelShip)
@@ -297,65 +306,11 @@ public class PathBuilder {
                             crossesOcean = true;
                             break;
                         }
-                    }
-                    else
-                    {
 
-                        //This way when we already hit destination we can include time travelled to there?
-                        //Or is it saying time travelled from before. Start 0, so actually is current to next
-                        //if there is no next then this doesn't need to happen, okay so this doesn't need to happen  if hit destination.
 
-                        /*
-                         *
-                         * This will be done by calculator that has made a concrete step.
-                        int terrainMovementIndex = 0;
-
-                        int climateIndex = terrain - (int)MapsFile.Climates.Ocean;
-                        terrainMovementIndex = climateIndices[climateIndex];
-
-                        //This multiplied by slope to make this accurate time, or multiplied by difference, ladder more accurate.
-                        minutesTakenThisMove = (((102 * transportModifier) >> 8)
-                            * (256 - terrainMovementModifiers[terrainMovementIndex] + 256)) >> 8;
-
-                        //Cause no skips done in x, drawing no big deal, but time must be accurate.
-                        if (prevY - mapPixel.Y != 0)
-                            minutesTakenThisMove *= Math.Abs(prevY - mapPixel.Y);
-
-                        */
                     }
 
-
-                    /*      if (!sleepModeInn)
-                              minutesTakenThisMove = (300 * minutesTakenThisMove) >> 8;
-                              */
-
-
-
-                    // If we've made it this far, we have yet to cross the ocean
                     crossesOcean = false;
-
-
-
-
-
-                    //For seeing if just happened this leg, to reset it if did.
-
-
-                    //Done in RandomEncounterManager
-                    /*
-                    if (!travelShip)
-                    {
-                        //20% chance, but try multiple times so may overwrite so more random.
-                        //Time taken to get to this position is total travle time so far but time taken this leg so far.
-                        tryInterrupt(currX, roundedY, totalTravelTime + minutesTakenThisLeg);
-
-                        //If successfully interrupted, then did it during this leg.
-                        if (interrupt != null)
-                        {
-                            justSetInterrupt = true;
-                        }
-                    }
-                    */
 
                 }
 
@@ -398,9 +353,14 @@ public class PathBuilder {
         }
 
 
-    
-        return path;
-    
+        foreach(PathBuiltAction action in pathBuiltActions)
+        {
+            action.Execute(path, travelShip);
         }
+
+
+        return path;
+
+    }
 
 }

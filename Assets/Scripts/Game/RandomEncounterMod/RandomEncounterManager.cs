@@ -31,15 +31,31 @@ namespace DaggerfallRandomEncountersMod
     //Only this mod uses this, others would use factory directly.
     public class RandomEncounterManager : MonoBehaviour
     {
+        private PathTimeCalculator pathTimeCalculator;
+        PathBuilder pathBuilder;
+        FastTravelInterrupt fastTravelInterrupt;
+        DecoratedTravelWindow decoratedTravelWindow;
 
-        class FastTravelInterrupt : PathBuilder.TravelAlongSlopeAction
+
+        public PathTimeCalculator PathTimeCalculator
         {
-            int daysTillInterrupt;
-            DFPosition interruptedPosition;
+            get { return pathTimeCalculator; }
+        }
+        public class FastTravelInterrupt : PathBuilder.PathBuiltAction
+        {
+            //Getting this information either recalculate along all legs from that point.
+            public int daysTillInterrupt;
+            public DFPosition interruptedPosition;
             RandomEncounter toSpawn;
 
-            public void Execute(DFPosition mapPixel, DFPosition prev, bool travelShip)
+
+            
+
+
+
+            public void Execute(LinkedList<DFPosition> path, bool travelShip)
             {
+                
                 //Try to set interrupt.
                 if (travelShip) return;
 
@@ -48,8 +64,41 @@ namespace DaggerfallRandomEncountersMod
 
                 if (doInterrupt && interruptedPosition == null)
                 {
+                    int randomIndex = Random.Range(0, path.Count);
 
-                    interruptedPosition = new DFPosition(mapPixel.X, mapPixel.Y);
+
+                    //Stupid, cause copying even if instant access
+
+                    int i = 0;
+
+                    LinkedListNode<DFPosition> current = path.First;
+
+                    while (current != null & i < randomIndex)
+                    {
+                        current = current.Next;
+                        i += 1;
+                    }
+
+                    //Gets instead of recomputing at this point, still dependant on order but it should have full time.
+                    interruptedPosition = current.Value;
+
+
+                    int timeTravelled = RandomEncounterManager.Instance.pathTimeCalculator.CalculateTime(path, interruptedPosition);
+
+                    timeTravelled = GameManager.Instance.GuildManager.FastTravel(timeTravelled);
+
+                    int travelTimeDaysTotal = (timeTravelled / 1440);
+
+                    // Classic always adds 1. For DF Unity, only add 1 if there is a remainder to round up.
+                    if ((timeTravelled % 1440) > 0)
+                        travelTimeDaysTotal += 1;
+
+
+                    daysTillInterrupt = travelTimeDaysTotal;
+                    //TO get daysTillInterrupt, we gotta get the time for that leg.
+
+
+
                     /*
 
                     interrupt.interruptPosition.X = pixelX;
@@ -83,10 +132,7 @@ namespace DaggerfallRandomEncountersMod
 
         PoolManager objectPool;
 
-        PathTimeCalculator pathTimeCalculator;
-        PathBuilder pathBuilder;
-        FastTravelInterrupt fastTravelInterrupt;
-        DecoratedTravelWindow decoratedTravelWindow;
+      
 
         #region Contexts
 
@@ -233,9 +279,9 @@ namespace DaggerfallRandomEncountersMod
          //   pathBuilder.addPathRereouteAction(pathTimeCalculator);
 
 
-            pathBuilder.addtravelAlongSlopeAction(pathTimeCalculator);
+            pathBuilder.addNewLegAction(pathTimeCalculator);
 
-            pathBuilder.addtravelAlongSlopeAction(fastTravelInterrupt);
+            pathBuilder.addPathBuiltAction(fastTravelInterrupt);
 
 
             decoratedTravelWindow.setCalculator(pathTimeCalculator);
@@ -545,10 +591,31 @@ namespace DaggerfallRandomEncountersMod
         // Update is called once per frame
         void Update()
         {
-            
+            if (DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallTravelPopUp)
+            {
+                DaggerfallTravelPopUp popUp = DaggerfallUI.Instance.UserInterfaceManager.TopWindow as DaggerfallTravelPopUp;
+
+                //If countdown > 0, then begin has begun and it's trying to perform fast travel.
+                if (fastTravelInterrupt.interruptedPosition != null && popUp.CountDownDays > 0)
+                {
+
+                    if (popUp.CountDownDays <= popUp.TotalTravelDays - fastTravelInterrupt.daysTillInterrupt)
+                    {
+
+                        DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+                        fastTravelInterrupt.interruptedPosition = null;
+                    }
+
+
+                }
+                //Then compare travel time
+            }
+
             if ((GameManager.Instance.StateManager.GameInProgress && GameManager.Instance.StateManager.CurrentState != StateManager.StateTypes.UI) ||
                 DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
             {
+
+             
 
 
                 //Problem with this is it may be mutated when I do the tick.

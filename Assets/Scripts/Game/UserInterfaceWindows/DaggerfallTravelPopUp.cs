@@ -97,6 +97,18 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #region Properties
 
+
+        public int TotalTravelDays
+        {
+            get { return totalTravelTimeDays; }
+        }
+
+        public int CountDownDays
+        {
+
+            get { return countdownValueTravelTimeDays; }
+        }
+
         internal DFPosition EndPos { get { return endPos; } set { endPos = value;} }
         internal DaggerfallTravelMapWindow TravelWindow { get { return travelWindow; } set { travelWindow = value; } }
         public bool SpeedCautious { get { return speedCautious;} set {speedCautious = value; } }
@@ -208,6 +220,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 }
                 else
                 {
+                    totalTravelTimeDays = 0;
                     doFastTravel = false;
                     DaggerfallUI.Instance.FadeBehaviour.SmashHUDToBlack();
                     performFastTravel();
