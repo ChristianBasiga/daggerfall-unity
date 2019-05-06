@@ -41,6 +41,8 @@ namespace DaggerfallRandomEncountersMod
         {
             get { return pathTimeCalculator; }
         }
+
+
         public class FastTravelInterrupt : PathBuilder.PathBuiltAction
         {
             //Getting this information either recalculate along all legs from that point.
@@ -55,7 +57,7 @@ namespace DaggerfallRandomEncountersMod
 
             public void Execute(LinkedList<DFPosition> path, bool travelShip)
             {
-                
+
                 //Try to set interrupt.
                 if (travelShip) return;
 
@@ -279,12 +281,17 @@ namespace DaggerfallRandomEncountersMod
          //   pathBuilder.addPathRereouteAction(pathTimeCalculator);
 
 
+            //Action being calcualte time.
             pathBuilder.addNewLegAction(pathTimeCalculator);
 
             pathBuilder.addPathBuiltAction(fastTravelInterrupt);
 
 
             decoratedTravelWindow.setCalculator(pathTimeCalculator);
+
+            //Action being draw travel path on window.
+            pathBuilder.addPathBuiltAction(decoratedTravelWindow);
+
         }
 
         //Sets filters / observer states to current state of game on load.

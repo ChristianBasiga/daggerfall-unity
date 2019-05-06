@@ -6,6 +6,7 @@ using DaggerfallConnect.Utility;
 using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop;
 using System;
+using DaggerfallWorkshop.Game;
 
 
 
@@ -21,7 +22,7 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
 
 
     //For calculating days for interrupt and caching.
-    LinkedList<DFPosition> lastComputedPath = new LinkedList<DFPosition>();
+    public LinkedList<DFPosition> lastComputedPath = new LinkedList<DFPosition>();
 
     //Either store here for quick and dirty or let execute call a method already here that computes leg.
     int minutesForLastLeg = 0;
@@ -34,7 +35,9 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
     public int computeStep(DFPosition pos)
     {
         int minutesTakenThisMove;
-        //Duplicating from execute, move later
+
+        MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
+
         int terrain = mapsFile.GetClimateIndex(pos.X, pos.Y);
 
         int terrainMovementIndex = 0;
@@ -60,7 +63,6 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
     public int CalculateTime(LinkedList<DFPosition> path, DFPosition dest)
     {
         int totalTravelTime = 0;
-        MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
 
 
         DFPosition prev = null;
@@ -94,12 +96,11 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
     public void Execute(List<DFPosition> leg, bool travelShip)
     {
 
-        //SO here it does the step.
-        MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
 
         int minutesTakenThisLeg = 0;
 
         DFPosition prev = null;
+        MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
 
 
         foreach (DFPosition position in leg)
@@ -108,6 +109,8 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
           
 
             int minutesTakenThisMove = 0;
+
+
 
             int terrain = mapsFile.GetClimateIndex(position.X, position.Y);
 
@@ -197,6 +200,7 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
         //Update to take in everything as needed later for actual pathing.
 
         LinkedList<DFPosition> path = DaggerfallRandomEncountersMod.RandomEncounterManager.Instance.PathBuilder.getPath(start, endPos, travelShip);
+
 
 
         //Not used for anything anymorer ight now, hindsight 20/20

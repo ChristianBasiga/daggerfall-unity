@@ -11,7 +11,7 @@ using DaggerfallConnect.Arena2;
 //Extending base to overwrite the one set in singleton of UI instance
 //to instantiate appropriate pop up that uses the calculator.
 
-public class DecoratedTravelWindow : DaggerfallTravelMapWindow
+public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.PathBuiltAction
 {
 
     LinkedList<DFPosition> pathToDraw;
@@ -68,20 +68,21 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow
     //So to avoid creating custom pop up itself,
     //we just pop it off the stack, when called by the encounter manager accordingly, infact manager itself will handle that.
 
-   
+
+
+
 
 
     #region Drawing Path of Travel
 
-    public void DrawPathOfTravel(LinkedList<DFPosition> path)
+    public void Execute(LinkedList<DFPosition> path, bool travelShip)
     {
-
         drawingPath = true;
         draw = true;
         pathToDraw = path;
-
     }
 
+    //Ideally I make drawing own class but it's fine.
     //And it shouldn't redraw
     void DrawPathOfTravel()
     {
