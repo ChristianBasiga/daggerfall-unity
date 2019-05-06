@@ -13,13 +13,11 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
     [RandomEncounterIdentifier(EncounterId = "NPCEncounter")]
     public class CustomNpc : RandomEncounter
     {
-        GameObject person;
-        GameObject testNPC;
         public bool LineOfSightCheck = true;
         GameObject pendingFoeGameObjects;
        
 
-        void createQuestNPC(QuestMarker marker, Person person, Transform parent)
+        void createQuestNPC(Person person, Transform parent)
         {
             // Get billboard texture data
             FactionFile.FlatData flatData;
@@ -56,7 +54,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             // Add StaticNPC behaviour
             StaticNPC npc = go.AddComponent<StaticNPC>();
-            npc.SetLayoutData((int)marker.flatPosition.x, (int)marker.flatPosition.y, (int)marker.flatPosition.z, person);
+            //npc.SetLayoutData((int)marker.flatPosition.x, (int)marker.flatPosition.y, (int)marker.flatPosition.z, person);
 
             // Set tag
             go.tag = QuestMachine.questPersonTag;
@@ -134,9 +132,9 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         {
            
             warning = "You hear the displeased voices of the masses!?";
-            //createQuestNPC(SiteTypes.None,);
-            //GameObjectHelper.AddQuestNPC();
-
+            Person test;
+            Transform testerT;
+            createQuestNPC(test, testerT);
             
             
            
