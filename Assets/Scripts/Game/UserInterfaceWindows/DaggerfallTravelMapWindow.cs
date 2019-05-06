@@ -72,9 +72,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         KeyCode toggleClosedBinding;
 
         Panel borderPanel;
-        Panel regionTextureOverlayPanel;
+        protected Panel regionTextureOverlayPanel;
         Panel playerRegionOverlayPanel;
-        Panel regionMapOverlayPanel;
+        protected Panel regionMapOverlayPanel;
 
         TextLabel regionLabel;
 
@@ -96,7 +96,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         Button findButton;
         Button atButton;
-        Button exitButton;
+        protected Button exitButton;
 
         Button horizontalArrowButton    = new Button();
         Button verticalArrowButton      = new Button();
@@ -117,7 +117,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         Color32[] pixelBuffer;
         Color32[] overlayPixelBuffer;
         Color32[] locationPixelColors;                      //pixel colors for different location types
-        Color identifyFlashColor;
+        protected Color identifyFlashColor;
 
         int zoomfactor = 2;
         int width = 0;
@@ -727,7 +727,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
-        void Draw(Panel target, Panel targetOverlay, Texture2D texture = null)
+        protected void Draw(Panel target, Panel targetOverlay, Texture2D texture = null)
         {
             if (target == null)
                 return;
@@ -911,9 +911,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         void ExitButtonClickHandler(BaseScreenComponent sender, Vector2 position)
         {
-         //   pathToDraw = null;
-       //     drawingPath = false;
-
+        
             CloseTravelWindows();
         }
 
@@ -1116,7 +1114,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         }
 
         // Sets pixels for selected region
-        void SetLocationPixels()
+       protected  void SetLocationPixels()
         {
             try
             {
@@ -1179,7 +1177,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             if (zoom)
             {
-                Debug.LogError("Zoomed");
+
                 results.x = (int)Math.Floor(pos.x / zoomfactor + zoomOffset.x + origin.x);
                 float diffy = height / zoomfactor - pos.y;
                 results.y = (int)Math.Floor(height - pos.y / zoomfactor - zoomOffset.y - diffy + origin.y);
@@ -1640,11 +1638,12 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             uiManager.PushWindow(messageBox);
         }
 
-        void CreatePopUpWindow()
+        protected virtual void CreatePopUpWindow()
         {
             DFPosition pos = MapsFile.GetPixelFromPixelID(locationSummary.ID);
             
-         
+
+            //Not about dirty, bout getting it to work, so worst case scenario I make this virtual, do this base class wise, then just set calculator.
 
             if (teleportationTravel)
             {

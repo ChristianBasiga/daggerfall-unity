@@ -286,7 +286,8 @@ namespace DaggerfallWorkshop.Game
             dfControlsWindow = new DaggerfallControlsWindow(uiManager);
             dfJoystickControlsWindow = new DaggerfallJoystickControlsWindow(uiManager);
             dfUnityMouseControlsWindow = new DaggerfallUnityMouseControlsWindow(uiManager);
-            dfTravelMapWindow = new DaggerfallTravelMapWindow(uiManager);
+            dfTravelMapWindow = DaggerfallRandomEncountersMod.RandomEncounterManager.Instance.DecoratedTravelWindow;
+           // dfTravelMapWindow = new DaggerfallTravelMapWindow(uiManager);
             dfAutomapWindow = new DaggerfallAutomapWindow(uiManager);
             dfBookReaderWindow = new DaggerfallBookReaderWindow(uiManager);
             dfQuestJournalWindow = new DaggerfallQuestJournalWindow(uiManager);

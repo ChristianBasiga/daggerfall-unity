@@ -31,15 +31,44 @@ namespace DaggerfallRandomEncountersMod
     //Only this mod uses this, others would use factory directly.
     public class RandomEncounterManager : MonoBehaviour
     {
+        public static bool initializedMod = false;
         private PathTimeCalculator pathTimeCalculator;
         PathBuilder pathBuilder;
         FastTravelInterrupt fastTravelInterrupt;
         DecoratedTravelWindow decoratedTravelWindow;
+        bool interrupted = false;
 
+        public DecoratedTravelWindow DecoratedTravelWindow
+        {
+            get
+            {
+
+                if (decoratedTravelWindow == null)
+                {
+                    decoratedTravelWindow = new DecoratedTravelWindow(DaggerfallUI.UIManager);
+                    PathBuilder.addPathBuiltAction(decoratedTravelWindow);
+
+                }
+                return decoratedTravelWindow;
+            }
+            set
+            {
+                decoratedTravelWindow = value;
+            }
+        }
 
         public PathTimeCalculator PathTimeCalculator
         {
-            get { return pathTimeCalculator; }
+            get {
+
+                if (pathTimeCalculator == null)
+                {
+                    pathTimeCalculator = new PathTimeCalculator();
+
+                    PathBuilder.addPathBuiltAction(pathTimeCalculator);
+
+                }
+                return pathTimeCalculator; }
         }
 
 
@@ -63,6 +92,7 @@ namespace DaggerfallRandomEncountersMod
 
                 //Otherwise, randomly choose if this should be interrupt location.
                 bool doInterrupt = (UnityEngine.Random.Range(0, 101) < 5);
+                doInterrupt = true;
 
                 if (doInterrupt && interruptedPosition == null)
                 {
@@ -99,7 +129,7 @@ namespace DaggerfallRandomEncountersMod
                     daysTillInterrupt = travelTimeDaysTotal;
                     //TO get daysTillInterrupt, we gotta get the time for that leg.
 
-
+                    Debug.LogError("here");
 
                     /*
 
@@ -172,7 +202,8 @@ namespace DaggerfallRandomEncountersMod
 
         private IEnumerator randomWildernessTriggerCoroutine;
 
-        private static RandomEncounterManager instance;
+        private static RandomEncounterManager instance = null;
+
 
 
         #region Properties
@@ -183,8 +214,9 @@ namespace DaggerfallRandomEncountersMod
             {
                 if (instance == null)
                 {
-                    instance = new RandomEncounterManager();
-                    instance.Setup();
+
+                    GameObject go = new GameObject("Hello");
+                    instance = go.AddComponent<RandomEncounterManager>();
 
                 }
                 return instance;
@@ -193,7 +225,17 @@ namespace DaggerfallRandomEncountersMod
 
         public PathBuilder PathBuilder
         {
-            get { return pathBuilder; }
+            get {
+
+                if (pathBuilder == null)
+                {
+                    pathBuilder = new PathBuilder();
+
+                    if (fastTravelInterrupt == null) fastTravelInterrupt = new FastTravelInterrupt();
+                    pathBuilder.addPathBuiltAction(fastTravelInterrupt);
+                }
+
+                return pathBuilder; }
         }
         #endregion
 
@@ -212,6 +254,7 @@ namespace DaggerfallRandomEncountersMod
 
         }
 
+      
 
         //Makes sure it is only instance, if it's not returns false.
         private bool SetUpSingleton()
@@ -236,14 +279,25 @@ namespace DaggerfallRandomEncountersMod
         }
 
 
+        private void Start()
+        {
+
+      //      setUpFactories();
+
+            Setup();
+
+
+        }
+
 
         public void Setup()
         {
 
+
             GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Trespassing;
             Debug.LogError("Crime committed "  + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
-            initFastTravelComponents();
+        //    initFastTravelComponents();
 
 
             objectPool = PoolManager.Instance;
@@ -252,7 +306,6 @@ namespace DaggerfallRandomEncountersMod
 
             activeEncounters = new LinkedList<RandomEncounters.RandomEncounter>();
 
-            Debug.LogError("encounter type count " + concreteRandomEncounters.Count);
 
             initStates();
             setUpObservers();
@@ -269,9 +322,11 @@ namespace DaggerfallRandomEncountersMod
 
         }
 
-
+        /*
         void initFastTravelComponents()
         {
+            /*
+            if (pathBuilder != null) return;
             pathBuilder = new PathBuilder();
 
             Debug.LogError("Here");
@@ -298,9 +353,9 @@ namespace DaggerfallRandomEncountersMod
 
             //Action being draw travel path on window.
             pathBuilder.addPathBuiltAction(decoratedTravelWindow);
-
+            
         }
-
+        */
         //Sets filters / observer states to current state of game on load.
         void initStates()
         {
@@ -324,13 +379,15 @@ namespace DaggerfallRandomEncountersMod
 
             //Prob better key than time, but this is fine.
             worldFilter.setFilter("time", currentTime.IsDay ? "day" : "night");
+            restFilter.setFilter("time", "day");
             randomWildernessTriggerCoroutine = randomEncounterWildernessTrigger();
+            StartCoroutine(randomWildernessTriggerCoroutine);
 
             worldFilter.setFilter("crime", PlayerEntity.Crimes.Trespassing.ToString());
 
-
             StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
             {
+                Debug.LogError("here");
                 StartCoroutine(randomWildernessTriggerCoroutine);
             };
         }
@@ -338,13 +395,15 @@ namespace DaggerfallRandomEncountersMod
         //Chance to for random encounter to occur in wilderness
         IEnumerator randomEncounterWildernessTrigger()
         {
+            Debug.LogError("I trigger");
 
 
-            while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
+            //  while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
+            while (true)
             {
                 //Random Chance 
                 int rand = Random.Range(0, 100);
-                if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true) || (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0))
+                if (!GameManager.Instance.PlayerEnterExit.IsPlayerInside && !GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true) || (GameManager.Instance.PlayerEntity.IsResting))
                 {
                     //I believe this is the wilderness? Was looking at pixel first... If not will change later
 
@@ -524,28 +583,36 @@ namespace DaggerfallRandomEncountersMod
 
             PlayerEntity.Crimes crime = GameManager.Instance.PlayerEntity.CrimeCommitted;
 
-
-
-            RandomEncounter encounter = null;
-            switch (context)
+            try
             {
-                case World:
 
-                    Debug.LogError("world");
-                    encounter = worldEventsFactory.getRandomEvent(worldFilter);
-                    break;
+                RandomEncounter encounter = null;
+                switch (context)
+                {
+                    case World:
 
-                case Resting:
-                    encounter = restEventsFactory.getRandomEvent(restFilter);
-                    break;
+                        Debug.LogError("world");
+                        encounter = worldEventsFactory.getRandomEvent(worldFilter);
+                        break;
 
-                case FastTravel:
-                    encounter = fastTravelEventsFactory.getRandomEvent(fastTravelFilter);
-                    break;
+                    case Resting:
+                        Debug.LogError("Resting");
+                     //   encounter = restEventsFactory.getRandomEvent(restFilter);
+                        break;
+
+                    case FastTravel:
+                        encounter = fastTravelEventsFactory.getRandomEvent(fastTravelFilter);
+                        break;
+
+                }
+                addEncounter(encounter);
 
             }
+            catch (System.Exception err)
+            {
 
-            addEncounter(encounter);
+                Debug.LogError("Culdn't spawn encounter " + err.ToString());
+            }
         }
 
 
@@ -560,6 +627,8 @@ namespace DaggerfallRandomEncountersMod
 
                 evt.OnBegin += (RandomEncounters.RandomEncounter a) =>
                 {
+
+                    Debug.LogError("Hereee");
                     activeEncounters.AddLast(evt);
                 };
 
@@ -596,7 +665,6 @@ namespace DaggerfallRandomEncountersMod
 
                 //Begin the encounter
 
-                evt.begin();
             }
         }
 
@@ -605,19 +673,46 @@ namespace DaggerfallRandomEncountersMod
         // Update is called once per frame
         void Update()
         {
+            Debug.LogError("initialized mod " + initializedMod);
+
+            //if (!initializedMod) return;
+            if (interrupted)
+            {
+                DaggerfallUI.UIManager.PopWindow();
+                DaggerfallUI.UIManager.PopWindow();
+                DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
+
+                DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
+                interrupted = false;
+            }
+            
             if (DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallTravelPopUp)
             {
                 DaggerfallTravelPopUp popUp = DaggerfallUI.Instance.UserInterfaceManager.TopWindow as DaggerfallTravelPopUp;
-
                 //If countdown > 0, then begin has begun and it's trying to perform fast travel.
-                if (fastTravelInterrupt.interruptedPosition != null && popUp.CountDownDays > 0)
+                if ( fastTravelInterrupt != null && fastTravelInterrupt.interruptedPosition != null && popUp.CountDownDays > 0)
                 {
 
                     if (popUp.CountDownDays <= popUp.TotalTravelDays - fastTravelInterrupt.daysTillInterrupt)
                     {
+                        Debug.LogError("I happen");
+                        //Problem is the money cost doesn't go through then, hmm.
+                        //There has to be better way for this.
+                        GameManager.Instance.StreamingWorld.TeleportToCoordinates(fastTravelInterrupt.interruptedPosition.X,
+                    fastTravelInterrupt.interruptedPosition.Y,
 
-                        DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+                    
+                    StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+                        
+                        
                         fastTravelInterrupt.interruptedPosition = null;
+                        fastTravelInterrupt.daysTillInterrupt = 0;
+                        DecoratedTravelWindow.CloseTravelWindows();
+
+
+                        interrupted = true;
+
+                        //Hmmmm, well fuck maybe do need to extend the daggerfallTravelPopup.
                     }
 
 
@@ -625,17 +720,25 @@ namespace DaggerfallRandomEncountersMod
                 //Then compare travel time
             }
 
-            if ((GameManager.Instance.StateManager.GameInProgress && GameManager.Instance.StateManager.CurrentState != StateManager.StateTypes.UI) ||
-                DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
+            if (DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
             {
 
-             
+
+                Debug.LogError("rested");
 
 
+                trySpawningEncounter(Resting);
+
+            }
                 //Problem with this is it may be mutated when I do the tick.
                 List<RandomEncounter> toRemove = new List<RandomEncounter>();
+
+                if (activeEncounters == null) activeEncounters = new LinkedList<RandomEncounter>();
+
+
                 foreach (RandomEncounter encounter in activeEncounters)
                 {
+                    if (encounter == null) ;
                     Debug.LogError("encounter " +  encounter.ToString());
 
                     if (encounter.Began)
@@ -653,11 +756,12 @@ namespace DaggerfallRandomEncountersMod
 
                 foreach( var encounter in toRemove)
                 {
+                    if (encounter == null) continue;
                     activeEncounters.Remove(encounter);
                 }
-            }
-        }
-
+            
+        
+    }
 
 
 
@@ -666,6 +770,8 @@ namespace DaggerfallRandomEncountersMod
         [Invoke(StateManager.StateTypes.Game, 0)]
         public static void InitEngineData(InitParams initParams)
         {
+
+            Debug.LogError("I am called");
 
             //Okay so all of the classes need to be taken via asset
             initParams.Mod.LoadAllAssetsFromBundle();
@@ -682,10 +788,7 @@ namespace DaggerfallRandomEncountersMod
             setUpFactories();
 
 
-            //Adds object of manager into scene.
-            GameObject randomEncounter = new GameObject("RandomEncounterManager");
-
-            randomEncounter.AddComponent<RandomEncounterManager>();
+         //   RandomEncounterManager manager = RandomEncounterManager.Instance;
 
 
             //Cancel all encounters, also since is static in itself prob move this to invoke method in mod loading.
@@ -705,10 +808,10 @@ namespace DaggerfallRandomEncountersMod
                     killActive();
                 }
             };
+            RandomEncounterManager.initializedMod = true;
 
 
             ModManager.Instance.GetMod(initParams.ModTitle).IsReady = true;
-
 
         }
 
@@ -779,7 +882,7 @@ namespace DaggerfallRandomEncountersMod
                     //Loads json into object.
                     EncounterData encounterData = JsonConvert.DeserializeObject<EncounterData>(jsonFile.text);
                     //EncounterData encounterData = JsonUtility.FromJson<EncounterData>(jsonFile);
-
+                    Debug.LogError("Concrete random encountesr " + concreteRandomEncounters.ToString());
                
                     if (!EncounterType.defaultTypes.ContainsKey(encounterData.type))
                     {
@@ -820,7 +923,7 @@ namespace DaggerfallRandomEncountersMod
                             break;
 
                         case Resting:
-
+                            Debug.LogError("Added " + randomEncounter.ToString());
                             restEventsFactory.addRandomEvent(type, randomEncounter, filter);
                             break;
 

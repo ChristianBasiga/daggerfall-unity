@@ -188,7 +188,7 @@ namespace DaggerfallRandomEncountersMod.GUI
             //based on fields create EncounterData object.
             EncounterData encounterData = new EncounterData();
             encounterData.encounterId = possibleEncounterIds[encounterIdIndex];
-            encounterData.context = "World";
+            encounterData.context = "Resting";
 
             List<FilterData> filters = new List<FilterData>();
 

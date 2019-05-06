@@ -101,7 +101,6 @@ public class PathBuilder {
 
 
         DFPosition currPos = start;
-        int pixelsAdded = 0;
         const double angleIncrement = 0.0523599;// 3 degrees 0.0436332; // 5 degrees in radians
 
         List<DFPosition> leg = new List<DFPosition>();
@@ -109,11 +108,7 @@ public class PathBuilder {
         {
 
 
-            foreach (NewLegAction action in newLegActions)
-            {
-                action.Execute(leg, travelShip);
-            }
-
+      
 
             int[] cartesianVectorToDest = new int[2] { destination.X - currPos.X, destination.Y - currPos.Y };
             double[] polarVectorToDest;
@@ -216,6 +211,10 @@ public class PathBuilder {
 
                 int currX = currPos.X;
                 double currY = currPos.Y;
+
+                //Leg shorterner should work. Need to add back in here.
+                //Also akes accounting for time much easier.
+                int pixelsAdded = 0;
 
                 while (currX * xModifier < currPos.X + cartesianVectorToDest[0] || currY * yModifier < currPos.Y + cartesianVectorToDest[1])
                 {
@@ -330,7 +329,7 @@ public class PathBuilder {
                     for (int i = 0; i < pixelsAdded; ++i)
                     {
                         //For drawing incorrect vecotrs the stuff popped from here add to path.
-                        //  path.RemoveLast();
+                         path.RemoveLast();
                     }
 
 
@@ -344,6 +343,151 @@ public class PathBuilder {
                 }
                 else
                 {
+                    
+                    if (!travelShip && !isAtDestination)
+                    {
+
+
+
+                        LinkedListNode<DFPosition> current = path.Last;
+                        int i;
+
+
+
+
+                        //I want to iterate number of pixels minus 1 times cause last is also a pixel.
+                        for (i = 0; i < pixelsAdded && current.Previous != null; ++i)
+                        {
+                            current = current.Previous;
+                        }
+
+                        i = 0;
+                        int amountToRemove = 0;
+
+
+                        //Main hing to void duplication didn't turn into a method lol.
+                        while (i < pixelsAdded && current != null)
+                        {
+
+                            //Same slope logic.
+                            int t_yDist = destination.Y - current.Value.Y;
+                            int t_xDist = destination.X - current.Value.X;
+
+                            int t_run = 1;
+                            double t_rise = 1;
+
+                            if (t_xDist == 0)
+                            {
+                                t_run = 0;
+                            }
+                            else
+                            {
+                                t_rise = (double)t_yDist / t_xDist;
+                            }
+
+
+                            if ((Math.Abs(t_xDist) == 1 || Math.Abs(t_xDist) == 2) && t_yDist != 0)
+                            {
+                                t_rise = 1;
+                            }
+
+
+                            int t_currX = current.Value.X;
+                            double t_currY = current.Value.Y;
+
+
+                            int x_modifier = (t_xDist < 0) ? -1 : 1;
+                            int y_modifier = (t_yDist < 0) ? -1 : 1;
+
+                            bool validStart = true;
+
+                            while ((t_currX * x_modifier < t_xDist + current.Value.X || t_currY * y_modifier < t_yDist + current.Value.Y))
+                            {
+                                t_currX += t_run * x_modifier;
+                                t_currY += t_rise * y_modifier;
+
+                                int rounded = (int)Math.Round(t_currY);
+
+
+                                int prevX = t_currX - (t_run * x_modifier);
+                                int prevY = rounded - (int)Math.Round((t_rise * y_modifier));
+
+
+
+                                if (Math.Abs(t_currX - prevX) > 1 || Math.Abs(rounded - prevY) > 1)
+                                {
+
+
+                                    if (destination.X >= prevX * x_modifier && destination.X <= t_currX * x_modifier &&
+                                        destination.Y >= prevY * y_modifier && destination.Y <= rounded * y_modifier)
+                                    {
+                                        break;
+                                    }
+                                }
+                                //But apparently never hits so maybe a bigger threshhold than just one.. What if slope?
+                                if (t_currX == destination.X && rounded == destination.Y)
+                                {
+                                    break;
+                                }
+
+
+
+                                if (t_currX >= MapsFile.MaxMapPixelX || rounded >= MapsFile.MaxMapPixelY || t_currX < MapsFile.MinMapPixelX || rounded < MapsFile.MinMapPixelY)
+                                {
+
+                                    //currY = Math.Round(currY);
+                                    //Does this happen? It shouldn't with current destination.
+                                    validStart = false;
+                                    break;
+                                }
+
+
+
+
+                                if (mapsFile.GetClimateIndex(t_currX, rounded) == (int)MapsFile.Climates.Ocean)
+                                {
+
+                                    validStart = false;
+
+                                    break;
+                                }
+
+
+
+                            }
+
+
+                            ++i;
+
+
+                            if (validStart)
+                            {
+                                amountToRemove = pixelsAdded - i;
+                                break;
+                            }
+
+
+
+                            //Then for each position here, draw vector to destination
+                            current = current.Next;
+
+
+                        }
+
+                        //Essentially if this isn't valid start or if all of hits ocean cause impossible, we still remove nothing.
+                        //Real question is why does this cause to wierd angle away.
+                        for (i = 0; i < amountToRemove; ++i)
+                        {
+                            path.RemoveLast();
+                        }
+                    }
+                    
+
+                    foreach (NewLegAction action in newLegActions)
+                    {
+                        action.Execute(leg, travelShip);
+                    }
+
                     break;
                 }
             }

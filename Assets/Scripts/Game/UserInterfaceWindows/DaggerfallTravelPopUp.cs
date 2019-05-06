@@ -31,7 +31,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
     {
         #region fields
         DaggerfallTravelMapWindow travelWindow = null;
-        bool interrupted = false;
 
         const string nativeImgName = "TRAV0I04.IMG";
 
@@ -115,7 +114,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public bool TravelShip { get { return travelShip;} set { travelShip = value;} }
         public bool SleepModeInn { get { return sleepModeInn; } set { sleepModeInn = value; } }
 
-        public TravelTimeCalculator TravelTimeCalculator { set { travelTimeCalculator = value; } }
+        public TravelTimeCalculator TravelTimeCalculator { get { return travelTimeCalculator; } set { travelTimeCalculator = value; } }
 
         #endregion
 
@@ -227,10 +226,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 }
 
             }
-            if (interrupted)
-            {
-                onInterrupt();
-            }
+           
         }
 
         #endregion
@@ -295,22 +291,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         bool TickCountdown()
         {
-            //Interrupt during the tick down.
             bool finished = false;
 
             if (Time.realtimeSinceStartup > waitTimer + secondsCountdownTickFastTravel)
             {
                 waitTimer = Time.realtimeSinceStartup;
 
-                //At what day should it interrupt?
-                //I'm already given time, change nothing here, just change what this value is assigned.
                 countdownValueTravelTimeDays--;
                 int toDisplay = countdownValueTravelTimeDays;
 
-                if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays ==  totalTravelTimeDays - travelTimeCalculator.Interrupt.daysTaken)
-                {
-                    countdownValueTravelTimeDays = 0;
-                }
                 
                 travelTimeLabel.Text = string.Format("{0}", toDisplay);
                 travelTimeLabel.Update();
@@ -321,17 +310,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             return finished;
         }
 
-        private void onInterrupt()
-        {
-
-            DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
-            travelWindow.CloseTravelWindows(true);
-            DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
-            DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
-            interrupted = false;
-            travelTimeCalculator.useInterrupt();
-
-        }
+      
         // perform fast travel actions
         private void performFastTravel()
         {
@@ -340,27 +319,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 SaveLoadManager.CacheScene(GameManager.Instance.StreamingWorld.SceneName);
 
 
-            if (travelTimeCalculator.Interrupt != null)
-            {
+          
 
-                DFPosition interruptPosition = travelTimeCalculator.Interrupt.interruptPosition;
-                GameManager.Instance.StreamingWorld.TeleportToCoordinates(interruptPosition.X,
-                    interruptPosition.Y,
+            GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
 
-                    StreamingWorld.RepositionMethods.DirectionFromStartMarker);
-
-
-
-                //DaggerfallUI.Instance.UserInterfaceManager.PushWindow(interruptMsg);
-                interrupted = true;
-               // return;
-            }
-            else
-            {
-
-                GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
-
-            }
             //So it's here that needs to be changed.
 
             if (speedCautious)
@@ -501,8 +463,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public void ExitButtonOnClickHandler(BaseScreenComponent sender, Vector2 position)
         {
             doFastTravel = false;
-            travelTimeCalculator.useInterrupt();
-            interrupted = false;
             DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
         }
 

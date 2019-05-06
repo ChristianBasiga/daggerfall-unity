@@ -11,7 +11,7 @@ using DaggerfallWorkshop.Game;
 
 
 //So main difference between this and other, is that it uses our PathBuilder, and assigns callbacks accordingly.
-public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
+public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.PathBuiltAction
 {
 
 
@@ -93,7 +93,7 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
         return totalTravelTime;
     }
 
-    public void Execute(List<DFPosition> leg, bool travelShip)
+    public void Execute(LinkedList<DFPosition> leg, bool travelShip)
     {
 
 
@@ -136,22 +136,22 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
                 if (prev != null)
                 {
                     //Cause no skips done in x, drawing no big deal, but time must be accurate.
-                    if (prev.Y - position.Y != 0)
+                    if (prev.Y - position.Y > 1)
                         minutesTakenThisMove *= Math.Abs(prev.Y - position.Y);
                 }
 
-                minutesTakenThisLeg += minutesTakenThisMove;
-
                 prev = position;
+
             }
+            minutesTakenThisLeg += minutesTakenThisMove;
 
 
             //Problem is dependant on order
             this.minutesForLastLeg = minutesTakenThisLeg;
 
         }
-
-        totalTime += minutesTakenThisLeg;
+        //Why the fuck haven't I dont this before???
+        totalTime = minutesTakenThisLeg;
 
     }
 
@@ -214,6 +214,7 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
         }
 
 
+       
 
         //Primitive should be by copy.
         int timeToReturn = totalTime;

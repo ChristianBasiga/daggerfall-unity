@@ -18,19 +18,12 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
     bool drawingPath = false;
     Color32 pathColor;
 
+    bool prevSelected = true;
+
     public DecoratedTravelWindow(IUserInterfaceManager uiManager)
           : base(uiManager)
     {
-        // register console commands
-        try
-        {
-            TravelMapConsoleCommands.RegisterCommands();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError(string.Format("Error Registering Travelmap Console commands: {0}", ex.Message));
-
-        }
+        
     }
 
 
@@ -40,32 +33,58 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
     {
 
         base.Setup();
+        exitButton.OnMouseClick += ExtraExitHandler;
         pathColor = Color.red;
+        popUp = new DaggerfallTravelPopUp(this.uiManager, DaggerfallUI.UIManager.TopWindow, DaggerfallRandomEncountersMod.RandomEncounterManager.Instance.DecoratedTravelWindow);
 
+        popUp.TravelTimeCalculator = DaggerfallRandomEncountersMod.RandomEncounterManager.Instance.PathTimeCalculator;
     }
 
     public void setCalculator(PathTimeCalculator calc)
     {
-        popUp = new DaggerfallTravelPopUp(this.uiManager);
-        popUp.TravelTimeCalculator = calc;
+       // popUp.TravelTimeCalculator = calc;
+    }
+
+    protected override void CreatePopUpWindow()
+    {
+        
+        base.CreatePopUpWindow();
+
+        if (popUp.TravelTimeCalculator == null)
+        {
+            popUp.TravelTimeCalculator = DaggerfallRandomEncountersMod.RandomEncounterManager.Instance.PathTimeCalculator;
+
+            //So make sure these match.
+            DaggerfallRandomEncountersMod.RandomEncounterManager.Instance.PathBuilder.addPathBuiltAction(this);
+
+            
+        }
     }
 
     // Update is called once per frame
     public override void Update () {
 
         base.Update();
-        if (draw)
-        {
-            if (SelectedRegion != -1)
-            {
-                if (drawingPath)
-                {
-                    DrawPathOfTravel();
-                }
 
-            }
+       
+        //Half hour barking up wrong tree, this wasn't problem, idk what the fuck is problem.
+        if (drawingPath && SelectedRegion != -1)
+        {
+            prevSelected = true;
+            SetLocationPixels();
+            
+            DrawPathOfTravel();
+            
+
+            Draw(regionTextureOverlayPanel, regionMapOverlayPanel);
         }
-	}
+        else
+        {
+            prevSelected = false;
+        }
+        
+
+    }
 
     //So to avoid creating custom pop up itself,
     //we just pop it off the stack, when called by the encounter manager accordingly, infact manager itself will handle that.
@@ -78,7 +97,7 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
     #region Drawing Path of Travel
 
     public void Execute(LinkedList<DFPosition> path, bool travelShip)
-    {
+    {   
         drawingPath = true;
         draw = true;
         pathToDraw = path;
@@ -92,7 +111,7 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
 
         if (!drawingPath) return;
 
-
+        drawingPath = true;
 
         Vector2 origin = OffsetLookUp[SelectedRegionMapNames[MapIndex]];
 
@@ -118,7 +137,7 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
             //Hmm I actually don't have that ocean check anymore.
             //Prob not inside pixel buffer?
             if (pixelIndex < Height * Width)
-                PixelBuffer[pixelIndex] = pathColor;
+                PixelBuffer[pixelIndex] = identifyFlashColor;
         }
     }
 
@@ -128,14 +147,33 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
     #endregion
 
     #region Callbacks
+    //Ayyo why is it not popping off, I CHANGED LITERALLY NOTHING.
     public override void OnPop()
     {
-        base.OnPop();
+       base.OnPop();
+
+
         //This will be overriden to include the drawing stuff for our purposes.
-        drawingPath = false;
-        pathToDraw = null;
+       drawingPath = false;
+       pathToDraw = null;
+
+
+
     }
 
+    void ExtraExitHandler(BaseScreenComponent sender, Vector2 position)
+    {
+
+
+        if (!prevSelected)
+        {
+            DaggerfallUI.UIManager.PopWindow();
+        }
+        else
+        {
+            prevSelected = false;
+        }
+    }
 
 
     #endregion
