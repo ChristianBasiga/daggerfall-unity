@@ -1,9 +1,9 @@
 using UnityEngine;
-
+using System;
+using DaggerfallWorkshop.Utility;
+using DaggerfallWorkshop.Game.UserInterfaceWindows;
 using DaggerfallWorkshop;
 using DaggerfallWorkshop.Game;
-using DaggerfallWorkshop.Utility;
-
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.Questing;
@@ -15,7 +15,11 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
     {
         GameObject person;
         GameObject testNPC;
-        void createQuestNPC(SiteTypes siteType, Quest quest, QuestMarker marker, Person person, Transform parent)
+        public bool LineOfSightCheck = true;
+        GameObject pendingFoeGameObjects;
+       
+
+        void createQuestNPC(QuestMarker marker, Person person, Transform parent)
         {
             // Get billboard texture data
             FactionFile.FlatData flatData;
@@ -39,16 +43,9 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             GameObject go;
             go = GameObjectHelper.CreateDaggerfallBillboardGameObject(flatData.archive, flatData.record, parent);
             go.name = string.Format("Quest NPC [{0}]", person.DisplayName);
-
-            // Set position and adjust up by half height if not inside a dungeon
-            Vector3 dungeonBlockPosition = new Vector3(marker.dungeonX * RDBLayout.RDBSide, 0, marker.dungeonZ * RDBLayout.RDBSide);
-            go.transform.localPosition = dungeonBlockPosition + marker.flatPosition;
-            DaggerfallBillboard dfBillboard = go.GetComponent<DaggerfallBillboard>();
-            if (siteType != SiteTypes.Dungeon)
-                go.transform.localPosition += new Vector3(0, dfBillboard.Summary.Size.y / 2, 0);
-
-            // Add people data to billboard
-            dfBillboard.SetRMBPeopleData(person.FactionIndex, person.FactionData.flags);
+            float MinDistance = 4f;
+            float MaxDistance = 20f;
+            placeQNPCNearPlayer(go, MinDistance, MaxDistance);
 
             // Add QuestResourceBehaviour to GameObject
             QuestResourceBehaviour questResourceBehaviour = go.AddComponent<QuestResourceBehaviour>();
@@ -64,7 +61,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             // Set tag
             go.tag = QuestMachine.questPersonTag;
         }
-        public void placeQNPCNearPlayer(GameObject[] gameObjects, float minDistance = 5f, float maxDistance = 20f)
+        public void placeQNPCNearPlayer(GameObject gameObjects, float minDistance = 5f, float maxDistance = 20f)
         {
             const float overlapSphereRadius = 0.65f;
             const float separationDistance = 1.25f;
@@ -73,6 +70,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             // Must have received a valid array
             if (gameObjects == null || gameObjects.Length == 0)
                 return;
+
             // Get roation of spawn ray
             Quaternion rotation;
             if (LineOfSightCheck)
@@ -84,6 +82,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     rotation = Quaternion.Euler(0, -directionAngle, 0);
                 else
                     rotation = Quaternion.Euler(0, directionAngle, 0);
+            }
             else
             {
                 // Don't care about player's field of view (e.g. at rest)
@@ -125,6 +124,11 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             Collider[] colliders = Physics.OverlapSphere(testPoint, overlapSphereRadius);
             if (colliders.Length > 0)
                 return;
+
+            // This looks like a good spawn position
+            pendingFoeGameObjects.transform.position = testPoint;
+            //FinalizeFoe(pendingFoeGameObjects);
+            gameObjects.transform.LookAt(GameManager.Instance.PlayerObject.transform.position);
         }
         public override void begin()
         {
