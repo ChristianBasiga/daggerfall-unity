@@ -181,6 +181,12 @@ namespace DaggerfallRandomEncountersMod
 
             get
             {
+                if (instance == null)
+                {
+                    instance = new RandomEncounterManager();
+                    instance.Setup();
+
+                }
                 return instance;
             }
         }
@@ -230,7 +236,8 @@ namespace DaggerfallRandomEncountersMod
         }
 
 
-        void Start()
+
+        public void Setup()
         {
 
             GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Trespassing;
@@ -656,7 +663,7 @@ namespace DaggerfallRandomEncountersMod
 
         #region Mod Initialization
        
-        [Invoke(StateManager.StateTypes.Start, 0)]
+        [Invoke(StateManager.StateTypes.Game, 0)]
         public static void InitEngineData(InitParams initParams)
         {
 

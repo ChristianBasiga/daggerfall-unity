@@ -58,6 +58,7 @@ public class PathBuilder {
         newLegActions = new LinkedList<NewLegAction>();
         pathRerouteActions = new LinkedList<PathRerouteAction>();
         travelAlongSlopeActions = new LinkedList<TravelAlongSlopeAction>();
+        pathBuiltActions = new LinkedList<PathBuiltAction>();
     }
 
 

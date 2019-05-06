@@ -199,7 +199,9 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.NewLegAction
 
         //Update to take in everything as needed later for actual pathing.
 
+
         LinkedList<DFPosition> path = DaggerfallRandomEncountersMod.RandomEncounterManager.Instance.PathBuilder.getPath(start, endPos, travelShip);
+
 
 
 

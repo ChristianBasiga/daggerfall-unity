@@ -32,18 +32,20 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
 
         }
     }
+
+
+   
+
     protected override void Setup()
     {
 
         base.Setup();
-
         pathColor = Color.red;
-        
+
     }
 
     public void setCalculator(PathTimeCalculator calc)
     {
-        Debug.LogError("AM I happening?");
         popUp = new DaggerfallTravelPopUp(this.uiManager);
         popUp.TravelTimeCalculator = calc;
     }
