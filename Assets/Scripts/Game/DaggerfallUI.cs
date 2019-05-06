@@ -223,9 +223,12 @@ namespace DaggerfallWorkshop.Game
             get { return dfExteriorAutomapWindow; }
         }
 
+        //So only a getter, we'd have to add a setter to make it work.
+
         public DaggerfallTravelMapWindow DfTravelMapWindow
         {
             get { return dfTravelMapWindow; }
+            set { dfTravelMapWindow = value; }
         }
 
         public DaggerfallCourtWindow DfCourtWindow

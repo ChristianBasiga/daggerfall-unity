@@ -24,6 +24,8 @@ using DaggerfallWorkshop.Game.UserInterfaceWindows;
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
 
+    //Don't need to extend this, when it creates popupwindow, calculation happens, before that happens, I just need to set travelTimeCalculator to use mine, and then everything else remains the same
+    //I just need to make time remaining public as well as total.
     public class DaggerfallTravelPopUp : DaggerfallPopupWindow
     {
         #region fields
@@ -34,6 +36,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         const float secondsCountdownTickFastTravel = 0.05f; // time used for fast travel countdown for one tick
 
+
+        //We could do subtituton, by creating a setter for this.
+        //And subtitution of the pop itself will also be needed, maybe template method.
         TravelTimeCalculator travelTimeCalculator = new TravelTimeCalculator();
 
         Color32 toggleColor = new Color32(85, 117, 48, 255);
@@ -93,6 +98,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         internal DFPosition EndPos { get { return endPos; } set { endPos = value;} }
         internal DaggerfallTravelMapWindow TravelWindow { get { return travelWindow; } set { travelWindow = value; } }
+
+        public TravelTimeCalculator TravelTimeCalculator { set { travelTimeCalculator = value; } }
 
         #endregion
 

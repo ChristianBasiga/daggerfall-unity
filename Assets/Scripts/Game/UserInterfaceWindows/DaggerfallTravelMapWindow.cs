@@ -37,29 +37,29 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         const int betonyIndex = 19;
 
-        const string nativeImgName                          = "TRAV0I00.IMG";
-        const string regionPickerImgName                    = "TRAV0I01.IMG";
-        const string findAtButtonImgName                    = "TRAV0I03.IMG";
-        const string locationFilterButtonEnabledImgName     = "TRAV01I0.IMG";
-        const string locationFilterButtonDisabledImgName    = "TRAV01I1.IMG";
-        const string downArrowImgName                       = "TRAVAI05.IMG";
-        const string upArrowImgName                         = "TRAVBI05.IMG";
-        const string rightArrowImgName                      = "TRAVCI05.IMG";
-        const string leftArrowImgName                       = "TRAVDI05.IMG";
-        const string regionBorderImgName                    = "MBRD00I0.IMG";
-        const string colorPaletteColName                    = "FMAP_PAL.COL";
-        const int regionPanelOffset                         = 12;
-        const int identifyFlashCount                        = 4;
-        const float identifyFlashInterval                   = 0.5f;
+        const string nativeImgName = "TRAV0I00.IMG";
+        const string regionPickerImgName = "TRAV0I01.IMG";
+        const string findAtButtonImgName = "TRAV0I03.IMG";
+        const string locationFilterButtonEnabledImgName = "TRAV01I0.IMG";
+        const string locationFilterButtonDisabledImgName = "TRAV01I1.IMG";
+        const string downArrowImgName = "TRAVAI05.IMG";
+        const string upArrowImgName = "TRAVBI05.IMG";
+        const string rightArrowImgName = "TRAVCI05.IMG";
+        const string leftArrowImgName = "TRAVDI05.IMG";
+        const string regionBorderImgName = "MBRD00I0.IMG";
+        const string colorPaletteColName = "FMAP_PAL.COL";
+        const int regionPanelOffset = 12;
+        const int identifyFlashCount = 4;
+        const float identifyFlashInterval = 0.5f;
 
 
 
-        LinkedList<DFPosition> pathToDraw;
-        bool drawingPath = false;
 
-        DaggerfallTravelPopUp popUp;
 
-        Dictionary<string, Vector2> offsetLookup    = new Dictionary<string, Vector2>();
+        protected DaggerfallTravelPopUp popUp;
+
+        //Just get protected property for this, cause we don't need to change it.
+        Dictionary<string, Vector2> offsetLookup = new Dictionary<string, Vector2>();
         string[] selectedRegionMapNames;    //different maps for selected region
 
         string gotoLocation = null;
@@ -96,50 +96,50 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         Button findButton;
         Button atButton;
         Button exitButton;
-        Button horizontalArrowButton    = new Button();
-        Button verticalArrowButton      = new Button();
-        Button dungeonsFilterButton     = new Button();
-        Button templesFilterButton      = new Button();
-        Button homesFilterButton        = new Button();
-        Button townsFilterButton        = new Button();
+        Button horizontalArrowButton = new Button();
+        Button verticalArrowButton = new Button();
+        Button dungeonsFilterButton = new Button();
+        Button templesFilterButton = new Button();
+        Button homesFilterButton = new Button();
+        Button townsFilterButton = new Button();
 
-        Rect regionTextureOverlayPanelRect  = new Rect(0, regionPanelOffset, 320, 160);
-        Rect dungeonsFilterButtonSrcRect    = new Rect(0, 0, 99, 11);
-        Rect templesFilterButtonSrcRect     = new Rect(0, 11, 99, 11);
-        Rect homesFilterButtonSrcRect       = new Rect(99, 0, 80, 11);
-        Rect townsFilterButtonSrcRect       = new Rect(99, 11, 80, 11);
-        Rect findButtonRect                 = new Rect(0, 0, 45, 11);
-        Rect atButtonRect                   = new Rect(0, 11, 45, 11);
+        Rect regionTextureOverlayPanelRect = new Rect(0, regionPanelOffset, 320, 160);
+        Rect dungeonsFilterButtonSrcRect = new Rect(0, 0, 99, 11);
+        Rect templesFilterButtonSrcRect = new Rect(0, 11, 99, 11);
+        Rect homesFilterButtonSrcRect = new Rect(99, 0, 80, 11);
+        Rect townsFilterButtonSrcRect = new Rect(99, 11, 80, 11);
+        Rect findButtonRect = new Rect(0, 0, 45, 11);
+        Rect atButtonRect = new Rect(0, 11, 45, 11);
 
         Color32[] pixelBuffer;
         Color32[] locationPixelColors;                      //pixel colors for different location types
         Color identifyFlashColor;
 
-        int zoomfactor                  = 2;
-        int width                       = 0;
-        int height                      = 0;
-        int mouseOverRegion             = -1;
-        int selectedRegion              = -1;
-        int mapIndex                    = 0;    //current index of loaded map from selectedRegionMapNames
-        float scale                     = 1.0f;
-        float identifyLastChangeTime    = 0;
-        float identifyChanges           = 0;
+        int zoomfactor = 2;
+        int width = 0;
+        int height = 0;
+        int mouseOverRegion = -1;
+        int selectedRegion = -1;
+        int mapIndex = 0;    //current index of loaded map from selectedRegionMapNames
+        float scale = 1.0f;
+        float identifyLastChangeTime = 0;
+        float identifyChanges = 0;
 
-        bool identifyState          = false;
-        bool identifying            = false;
-        bool locationSelected       = false;
-        bool findingLocation        = false;
-        bool zoom                   = false;    //toggles zoom mode
-        bool draw                   = true;     //draws textures to panel
-        bool loadNewImage           = true;     //loads current map image
-        bool teleportationTravel    = false;    // Indicates travel should be by teleportation
+        bool identifyState = false;
+        bool identifying = false;
+        bool locationSelected = false;
+        bool findingLocation = false;
+        bool zoom = false;    //toggles zoom mode
+        protected bool draw = true;     //draws textures to panel
+        bool loadNewImage = true;     //loads current map image
+        bool teleportationTravel = false;    // Indicates travel should be by teleportation
 
         static bool revealUndiscoveredLocations; // flag used to indicate cheat/debugging mode for revealing undiscovered locations
 
-        static bool filterDungeons  = false;
-        static bool filterTemples   = false;
-        static bool filterHomes     = false;
-        static bool filterTowns     = false;
+        static bool filterDungeons = false;
+        static bool filterTemples = false;
+        static bool filterHomes = false;
+        static bool filterTowns = false;
 
         Vector2 lastMousePos = Vector2.zero;
         Vector2 zoomOffset = Vector2.zero;
@@ -152,6 +152,45 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         #region Properties
 
         string RegionImgName { get; set; }
+
+
+        //Instead of accessing directly maybe just have a draw method that indexes into it, that will be much cleaner.
+        protected Color32[] PixelBuffer{
+
+            get
+            {
+                return pixelBuffer;
+            }
+        }
+
+        protected int Width
+        {
+            get {return  width; }
+        }
+
+        protected int Height
+        {
+            get { return height; }
+        }
+
+        protected int SelectedRegion
+        {
+            get { return selectedRegion; }
+        }
+
+        protected int MapIndex
+        {
+            get { return mapIndex; }
+        }
+
+        protected string[] SelectedRegionMapNames
+        {
+            get { return selectedRegionMapNames; }
+        }
+        protected Dictionary<string, Vector2> OffsetLookUp
+        {
+            get { return offsetLookup; }
+        }
 
         bool HasMultipleMaps
         {
@@ -297,8 +336,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public override void OnPop()
         {
             base.OnPop();
-        //    drawingPath = false;
-         //   pathToDraw = null;
+
+            
             teleportationTravel = false;
             findingLocation = false;
             gotoLocation = null;
@@ -385,12 +424,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                         else
                             CreateCrossHair(TravelTimeCalculator.GetPlayerTravelPosition(), selectedRegion);
                     }
-                    else if (drawingPath)
-                    {
-
-                        DrawPathOfTravel();
-                    }
-
+                   
                     Draw(regionTextureOverlayPanel);
                 }
                 else
@@ -418,87 +452,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         #endregion
 
 
-        public void DrawPathOfTravel(LinkedList<DFPosition> path)
-        {
-
-            drawingPath = true;
-            draw = true;
-            pathToDraw = path;
-
-        }
-
-        public bool isOnOcean(int pixelX, int pixelY)
-        {
-
-            Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
-
-            DFPosition offset = new DFPosition((int)(pixelX - origin.x), (int)(pixelY - origin.y));
-
-
-            MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
-            
-
-            //Problem is if it's in diff region, offset is wrong, main thing is if and only if in selected region do I check like this?
-            //like the fuck man.
-            return (mapsFile.GetClimateIndex(offset.X, offset.Y) == (int)MapsFile.Climates.Ocean);
-
-
-        }
-
-
-        //And it shouldn't redraw
-        void DrawPathOfTravel()
-        {
-
-
-            if (!drawingPath) return;
-            //Have region map names, and map index from selected region.
-
-
-
-            Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
-          
-
-            foreach (DFPosition pos in pathToDraw)
-            {
-
-             //   Debug.LogError(string.Format("Position: {0}, {1}", pos.X, pos.Y));
-                int region = DaggerfallUnity.Instance.ContentReader.MapFileReader.GetPoliticIndex(pos.X, pos.Y) - 128;
-                if (region != selectedRegion) continue;
-                //Then unless region goes through multiple images, there should only be one.
-                //string[] regionNames = GetRegionMapNames(region);
-                //Get different origins per pixel
-                //loadedImg = new ImgFile(Path.Combine(DaggerfallUnity.Instance.Arena2Path, regionNames[0]), FileUsage.UseMemory, true);
-                //loadedImg.LoadPalette(Path.Combine(DaggerfallUnity.Instance.Arena2Path, loadedImg.PaletteName));
-
-                //Height and with shoudl also be appropriate.
-         //       int width = loadedImg.GetDFBitmap().Width;
-           //     int height = loadedImg.GetDFBitmap().Height;
-
-
-
-                //Debug.LogError(string.Format("Width : {0} Height: {1}", width, height));
-
-                //Only draw stuff not in ocean, so in a region.
-
-                    int offSetX = (int)(pos.X - origin.x);
-                    int offSetY = (int)(pos.Y - origin.y);
-
-                    //Width and height would be different as well, so make sure accurate.
-                    //Actually since width and height difference per zoomed in. Hmm maybe only draw stuff that are in that region? That
-                    //makes more sense.
-                    
-
-                    int pixelIndex = (height - offSetY - 1) * width + offSetX;
-
-
-                    //Hmm I actually don't have that ocean check anymore.
-                    //Prob not inside pixel buffer?
-                    if (pixelIndex < height * width)
-                        pixelBuffer[pixelIndex] = identifyFlashColor;
-            }
-        }
-
+     
         #region Setup
 
         // Initial button setup
@@ -784,7 +738,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 int zoomHeight = height / (zoomfactor * 2);
                 int startX = (int)zoomPosition.x - zoomWidth;
                 int startY = (int)(height + (-zoomPosition.y - zoomHeight)) + regionPanelOffset;
-
                 if (startX < 0)
                 {
                     startX = 0;
@@ -890,10 +843,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
             Vector2 origin = offsetLookup[selectedRegionMapNames[mapIndex]];
 
-            DFPosition mapPixel = new DFPosition((int)(position.x - origin.x), (int)(position.y - origin.y));
+            DFPosition mapPixel = new DFPosition((int)(position.x + origin.x), (int)(position.y + origin.y));
 
             //Uncommenting so can know threshhold.
-            Debug.LogError("pixel " + mapPixel);
+          //  Debug.LogError("pixel " + mapPixel);
             MapsFile mapsFile = DaggerfallUnity.Instance.ContentReader.MapFileReader;
 
             Debug.LogError("is ocean " + (mapsFile.GetClimateIndex(mapPixel.X, mapPixel.Y) == (int)MapsFile.Climates.Ocean));
@@ -1594,8 +1547,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             DFPosition pos = MapsFile.GetPixelFromPixelID(locationSummary.ID);
             
-            drawingPath = false;
-            pathToDraw = null;
+         
 
             if (teleportationTravel)
             {
@@ -1608,6 +1560,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             {
                 if (popUp == null)
                 {
+                    //Could change this to get from a range factory of popups instead.
+                    //I mean in core game that wouldn't REALLY be needed, but it's a nice touch so make all UI changable by mods.
                     popUp = new DaggerfallTravelPopUp(DaggerfallUI.UIManager, DaggerfallUI.UIManager.TopWindow, this);
                 }
                 popUp.EndPos = pos;

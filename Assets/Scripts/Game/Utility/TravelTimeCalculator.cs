@@ -34,14 +34,14 @@ namespace DaggerfallWorkshop.Game.Utility
         public static byte[] climateIndices = { 0, 0, 0, 1, 2, 3, 4, 5, 5, 5 };
 
         // Gives movement modifiers used for different terrain types.
-        byte[] terrainMovementModifiers = { 240, 220, 200, 200, 230, 250 };
+        protected byte[] terrainMovementModifiers = { 240, 220, 200, 200, 230, 250 };
 
         // Taverns only accept gold pieces, compute those separately
         protected int piecesCost = 0;
         protected int totalCost = 0;
 
         // Used in calculating travel cost
-        int pixelsTraveledOnOcean = 0;
+        protected int pixelsTraveledOnOcean = 0;
 
         #endregion
         Dictionary<int, Dictionary<int, List<DFPosition>>> bTreeOceanPixels;
@@ -335,7 +335,6 @@ namespace DaggerfallWorkshop.Game.Utility
             //Debug.LogError("Number of ocean pixels " + oceanPixels.Count);
 
 
-            bool rerouted = false;
 
             //Converting current position to world coords.
            //   currPos = MapsFile.MapPixelToWorldCoord(currPos.X, currPos.Y);
@@ -685,7 +684,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
                         //For seeing if just happened this leg, to reset it if did.
 
-                        if (!travelShip/* && interrupt == null*/)
+                        if (!travelShip)
                         {
                             //20% chance, but try multiple times so may overwrite so more random.
                             //Time taken to get to this position is total travle time so far but time taken this leg so far.
@@ -962,7 +961,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
             subPath.AddLast(pixelDestination);
 
-            DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(subPath);
+          //  DaggerfallUI.Instance.DfTravelMapWindow.DrawPathOfTravel(subPath);
 
 
             return totalTravelTime;
@@ -986,7 +985,7 @@ namespace DaggerfallWorkshop.Game.Utility
         /// returns minutes taken to travel.
         /// </summary>
         /// <param name="endPos">Endpoint in map pixel coordinates.</param>
-        public int CalculateTravelTime(DFPosition endPos,
+        public virtual int CalculateTravelTime(DFPosition endPos,
             bool speedCautious = false,
             bool sleepModeInn = false,
             bool travelShip = false,
@@ -1149,6 +1148,9 @@ namespace DaggerfallWorkshop.Game.Utility
             return minutesTakenTotal;
         }
 
+
+        //Oo how rough, lol time travelled IS needed here tho. Hmmmmmm
+        //Well if it interrupted I can say did interrupt, then access the last done addition in calculator.
         private void tryInterrupt(int pixelX, int pixelY, int timeTravelled)
         {
 
@@ -1157,7 +1159,7 @@ namespace DaggerfallWorkshop.Game.Utility
 
             //Pixel offset makes it so it is along line of travel at the very least.
             //Obviously more interrupts should be possible and also should be via the engine.
-            bool doInterrupt = (UnityEngine.Random.Range(0, 101) < 20);
+            bool doInterrupt = (UnityEngine.Random.Range(0, 101) < 5);
 
            
             DaggerfallWorkshop.Utility.ContentReader.MapSummary mapSumm = new DaggerfallWorkshop.Utility.ContentReader.MapSummary();

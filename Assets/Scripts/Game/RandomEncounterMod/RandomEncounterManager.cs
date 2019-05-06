@@ -31,7 +31,49 @@ namespace DaggerfallRandomEncountersMod
     //Only this mod uses this, others would use factory directly.
     public class RandomEncounterManager : MonoBehaviour
     {
-        
+
+        class FastTravelInterrupt : PathBuilder.TravelAlongSlopeAction
+        {
+            int daysTillInterrupt;
+            DFPosition interruptedPosition;
+            RandomEncounter toSpawn;
+
+            public void Execute(DFPosition mapPixel, DFPosition prev, bool travelShip)
+            {
+                //Try to set interrupt.
+                if (travelShip) return;
+
+                //Otherwise, randomly choose if this should be interrupt location.
+                bool doInterrupt = (UnityEngine.Random.Range(0, 101) < 5);
+
+                if (doInterrupt && interruptedPosition == null)
+                {
+
+                    interruptedPosition = new DFPosition(mapPixel.X, mapPixel.Y);
+                    /*
+
+                    interrupt.interruptPosition.X = pixelX;
+                    interrupt.interruptPosition.Y = pixelY;
+                    // Players can have fast travel benefit from guild memberships
+                    timeTravelled = GameManager.Instance.GuildManager.FastTravel(timeTravelled);
+
+                    int travelTimeDaysTotal = (timeTravelled / 1440);
+
+                    // Classic always adds 1. For DF Unity, only add 1 if there is a remainder to round up.
+                    if ((timeTravelled % 1440) > 0)
+                        travelTimeDaysTotal += 1;
+
+                    interrupt.daysTaken = travelTimeDaysTotal;
+                    */
+                }
+
+
+
+                //Then based on location and other factors spawn an enouncter. (WIP)
+            }
+
+        }
+
 
         static Dictionary<string, System.Type> concreteRandomEncounters;
 
@@ -40,6 +82,11 @@ namespace DaggerfallRandomEncountersMod
         }
 
         PoolManager objectPool;
+
+        PathTimeCalculator pathTimeCalculator;
+        PathBuilder pathBuilder;
+        FastTravelInterrupt fastTravelInterrupt;
+        DecoratedTravelWindow decoratedTravelWindow;
 
         #region Contexts
 
@@ -75,11 +122,12 @@ namespace DaggerfallRandomEncountersMod
         #endregion
 
 
-
         private IEnumerator randomWildernessTriggerCoroutine;
 
         private static RandomEncounterManager instance;
 
+
+        #region Properties
         public static RandomEncounterManager Instance
         {
 
@@ -88,6 +136,12 @@ namespace DaggerfallRandomEncountersMod
                 return instance;
             }
         }
+
+        public PathBuilder PathBuilder
+        {
+            get { return pathBuilder; }
+        }
+        #endregion
 
 
 
@@ -134,6 +188,9 @@ namespace DaggerfallRandomEncountersMod
             GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Trespassing;
             Debug.LogError("Crime committed "  + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
+            initFastTravelComponents();
+
+
             objectPool = PoolManager.Instance;
 
             objectPool.PoolCapacity = 20;
@@ -155,6 +212,33 @@ namespace DaggerfallRandomEncountersMod
                 killActive();
             };
 
+        }
+
+
+        void initFastTravelComponents()
+        {
+            pathBuilder = new PathBuilder();
+
+            Debug.LogError("Here");
+            pathTimeCalculator = new PathTimeCalculator();
+            fastTravelInterrupt = new FastTravelInterrupt();
+            //Assuming that is already initialized.
+            decoratedTravelWindow = new DecoratedTravelWindow(DaggerfallUI.Instance.UserInterfaceManager);
+
+            DaggerfallUI.Instance.DfTravelMapWindow = decoratedTravelWindow;
+
+
+
+         //   pathBuilder.addNewLegAction(pathTimeCalculator);
+         //   pathBuilder.addPathRereouteAction(pathTimeCalculator);
+
+
+            pathBuilder.addtravelAlongSlopeAction(pathTimeCalculator);
+
+            pathBuilder.addtravelAlongSlopeAction(fastTravelInterrupt);
+
+
+            decoratedTravelWindow.setCalculator(pathTimeCalculator);
         }
 
         //Sets filters / observer states to current state of game on load.
