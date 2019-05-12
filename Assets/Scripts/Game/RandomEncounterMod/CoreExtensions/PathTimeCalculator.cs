@@ -136,7 +136,7 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.PathBuiltAct
                 if (prev != null)
                 {
                     //Cause no skips done in x, drawing no big deal, but time must be accurate.
-                    if (prev.Y - position.Y != 0)
+                    if (prev.Y - position.Y > 1 )
                         minutesTakenThisMove *= Math.Abs(prev.Y - position.Y);
                 }
 
@@ -147,9 +147,9 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.PathBuiltAct
 
 
             //Problem is dependant on order
-            this.minutesForLastLeg = minutesTakenThisLeg;
 
         }
+
 
         totalTime = minutesTakenThisLeg;
 
@@ -166,7 +166,7 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.PathBuiltAct
          bool hasCart = false)
     {
 
-
+        pixelsTraveledOnOcean = 0;
         //Then call buildPath
 
         //In complete version access via manger.
@@ -200,6 +200,7 @@ public class PathTimeCalculator : TravelTimeCalculator, PathBuilder.PathBuiltAct
         //Update to take in everything as needed later for actual pathing.
 
 
+        //Why is time being effected when literally did not change it.
         LinkedList<DFPosition> path = OceanConsciousTravel.Instance.PathBuilder.getPath(start, endPos, travelShip);
 
 

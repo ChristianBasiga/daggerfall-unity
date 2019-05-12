@@ -17,20 +17,12 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
     LinkedList<DFPosition> pathToDraw;
     bool drawingPath = false;
     Color32 pathColor;
+    bool prevSelected = false;
 
     public DecoratedTravelWindow(IUserInterfaceManager uiManager)
           : base(uiManager)
     {
-        // register console commands
-        try
-        {
-            TravelMapConsoleCommands.RegisterCommands();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError(string.Format("Error Registering Travelmap Console commands: {0}", ex.Message));
-
-        }
+        
     }
 
 
@@ -48,7 +40,7 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
 
     public void setCalculator(PathTimeCalculator calc)
     {
-        popUp = new DaggerfallTravelPopUp(DaggerfallUI.UIManager, DaggerfallUI.UIManager.TopWindow, this);
+        popUp = new DaggerfallTravelPopUp(DaggerfallUI.UIManager, this, this);
         //Numbers are off for some reason.
         popUp.TravelTimeCalculator = calc;
     }
@@ -56,17 +48,25 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
     // Update is called once per frame
     public override void Update () {
 
-        if(draw)
-            if (SelectedRegion != -1)
-            {
-                if (drawingPath)
-                {
-                //    DrawPathOfTravel();
-                }
-
-            }
-
         base.Update();
+
+
+        //Half hour barking up wrong tree, this wasn't problem, idk what the fuck is problem.
+        if (drawingPath && SelectedRegion != -1)
+        {
+            prevSelected = true;
+            SetLocationPixels();
+
+            DrawPathOfTravel();
+
+
+            Draw(regionTextureOverlayPanel);
+        }
+        else
+        {
+            prevSelected = false;
+        }
+
 	}
 
     //So to avoid creating custom pop up itself,
@@ -81,6 +81,8 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
 
     public void Execute(LinkedList<DFPosition> path, bool travelShip)
     {
+
+        Debug.LogError("Draw sir!");
         drawingPath = true;
         draw = true;
         pathToDraw = path;
@@ -94,6 +96,7 @@ public class DecoratedTravelWindow : DaggerfallTravelMapWindow, PathBuilder.Path
 
         if (!drawingPath) return;
 
+        Debug.LogError("Drawing");
 
 
         Vector2 origin = OffsetLookUp[SelectedRegionMapNames[MapIndex]];

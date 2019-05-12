@@ -73,7 +73,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         KeyCode toggleClosedBinding;
 
         Panel borderPanel;
-        Panel regionTextureOverlayPanel;
+        protected Panel regionTextureOverlayPanel;
 
         TextLabel regionLabel;
 
@@ -711,7 +711,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             }
         }
 
-        void Draw(Panel target, Texture2D texture = null)
+        protected void Draw(Panel target, Texture2D texture = null)
         {
             if (target == null)
                 return;
@@ -1056,7 +1056,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         }
 
         // Sets pixels for selected region
-        void SetLocationPixels()
+        protected void SetLocationPixels()
         {
             try
             {

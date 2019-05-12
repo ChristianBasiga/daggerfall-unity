@@ -299,17 +299,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             {
                 waitTimer = Time.realtimeSinceStartup;
 
-                //At what day should it interrupt?
-                //I'm already given time, change nothing here, just change what this value is assigned.
+              
                 countdownValueTravelTimeDays--;
                 int toDisplay = countdownValueTravelTimeDays;
 
-                /*
-                if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays == totalTravelTimeDays - travelTimeCalculator.Interrupt.daysTaken)
-                {
-                    countdownValueTravelTimeDays = 0;
-                }
-                */
                 travelTimeLabel.Text = string.Format("{0}", toDisplay);
                 travelTimeLabel.Update();
 
@@ -319,18 +312,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             return finished;
         }
 
-    /*    private void onInterrupt() Move this to RandomEncounterManager instead.
-        {
-
-            DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
-            travelWindow.CloseTravelWindows(true);
-            DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
-            DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
-            interrupted = false;
-            travelTimeCalculator.useInterrupt();
-
-        }
-        */
+   
         // perform fast travel actions
         private void performFastTravel()
         {

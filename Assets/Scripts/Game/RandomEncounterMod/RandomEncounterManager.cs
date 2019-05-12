@@ -85,7 +85,7 @@ namespace DaggerfallRandomEncountersMod
 
         //Todo: Add path builder, calculator, decorated pop up, etc.
 
-        class FastTravelInterrupt: PathBuilder.PathBuiltAction
+        public class FastTravelInterrupt: PathBuilder.PathBuiltAction
         {
 
            public  int daysTillInterrupt;
@@ -94,6 +94,8 @@ namespace DaggerfallRandomEncountersMod
 
             public void Execute(LinkedList<DFPosition> fullPath, bool travelShip)
             {
+
+                Debug.LogError("I'm totally happening yo");
 
                 if (travelShip) return;
 
@@ -143,24 +145,18 @@ namespace DaggerfallRandomEncountersMod
 
             get
             {
-                if (instance == null)
-                {
-                    RandomEncounterManager manager = GameObject.Find("RandomEncounterManager").GetComponent<RandomEncounterManager>();
-                    if ( manager == null)
-                    {
-                        instance = GameObject.Find("RandomEncounterManager").AddComponent<RandomEncounterManager>();
-                    }
-                    else
-                    {
-                        instance = manager;
-                    }
-                    instance.Setup();
-                }
+               
                 return instance;
             }
         }
 
-
+        public FastTravelInterrupt Interrupt
+        {
+            get
+            {
+                return fastTravelInterrupt;
+            }
+        }
 
         private void Awake()
         {
@@ -202,10 +198,10 @@ namespace DaggerfallRandomEncountersMod
         {
             Setup();
 
+            //Initializes the travel object and adds fast travel interrupt to it.
             OceanConsciousTravel travel = OceanConsciousTravel.Instance;
-
             fastTravelInterrupt = new FastTravelInterrupt();
-            travel.PathBuilder.addPathBuiltAction(fastTravelInterrupt);
+            //So main thing here, interrupt mechanic works, it's mainly the fact that it may not be being added.
         }
 
 
@@ -213,7 +209,6 @@ namespace DaggerfallRandomEncountersMod
         {
 
             GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Trespassing;
-            Debug.LogError("Crime committed "  + GameManager.Instance.PlayerEntity.CrimeCommitted.ToString());
 
             objectPool = PoolManager.Instance;
 
@@ -221,7 +216,6 @@ namespace DaggerfallRandomEncountersMod
 
             activeEncounters = new LinkedList<RandomEncounters.RandomEncounter>();
 
-            Debug.LogError("encounter type count " + concreteRandomEncounters.Count);
 
             initStates();
             setUpObservers();
@@ -265,13 +259,19 @@ namespace DaggerfallRandomEncountersMod
         IEnumerator randomEncounterWildernessTrigger()
         {
 
-            Debug.LogError("here?");
             //  while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
             while(true)
             {
-                Debug.LogError("trying to trigger");
                 //Random Chance 
                 int rand = Random.Range(0, 100);
+                yield return new WaitUntil(() =>
+                {
+
+
+                    return (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game || DaggerfallUI.UIManager.TopWindow is DaggerfallRestWindow);
+
+                });
+
                 if ( ((!GameManager.Instance.PlayerEnterExit.IsPlayerInside &&  !GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true)) || (GameManager.Instance.PlayerEntity.IsResting)))
                 {
                     //I believe this is the wilderness? Was looking at pixel first... If not will change later
@@ -287,9 +287,11 @@ namespace DaggerfallRandomEncountersMod
                     //}
                 }
 
+                yield return new WaitForSeconds(5.0f);
+
+
 
                 //Can change to seconds, look up coroutines.
-                yield return new WaitForSeconds(1.0f);
             }
         }
 
@@ -505,7 +507,7 @@ namespace DaggerfallRandomEncountersMod
                     }
 
                     //Once encounter over, remove from active encounters.
-                    // activeEncounters.Remove(a);
+                     //activeEncounters.Remove(a);
                     //Remove the encounter from the scene.
 
                     //Not only put back in pool, but remove the encounter script on it.
@@ -516,7 +518,7 @@ namespace DaggerfallRandomEncountersMod
                     //but not really worth because there isn't going to be alot
                     //of same encounter happening, it may still be worth to, then just simple key string or type
                     //whatever.
-                    Destroy(a.GetComponent<RandomEncounter>());
+              //      Destroy(a.GetComponent<RandomEncounter>());
                     a.GetComponent<Reusable>().OnDone();
 
                     //Destroy(a.gameObject);
@@ -543,48 +545,31 @@ namespace DaggerfallRandomEncountersMod
                 DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
             {
 
-             
-                //Problem with this is it may be mutated when I do the tick.
+
                 List<RandomEncounter> toRemove = new List<RandomEncounter>();
                 foreach (RandomEncounter encounter in activeEncounters)
                 {
-                    Debug.LogError("encounter " +  encounter.ToString());
-
+                  
                     if (encounter.Began)
                     {
                         encounter.tick();
                     }
-
-                    else if (!encounter.Began)
+                    else
                     {
                         toRemove.Add(encounter);
                     }
-
                 }
 
 
-                foreach( var encounter in toRemove)
+                foreach(RandomEncounter rc in toRemove)
                 {
-                    activeEncounters.Remove(encounter);
-                }
-            }
-
-            if (fastTravelInterrupt.interruptedPosition != null && DaggerfallUI.UIManager.TopWindow is DaggerfallTravelPopUp)
-            {
-                DaggerfallTravelPopUp popup = DaggerfallUI.UIManager.TopWindow as DaggerfallTravelPopUp;
-
-                //If days it takes to get to interrupt has passed, interrupt it.
-                if (popup.CountDownDays <= popup.TotalTravelDays - fastTravelInterrupt.daysTillInterrupt && popup.CountDownDays > 0)
-                {
-                //    DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
-                //    DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
-
-                    DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
-                    DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
-                    fastTravelInterrupt.interruptedPosition = null;
+                    activeEncounters.Remove(rc);
+                    Destroy(rc);
                 }
 
             }
+
+         
         }
 
 
@@ -632,8 +617,8 @@ namespace DaggerfallRandomEncountersMod
 
             StateManager.OnStateChange += (StateManager.StateTypes newState) =>
             {
-                Debug.LogError("Prev state is " + GameManager.Instance.StateManager.LastState);
-                Debug.LogError("new State is " + newState.ToString());
+           //     Debug.LogError("Prev state is " + GameManager.Instance.StateManager.LastState);
+           //     Debug.LogError("new State is " + newState.ToString());
                 if (newState == StateManager.StateTypes.Start)
                 {
                     killActive();
@@ -708,7 +693,7 @@ namespace DaggerfallRandomEncountersMod
 
                 try
                 {
-                    Debug.LogError(jsonFile.name);
+              //      Debug.LogError(jsonFile.name);
 
                     //Loads json into object.
                     EncounterData encounterData = JsonConvert.DeserializeObject<EncounterData>(jsonFile.text);
@@ -788,7 +773,7 @@ namespace DaggerfallRandomEncountersMod
         {
             foreach (RandomEncounter randomEncounter in activeEncounters)
             {
-                Debug.LogError("Me too?" + randomEncounter.gameObject.name);
+              //  Debug.LogError("Me too?" + randomEncounter.gameObject.name);
                 GameObject holder = randomEncounter.gameObject;
                 Destroy(randomEncounter);
                 holder.GetComponent<Reusable>().OnDone();

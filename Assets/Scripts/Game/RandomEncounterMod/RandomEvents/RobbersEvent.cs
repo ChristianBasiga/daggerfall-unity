@@ -22,8 +22,12 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         GameObject spawner;
 
 
+        int framePassed = 0;
+        int framesToWait = 2000;
+        bool spawned = false;
+        bool wasResting = false;
 
-        const float thiefEscapeTime = 10.0f;
+        const float thiefEscapeTime = 2.0f;
         float timeTillThiefGone;
 
         //Items stolen, must have this intermediate stop cause even if
@@ -42,8 +46,15 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
         public override void begin()
         {
+                ItemCollection playerItems = GameManager.Instance.PlayerEntity.Items;
+            if (playerItems.Count == 0) return;
+            /*
             //Change this to just stealing while resting.
             if (!GameManager.Instance.PlayerEntity.IsResting)
+            {
+               
+            }*/
+           /* if (!(DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow))
             {
                 return;
                 warning = "You hear footsteps coming towards you";
@@ -60,14 +71,16 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
                 spawner = GameObjectHelper.CreateFoeSpawner();
                 spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(robbers);
-            }
-           
-        
-            
-          
+            }*/
+                Debug.LogError("Get to here");
+
+
+
+
             //Gets list of robbers
 
-
+            //This shouldn't be seen untils spawned.
+           
 
 
             timeTillThiefGone = thiefEscapeTime;
@@ -75,7 +88,6 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             //So fucking true here, yet,
             stolenItems = new ItemCollection();
 
-            Debug.LogError(DaggerfallUI.Instance.UserInterfaceManager.TopWindow);
             base.begin();
 
         }
@@ -84,12 +96,25 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
         public override void tick()
         {
             base.tick();
+            Debug.LogError("Top window is " + DaggerfallUI.UIManager.TopWindow);
 
             //For world encounter nothing special, they just attack the player, then when none left in world
             //encounter is over. So this tick only for resting case.
 
-            //If already stole item thief is running while player still sleeping.
-            if (stoleItem && !wokeUp)
+            if (!(DaggerfallUI.UIManager.TopWindow is DaggerfallRestWindow) && !stoleItem && !wokeUp)
+            {
+
+                if (framePassed == framesToWait)
+                {
+                    end();
+                }
+                else
+                {
+                    framePassed += 1;
+                }
+            }
+                //If already stole item thief is running while player still sleeping.
+           else if (stoleItem)
             {
                 //It should actually roll the chance at every point.
                 if (timeTillThiefGone > 0)
@@ -102,7 +127,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                 //If gone, then wait until rest window gone for them to be notified that they lost something.
                 //Maybe change to contains, but will take more time, it's something to do later incase it is not the top and resting.
                 //even if it's not, though it's somewhre below and those above will pop
-                else if (!(DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow))
+                else if (!(DaggerfallUI.UIManager.TopWindow is DaggerfallRestWindow))
                 {
                     closure = "You notice you're missing something from your inventory";
 
@@ -112,13 +137,13 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             }
 
             //Okay, so checking it in instance vs on new hour for some reason isn't synced up??
-            else if (DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
+            else if (DaggerfallUI.UIManager.TopWindow is DaggerfallRestWindow && !stoleItem)
             {
-
                 //Transfer random item from player inventory into robber stolen Inventory.
                 //ToDo: Instead of completely random, filter out quest items and items they can't get back.
                 //cause that would break the game / quest they're on..
-                
+
+
                 ItemCollection playerItems = GameManager.Instance.PlayerEntity.Items;
 
 
@@ -142,7 +167,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                     }
                 }
                 //Since adding in order the first one is min and last one is max index of item can get.
-                int itemIndex = UnityEngine.Random.Range(indicesOfItemsCanSteal[0], indicesOfItemsCanSteal[indicesOfItemsCanSteal.Count]);
+                int itemIndex = UnityEngine.Random.Range(0,indicesOfItemsCanSteal.Count);
 
                 DaggerfallUnityItem itemToSteal = playerItems.GetItem(itemIndex);
 
@@ -151,37 +176,41 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
                 stoleItem = true;
 
+                //This might cause the senseign issue even if not spawned.
                 robbers = GameObjectHelper.CreateFoeGameObjects(GameManager.Instance.PlayerObject.transform.position,
-                MobileTypes.Thief, spawnCount, MobileReactions.Hostile);
+              MobileTypes.Thief, spawnCount, MobileReactions.Hostile);
 
                 tryWakeUp();
 
-                if (wokeUp)
+                
+            }
+            else if (wokeUp && !spawned)
+            {
+
+                //If woke up, from attempt, pop rest window and wake up.
+                DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+                Debugging.DebugLog("You hear someone rummaging through your inventory.");
+                spawned = true;
+
+                //In this case the enemy will force the interrupt, so not good case of that, but still cool.
+
+                //Transfer items from stolen loot into robbers items so that they're dropped on death.
+                //May clear items so only that, but makes sense that thieves would have other stuff though.
+                //Maybe that'll vary on rep, climate, and such.
+                robbers[0].GetComponent<DaggerfallEntityBehaviour>().Entity.Items.TransferAll(stolenItems);
+
+
+                robbers[0].GetComponent<DaggerfallEntityBehaviour>().Entity.OnDeath += (DaggerfallEntity entity) =>
                 {
 
-                    //If woke up, from attempt, pop rest window and wake up.
-                    DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
-                    Debugging.DebugLog("You hear someone rummaging through your inventory.");
-                    //In this case the enemy will force the interrupt, so not good case of that, but still cool.
+                    closure = "You see the items that were in your inventory";
+                    end();
+                };
 
-                    //Transfer items from stolen loot into robbers items so that they're dropped on death.
-                    //May clear items so only that, but makes sense that thieves would have other stuff though.
-                    //Maybe that'll vary on rep, climate, and such.
-                    robbers[0].GetComponent<DaggerfallEntityBehaviour>().Entity.Items.TransferAll(stolenItems);
-
-
-                    robbers[0].GetComponent<DaggerfallEntityBehaviour>().Entity.OnDeath += (DaggerfallEntity entity) =>
-                    {
-
-                        closure = "You see the items that were in your inventory";
-                        end();
-                    };
-
-                    spawner = GameObjectHelper.CreateFoeSpawner();
-                    spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(robbers);
-                }
+                spawner = GameObjectHelper.CreateFoeSpawner();
+                spawner.GetComponent<FoeSpawner>().SetFoeGameObjects(robbers);
             }
-            
+
 
         }
 
@@ -201,13 +230,16 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             Debug.LogError("thief stealth level " + thiefStealth);
 
             //Randomize on stealth with offset of player luck, just random as fuck equation lol.
-            int roll = UnityEngine.Random.Range(-thiefStealth, thiefStealth / 2) + playerLuckLevel;
-            wokeUp = roll > playerLuckLevel;
+            int stealth_roll = UnityEngine.Random.Range(thiefStealth / 2, thiefStealth);
+            int luck_roll = Random.Range(0, playerLuckLevel / 2);
+            wokeUp = luck_roll > stealth_roll;
         }
 
         public override void end()
         {
-            
+
+
+
             base.end();
         }
     }
