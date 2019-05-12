@@ -18,7 +18,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
     {
         bool wokeUp;
         bool deliveredItem;
-        double timeToDeliver = 2.0f;
+        double timeToDeliver = 0.5f;
         double timeTillDeliver = 0;
         int framePassed = 0;
         int framesToWait = 2000;
@@ -29,17 +29,11 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             //Shouldn't ever happen if this began, but yeah.
 
-            if (!(DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow))
-            {
-                return;
+           
 
-            }
-
-            warning = "You hear giggling";
             deliveredItem = false;
             base.begin();
 
-            timeTillDeliver = timeToDeliver;
         }
 
         public override void tick()
@@ -60,44 +54,44 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             else if ((DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow))
             {
+
                 isResting = true;
-
-                if (timeTillDeliver > 0)
-                {
-                    timeTillDeliver -= Time.deltaTime;
-                }
-                else if (deliveredItem)
-                {
-                    end();
-                }
-                else
-                {
-                    //otherwise if player still resting choose an item.
-
-                    ItemCollection playerItems = GameManager.Instance.PlayerEntity.Items;
-
-
-                    //Get flowers
-                    //Assuming group index is that
-                    Array enumArray = DaggerfallUnity.Instance.ItemHelper.GetEnumArray(ItemGroups.PlantIngredients1);
-
-                    //Ideally group then index with int casted enum value, but from what I've seen they do so can only assume 11 is the red rose? Maybe randomize flowers.
-                    DaggerfallUnityItem redRoses = new DaggerfallUnityItem(ItemGroups.PlantIngredients1, 11);
-
-
-                    //Pretty instant maybe have time to deliver.
-
-                    playerItems.AddItem(redRoses, ItemCollection.AddPosition.Front);
-
-                    deliveredItem = true;
-                }
-
+                timeTillDeliver = timeToDeliver;
+               
             }
-            else if (isResting)
+            if (deliveredItem)
             {
-                wokeUp = true;
                 end();
             }
+
+            
+            if (timeTillDeliver > 0)
+            {
+                timeTillDeliver -= Time.deltaTime * 2;
+            }
+
+            else
+            {
+                //otherwise if player still resting choose an item.
+
+                ItemCollection playerItems = GameManager.Instance.PlayerEntity.Items;
+                Debug.LogError("Get to here ever");
+
+                //Get flowers
+                //Assuming group index is that
+                Array enumArray = DaggerfallUnity.Instance.ItemHelper.GetEnumArray(ItemGroups.PlantIngredients1);
+
+                //Ideally group then index with int casted enum value, but from what I've seen they do so can only assume 11 is the red rose? Maybe randomize flowers.
+                DaggerfallUnityItem redRoses = new DaggerfallUnityItem(ItemGroups.PlantIngredients1, 11);
+
+
+                //Pretty instant maybe have time to deliver.
+
+                playerItems.AddItem(redRoses, ItemCollection.AddPosition.Front);
+
+                deliveredItem = true;
+            }
+
 
 
         }

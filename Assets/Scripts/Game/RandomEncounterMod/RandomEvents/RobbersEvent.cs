@@ -103,6 +103,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
 
             if (!(DaggerfallUI.UIManager.TopWindow is DaggerfallRestWindow) && !stoleItem && !wokeUp)
             {
+                Debug.LogError("checking esting");
 
                 if (framePassed == framesToWait)
                 {
@@ -116,6 +117,7 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
                 //If already stole item thief is running while player still sleeping.
            else if (stoleItem)
             {
+                Debug.LogError("stolen item");
                 //It should actually roll the chance at every point.
                 if (timeTillThiefGone > 0)
                 {
@@ -139,6 +141,9 @@ namespace DaggerfallRandomEncountersMod.RandomEncounters
             //Okay, so checking it in instance vs on new hour for some reason isn't synced up??
             else if (DaggerfallUI.UIManager.TopWindow is DaggerfallRestWindow && !stoleItem)
             {
+
+                Debug.LogError("stealing item");
+
                 //Transfer random item from player inventory into robber stolen Inventory.
                 //ToDo: Instead of completely random, filter out quest items and items they can't get back.
                 //cause that would break the game / quest they're on..
