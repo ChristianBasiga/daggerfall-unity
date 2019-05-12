@@ -1,16 +1,9 @@
 [
     {
-        "FileName": "dsad",
-        "Title": "dsad",
-        "Enabled": false,
-        "LoadPriority": 0,
-        "HasSettings": false
-    },
-    {
         "FileName": "randomencountersmod",
         "Title": "RandomEncountersMod",
         "Enabled": true,
-        "LoadPriority": 1,
+        "LoadPriority": 0,
         "HasSettings": false
     }
 ]
