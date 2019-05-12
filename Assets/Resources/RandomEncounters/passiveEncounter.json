@@ -4,7 +4,7 @@
 
 	"encounterId": "MerchantEncounter",
 	"context" : "World",
-	"type" : "Positive",
+	"type" : "Neutral",
 	"filter" : [
 		{
 			"context" : "time",
