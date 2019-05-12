@@ -75,6 +75,64 @@ namespace DaggerfallRandomEncountersMod
         #endregion
 
 
+        FastTravelInterrupt fastTravelInterrupt;
+
+
+        //Then need properties of above, so they can access each other accordingly.
+
+
+      
+
+        //Todo: Add path builder, calculator, decorated pop up, etc.
+
+        class FastTravelInterrupt: PathBuilder.PathBuiltAction
+        {
+
+           public  int daysTillInterrupt;
+           public  DFPosition interruptedPosition;
+
+
+            public void Execute(LinkedList<DFPosition> fullPath, bool travelShip)
+            {
+
+                if (travelShip) return;
+
+
+                //Otherwise should random point along full path.
+
+                int randomStop = Random.Range(0, fullPath.Count);
+
+
+                int i = 0;
+
+                foreach(DFPosition pos in fullPath)
+                {
+                    if (i == randomStop)
+                    {
+                        interruptedPosition = pos;
+                        break;
+                    }
+
+                    i += 1;
+
+                }
+
+                int travelTimeMinutes = OceanConsciousTravel.Instance.PathTimeCalculator.CalculateTime(fullPath, interruptedPosition);
+
+                // Players can have fast travel benefit from guild memberships
+                travelTimeMinutes = GameManager.Instance.GuildManager.FastTravel(travelTimeMinutes);
+
+                int travelTimeDaysTotal = (travelTimeMinutes / 1440);
+
+                // Classic always adds 1. For DF Unity, only add 1 if there is a remainder to round up.
+                if ((travelTimeMinutes % 1440) > 0)
+                    travelTimeDaysTotal += 1;
+
+                this.daysTillInterrupt = travelTimeDaysTotal;
+                //Then get travel time between these points.
+
+            }
+        }
 
         private IEnumerator randomWildernessTriggerCoroutine;
 
@@ -85,6 +143,19 @@ namespace DaggerfallRandomEncountersMod
 
             get
             {
+                if (instance == null)
+                {
+                    RandomEncounterManager manager = GameObject.Find("RandomEncounterManager").GetComponent<RandomEncounterManager>();
+                    if ( manager == null)
+                    {
+                        instance = GameObject.Find("RandomEncounterManager").AddComponent<RandomEncounterManager>();
+                    }
+                    else
+                    {
+                        instance = manager;
+                    }
+                    instance.Setup();
+                }
                 return instance;
             }
         }
@@ -127,8 +198,18 @@ namespace DaggerfallRandomEncountersMod
             return instance == this;
         }
 
+        private void Start()
+        {
+            Setup();
 
-        void Start()
+            OceanConsciousTravel travel = OceanConsciousTravel.Instance;
+
+            fastTravelInterrupt = new FastTravelInterrupt();
+            travel.PathBuilder.addPathBuiltAction(fastTravelInterrupt);
+        }
+
+
+        public void Setup()
         {
 
             GameManager.Instance.PlayerEntity.CrimeCommitted = PlayerEntity.Crimes.Trespassing;
@@ -146,17 +227,12 @@ namespace DaggerfallRandomEncountersMod
             setUpObservers();
 
 
-            randomEncounterWildernessTrigger();
+            StartCoroutine(randomWildernessTriggerCoroutine);
 
-            //If player dies, clears encounters, so then garbage collected.
-            GameManager.Instance.PlayerEntity.OnDeath += (DaggerfallEntity entity) =>
-            {
-                Debug.LogError("I happen");
-                killActive();
-            };
 
         }
 
+      
         //Sets filters / observer states to current state of game on load.
         void initStates()
         {
@@ -181,33 +257,29 @@ namespace DaggerfallRandomEncountersMod
             //Prob better key than time, but this is fine.
             worldFilter.setFilter("time", currentTime.IsDay ? "day" : "night");
             randomWildernessTriggerCoroutine = randomEncounterWildernessTrigger();
-
-            worldFilter.setFilter("crime", PlayerEntity.Crimes.Trespassing.ToString());
-
-
-            StateManager.OnStartNewGame += (object sender, System.EventArgs e) =>
-            {
-                StartCoroutine(randomWildernessTriggerCoroutine);
-            };
+            worldFilter.setFilter("crime", PlayerEntity.Crimes.Trespassing.ToString());       
+    
         }
 
         //Chance to for random encounter to occur in wilderness
         IEnumerator randomEncounterWildernessTrigger()
         {
 
-
-            while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
+            Debug.LogError("here?");
+            //  while (GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Start || GameManager.Instance.StateManager.CurrentState == StateManager.StateTypes.Game)
+            while(true)
             {
+                Debug.LogError("trying to trigger");
                 //Random Chance 
                 int rand = Random.Range(0, 100);
-                if (GameManager.Instance.PlayerEnterExit.IsPlayerInside || GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true) || (GameManager.Instance.PlayerEntity.IsResting && activeEncounters.Count > 0))
+                if ( ((!GameManager.Instance.PlayerEnterExit.IsPlayerInside &&  !GameManager.Instance.PlayerGPS.IsPlayerInTown(false, true)) || (GameManager.Instance.PlayerEntity.IsResting)))
                 {
                     //I believe this is the wilderness? Was looking at pixel first... If not will change later
 
                     //  Debug.LogError("Random chance to spawn " + rand);
 
                     //Todo: Add check to make sure player in wilderness, look in Update.
-                    // if (rand < 50) //50%
+                    // if (rand < 50) /
                     //{
                     // Create encounter but still has conditions present I believe
                     Debug.LogError("Trigger happening ");
@@ -217,7 +289,7 @@ namespace DaggerfallRandomEncountersMod
 
 
                 //Can change to seconds, look up coroutines.
-                yield return new WaitForSeconds(5.0f);
+                yield return new WaitForSeconds(1.0f);
             }
         }
 
@@ -461,12 +533,17 @@ namespace DaggerfallRandomEncountersMod
         // Update is called once per frame
         void Update()
         {
+           // if (instance == null) return;
+
+
             
+         
+
             if ((GameManager.Instance.StateManager.GameInProgress && GameManager.Instance.StateManager.CurrentState != StateManager.StateTypes.UI) ||
                 DaggerfallUI.Instance.UserInterfaceManager.TopWindow is DaggerfallRestWindow)
             {
 
-
+             
                 //Problem with this is it may be mutated when I do the tick.
                 List<RandomEncounter> toRemove = new List<RandomEncounter>();
                 foreach (RandomEncounter encounter in activeEncounters)
@@ -491,6 +568,23 @@ namespace DaggerfallRandomEncountersMod
                     activeEncounters.Remove(encounter);
                 }
             }
+
+            if (fastTravelInterrupt.interruptedPosition != null && DaggerfallUI.UIManager.TopWindow is DaggerfallTravelPopUp)
+            {
+                DaggerfallTravelPopUp popup = DaggerfallUI.UIManager.TopWindow as DaggerfallTravelPopUp;
+
+                //If days it takes to get to interrupt has passed, interrupt it.
+                if (popup.CountDownDays <= popup.TotalTravelDays - fastTravelInterrupt.daysTillInterrupt && popup.CountDownDays > 0)
+                {
+                //    DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+                //    DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
+
+                    DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
+                    DaggerfallUI.AddHUDText("Travel has been interrupted", 1.5f);
+                    fastTravelInterrupt.interruptedPosition = null;
+                }
+
+            }
         }
 
 
@@ -498,7 +592,7 @@ namespace DaggerfallRandomEncountersMod
 
         #region Mod Initialization
        
-        [Invoke(StateManager.StateTypes.Start, 0)]
+        [Invoke(StateManager.StateTypes.Game, 0)]
         public static void InitEngineData(InitParams initParams)
         {
 
@@ -517,10 +611,15 @@ namespace DaggerfallRandomEncountersMod
             setUpFactories();
 
 
+            //Test that encounters still spawn then try the travel interrupt.
+
+
             //Adds object of manager into scene.
             GameObject randomEncounter = new GameObject("RandomEncounterManager");
 
+            //So adding it here does that, a solution would be separating it so manager does these encountesr, then travl interrupter is just completley own component
             randomEncounter.AddComponent<RandomEncounterManager>();
+
 
 
             //Cancel all encounters, also since is static in itself prob move this to invoke method in mod loading.

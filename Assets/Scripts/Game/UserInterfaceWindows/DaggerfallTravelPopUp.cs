@@ -18,12 +18,15 @@ using DaggerfallConnect.Arena2;
 using DaggerfallWorkshop.Game.Formulas;
 using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.Serialization;
+using DaggerfallWorkshop.Utility;
 
 using DaggerfallWorkshop.Game.UserInterfaceWindows;
 
 namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 {
 
+    //Don't need to extend this, when it creates popupwindow, calculation happens, before that happens, I just need to set travelTimeCalculator to use mine, and then everything else remains the same
+    //I just need to make time remaining public as well as total.
     public class DaggerfallTravelPopUp : DaggerfallPopupWindow
     {
         #region fields
@@ -34,6 +37,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         const float secondsCountdownTickFastTravel = 0.05f; // time used for fast travel countdown for one tick
 
+
+        //We could do subtituton, by creating a setter for this.
+        //And subtitution of the pop itself will also be needed, maybe template method.
         TravelTimeCalculator travelTimeCalculator = new TravelTimeCalculator();
 
         Color32 toggleColor = new Color32(85, 117, 48, 255);
@@ -52,22 +58,22 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         Texture2D nativeTexture;
 
         //rects
-        Rect nativePanelRect        = new Rect(49, 28, 223, 97);
-        Rect exitButtonRect         = new Rect(222, 112, 48, 10);
-        Rect beginButtonRect        = new Rect(222, 98, 48, 10);
-        Rect speedButtonRect        = new Rect(50, 51, 108, 20);
-        Rect transportButtonRect    = new Rect(163, 51, 108, 20);
-        Rect innsButtonRect         = new Rect(50, 83, 108, 9);
-        Rect campoutButtonRect      = new Rect(163, 83, 108, 9);
+        Rect nativePanelRect = new Rect(49, 28, 223, 97);
+        Rect exitButtonRect = new Rect(222, 112, 48, 10);
+        Rect beginButtonRect = new Rect(222, 98, 48, 10);
+        Rect speedButtonRect = new Rect(50, 51, 108, 20);
+        Rect transportButtonRect = new Rect(163, 51, 108, 20);
+        Rect innsButtonRect = new Rect(50, 83, 108, 9);
+        Rect campoutButtonRect = new Rect(163, 83, 108, 9);
 
-        Vector2 colorPanelSize      = new Vector2(4.5f, 5f);
-        Vector2 cautiousPanelPos    = new Vector2(52, 53.25f);
-        Vector2 recklessPanelPos    = new Vector2(52, 63.25f);
-        Vector2 innPanelPos         = new Vector2(52, 85.25f);
-        Vector2 campoutPos          = new Vector2(165, 85.25f);
-        Vector2 footPos             = new Vector2(165, 53.25f);
-        Vector2 shipPos             = new Vector2(165, 63.25f);
-        DFPosition endPos           = new DFPosition(109, 158);
+        Vector2 colorPanelSize = new Vector2(4.5f, 5f);
+        Vector2 cautiousPanelPos = new Vector2(52, 53.25f);
+        Vector2 recklessPanelPos = new Vector2(52, 63.25f);
+        Vector2 innPanelPos = new Vector2(52, 85.25f);
+        Vector2 campoutPos = new Vector2(165, 85.25f);
+        Vector2 footPos = new Vector2(165, 53.25f);
+        Vector2 shipPos = new Vector2(165, 63.25f);
+        DFPosition endPos = new DFPosition(109, 158);
 
         TextLabel availableGoldLabel;
         TextLabel tripCostLabel;
@@ -79,9 +85,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         bool doFastTravel = false; // flag used to indicate Update() function that fast travel should happen
         float waitTimer = 0;
 
-        bool speedCautious  = true;
-        bool travelShip     = true;
-        bool sleepModeInn   = true;
+        bool speedCautious = true;
+        bool travelShip = true;
+        bool sleepModeInn = true;
 
         bool hasHorse = false;
         bool hasCart = false;
@@ -91,8 +97,25 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         #region Properties
 
-        internal DFPosition EndPos { get { return endPos; } set { endPos = value;} }
+
+        public int TotalTravelDays
+        {
+            get { return totalTravelTimeDays; }
+        }
+
+        public int CountDownDays
+        {
+
+            get { return countdownValueTravelTimeDays; }
+        }
+
+        internal DFPosition EndPos { get { return endPos; } set { endPos = value; } }
         internal DaggerfallTravelMapWindow TravelWindow { get { return travelWindow; } set { travelWindow = value; } }
+        public bool SpeedCautious { get { return speedCautious; } set { speedCautious = value; } }
+        public bool TravelShip { get { return travelShip; } set { travelShip = value; } }
+        public bool SleepModeInn { get { return sleepModeInn; } set { sleepModeInn = value; } }
+
+        public TravelTimeCalculator TravelTimeCalculator { set { travelTimeCalculator = value; } }
 
         #endregion
 
@@ -125,10 +148,10 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             availableGoldLabel = DaggerfallUI.AddTextLabel(DaggerfallUI.DefaultFont, new Vector2(148, 97), "0", NativePanel);
             availableGoldLabel.MaxCharacters = 12;
 
-            tripCostLabel = DaggerfallUI.AddTextLabel(DaggerfallUI.DefaultFont, new Vector2(117,107), "0", NativePanel);
+            tripCostLabel = DaggerfallUI.AddTextLabel(DaggerfallUI.DefaultFont, new Vector2(117, 107), "0", NativePanel);
             tripCostLabel.MaxCharacters = 18;
 
-            travelTimeLabel = DaggerfallUI.AddTextLabel(DaggerfallUI.DefaultFont, new Vector2(129,117), "0", NativePanel);
+            travelTimeLabel = DaggerfallUI.AddTextLabel(DaggerfallUI.DefaultFont, new Vector2(129, 117), "0", NativePanel);
             travelTimeLabel.MaxCharacters = 16;
 
             speedToggleColorPanel = DaggerfallUI.AddPanel(new Rect(cautiousPanelPos, colorPanelSize), NativePanel);
@@ -148,7 +171,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
 
         void SetupButtons()
         {
-            beginButton = DaggerfallUI.AddButton(beginButtonRect, NativePanel );
+            beginButton = DaggerfallUI.AddButton(beginButtonRect, NativePanel);
             beginButton.OnMouseClick += BeginButtonOnClickHandler;
 
             exitButton = DaggerfallUI.AddButton(exitButtonRect, NativePanel);
@@ -197,16 +220,14 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 }
                 else
                 {
+                    totalTravelTimeDays = 0;
                     doFastTravel = false;
                     DaggerfallUI.Instance.FadeBehaviour.SmashHUDToBlack();
                     performFastTravel();
                 }
 
             }
-            if (interrupted)
-            {
-                onInterrupt();
-            }
+           
         }
 
         #endregion
@@ -244,7 +265,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             availableGoldLabel.Text = GameManager.Instance.PlayerEntity.GoldPieces.ToString();
 
             travelTimeMinutes = travelTimeCalculator.CalculateTravelTime(endPos, speedCautious, sleepModeInn, travelShip, hasHorse, hasCart);
-     
+
 
             // Players can have fast travel benefit from guild memberships
             travelTimeMinutes = GameManager.Instance.GuildManager.FastTravel(travelTimeMinutes);
@@ -283,11 +304,12 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 countdownValueTravelTimeDays--;
                 int toDisplay = countdownValueTravelTimeDays;
 
-                if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays ==  totalTravelTimeDays - travelTimeCalculator.Interrupt.daysTaken)
+                /*
+                if (travelTimeCalculator.Interrupt != null && countdownValueTravelTimeDays == totalTravelTimeDays - travelTimeCalculator.Interrupt.daysTaken)
                 {
                     countdownValueTravelTimeDays = 0;
                 }
-                
+                */
                 travelTimeLabel.Text = string.Format("{0}", toDisplay);
                 travelTimeLabel.Update();
 
@@ -297,7 +319,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             return finished;
         }
 
-        private void onInterrupt()
+    /*    private void onInterrupt() Move this to RandomEncounterManager instead.
         {
 
             DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
@@ -308,6 +330,7 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             travelTimeCalculator.useInterrupt();
 
         }
+        */
         // perform fast travel actions
         private void performFastTravel()
         {
@@ -316,27 +339,9 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
                 SaveLoadManager.CacheScene(GameManager.Instance.StreamingWorld.SceneName);
 
 
-            if (travelTimeCalculator.Interrupt != null)
-            {
 
-                DFPosition interruptPosition = travelTimeCalculator.Interrupt.interruptPosition;
-                GameManager.Instance.StreamingWorld.TeleportToCoordinates(interruptPosition.X,
-                    interruptPosition.Y,
-
-                    StreamingWorld.RepositionMethods.DirectionFromStartMarker);
-
-
-
-                //DaggerfallUI.Instance.UserInterfaceManager.PushWindow(interruptMsg);
-                interrupted = true;
-               // return;
-            }
-            else
-            {
-
-                GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
-
-            }
+           GameManager.Instance.StreamingWorld.TeleportToCoordinates((int)endPos.X, (int)endPos.Y, StreamingWorld.RepositionMethods.DirectionFromStartMarker);
+            
             //So it's here that needs to be changed.
 
             if (speedCautious)
@@ -351,13 +356,17 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             // Halt random enemy spawns for next playerEntity update so player isn't bombarded by spawned enemies at the end of a long trip
             GameManager.Instance.PlayerEntity.PreventEnemySpawns = true;
 
-            // Raise arrival time to just after 7am if cautious travel would otherwise arrive at night
-            // Increasing this from 6am to 7am as game is quite dark on at 6am (in Daggerfall Unity, Daggerfall is lighter)
-            // Will consider retuning lighting so this can be like classic, although +1 hours to travel time isn't likely to be a problem for now
-            if (speedCautious) /*Include checking cautious during interrupt choosing.*/
+            // Vampires always arrive just after 6pm regardless of travel type
+            // Otherwise raise arrival time to just after 7am if cautious travel would arrive at night
+            /*if (GameManager.Instance.PlayerEffectManager.HasVampirism()) From pulling from master branch, just integrating to latest version.
+            {
+                DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.RaiseTime((DaggerfallDateTime.DuskHour - DaggerfallUnity.Instance.WorldTime.DaggerfallDateTime.Hour) * 3600);
+            }
+            */
+            if (speedCautious)
             {
 
-               
+
 
                 if ((DaggerfallUnity.WorldTime.DaggerfallDateTime.Hour < 7)
                     || ((DaggerfallUnity.WorldTime.DaggerfallDateTime.Hour == 7) && (DaggerfallUnity.WorldTime.DaggerfallDateTime.Minute < 10)))
@@ -382,6 +391,8 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
             //Maybe not raise skills if interrupted.
             GameManager.Instance.PlayerEntity.RaiseSkills();
             DaggerfallUI.Instance.FadeBehaviour.FadeHUDFromBlack();
+
+            RaiseOnPostFastTravelEvent();
         }
 
         // Return whether player has enough gold for the selected travel options
@@ -472,7 +483,6 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         public void ExitButtonOnClickHandler(BaseScreenComponent sender, Vector2 position)
         {
             doFastTravel = false;
-            travelTimeCalculator.useInterrupt();
             interrupted = false;
             DaggerfallUI.Instance.UserInterfaceManager.PopWindow();
         }
@@ -493,6 +503,15 @@ namespace DaggerfallWorkshop.Game.UserInterfaceWindows
         {
             sleepModeInn = !sleepModeInn;
             Refresh();
+        }
+
+        // OnPostFastTravel
+        public delegate void OnOnPostFastTravelEventHandler();
+        public static event OnOnPostFastTravelEventHandler OnPostFastTravel;
+        void RaiseOnPostFastTravelEvent()
+        {
+            if (OnPostFastTravel != null)
+                OnPostFastTravel();
         }
 
         #endregion

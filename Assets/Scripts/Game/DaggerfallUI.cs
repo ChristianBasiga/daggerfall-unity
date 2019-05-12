@@ -225,6 +225,10 @@ namespace DaggerfallWorkshop.Game
 
         public DaggerfallTravelMapWindow DfTravelMapWindow
         {
+            set
+            {
+                dfTravelMapWindow = value;
+            }
             get { return dfTravelMapWindow; }
         }
 
